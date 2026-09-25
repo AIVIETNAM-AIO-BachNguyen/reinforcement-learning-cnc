@@ -1,5 +1,32 @@
 # CNC Research Platform Backend
 
+## Decision Case planning worker
+
+Run `npm run operations:decision-worker` as a process separate from the API and
+the episode worker. It claims queued Decision Cases with a fenced lease, builds
+the planner request from the pinned snapshot and stored case request, calls the
+contract-v3 AI endpoint configured by `AI_SERVICE_URL`, and persists a validated
+recommendation without changing the current schedule. `SIGINT`/`SIGTERM` aborts
+the in-flight AI request and releases the claim for another worker.
+
+Use `GET /api/v1/decision-cases/{id}/recommendation` after the case reaches
+`AWAITING_APPROVAL`. Transport/planner failures leave the lifecycle at
+`ANALYZING` with `meta.processing.status=BLOCKED` and an allowlisted error.
+
+## Operations snapshot ingestion
+
+The internal `ingestFactorySnapshot` service validates v3 observations, serializes ingestion per factory, and updates the current snapshot with a head-revision CAS while preserving the published schedule and plan version. [Migration impact, concurrency protocol, CLI and test evidence](docs/operations-context/snapshot-ingestion.md). No public mutation endpoint is added.
+
+## Operations Context design drafts
+
+Design-only deliverables (no runtime API or migration changes):
+
+- [Prisma mapping, phased persistence and transaction boundaries](docs/operations-context/prisma-design-note.md)
+- [Six proposed v1 endpoints and concurrency/idempotency contract](docs/operations-context/api-endpoint-spec.md)
+- [Decision Case lifecycle and transition guards](docs/operations-context/state-machine.md)
+
+These drafts target Operations and Multi-Agent Contract v3.0. They still distinguish canonical contract payloads from proposed HTTP DTOs, persistence fields and transaction semantics.
+
 ## Maintenance decision queue
 
 `GET /api/v1/maintenance/decisions?experiment=<UUID>` returns one candidate per machine in each persisted observation/recommendation/result triple from the episode's current attempt. The response shape is fixed in [the frontend mock](examples/maintenance-decisions.list.json) and described in [OpenAPI](openapi.yaml). Query filters are `status`, `severity`, `experiment`, and exact `machine`; `page` starts at 1 and `limit` defaults to 20 (maximum 100). `GET /api/v1/maintenance/decisions/:id` uses the candidate id from the list, formed as `<recommendation UUID>~<machine id>`.
