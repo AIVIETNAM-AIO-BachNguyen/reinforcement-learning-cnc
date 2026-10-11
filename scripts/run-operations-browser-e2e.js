@@ -270,6 +270,8 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
   const target = createHash('sha256').update(baseUrl.toString()).digest('hex');
   appendJournal(journal, { schema, target });
   const adminPassword = `operations-e2e-${randomBytes(12).toString('hex')}`;
+  const rolePassword = `operations-role-e2e-${randomBytes(12).toString('hex')}`;
+  const usersFile = path.join(runDir, 'test-users.json');
   const commonEnv = {
     ...process.env,
     NODE_ENV: 'test',
@@ -303,6 +305,13 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
       env: { ...commonEnv, OPERATIONS_DEMO_DATABASE_URL: isolatedUrl.toString() },
       logFile: path.join(runDir, 'operations-seed.log'),
     });
+    await command(process.execPath, ['tests/helpers/seed-browser-users.js'], {
+      cwd: backendRoot,
+      env: { ...commonEnv, OPERATIONS_E2E_USERS_FILE: usersFile, OPERATIONS_E2E_ROLE_PASSWORD: rolePassword },
+      logFile: path.join(runDir, 'test-users.log'),
+    });
+    const testUsers = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
+    commonEnv.OPERATIONS_FACTORY_ACCESS = JSON.stringify({ 'factory-demo-01': [testUsers.viewer.id] });
 
     fastapi = await startFastApi(commonEnv, runDir);
     frontendPort = await freePort();
@@ -352,6 +361,9 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
         OPERATIONS_E2E_API_URL: apiUrl,
         OPERATIONS_E2E_AI_URL: serviceEnv.AI_SERVICE_URL,
         OPERATIONS_E2E_ADMIN_PASSWORD: adminPassword,
+        OPERATIONS_E2E_ROLE_PASSWORD: rolePassword,
+        OPERATIONS_E2E_VIEWER_USERNAME: testUsers.viewer.username,
+        OPERATIONS_E2E_OUTSIDER_USERNAME: testUsers.outsider.username,
         OPERATIONS_E2E_FACTORY_ID: 'factory-demo-01',
         OPERATIONS_E2E_GIT_SHA: sha,
         OPERATIONS_E2E_RUN: String(run),

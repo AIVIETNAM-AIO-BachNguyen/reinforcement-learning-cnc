@@ -3,12 +3,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 
-import { expect, test, type APIRequestContext, type APIResponse } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse, type Browser, type BrowserContext } from "@playwright/test";
 
 const apiBase = required("OPERATIONS_E2E_API_URL").replace(/\/+$/, "");
 const aiBase = required("OPERATIONS_E2E_AI_URL").replace(/\/+$/, "");
 const factoryId = process.env.OPERATIONS_E2E_FACTORY_ID || "factory-demo-01";
 const adminPassword = required("OPERATIONS_E2E_ADMIN_PASSWORD");
+const rolePassword = required("OPERATIONS_E2E_ROLE_PASSWORD");
+const viewerUsername = required("OPERATIONS_E2E_VIEWER_USERNAME");
+const outsiderUsername = required("OPERATIONS_E2E_OUTSIDER_USERNAME");
 const evidenceFile = required("OPERATIONS_E2E_EVIDENCE_FILE");
 
 type JsonObject = Record<string, unknown>;
@@ -149,6 +152,102 @@ async function waitForCase(
     return accepted.includes(String(latest.status));
   }, { timeout: 90_000, intervals: [100, 250, 500, 1_000] }).toBe(true);
   return latest!;
+}
+
+async function loginContext(browser: Browser, username: string, password: string): Promise<BrowserContext> {
+  const context = await browser.newContext();
+  const response = await context.request.post(`${apiBase}/api/v1/auth/login`, {
+    data: { username, password },
+  });
+  expect(response.status()).toBe(200);
+  return context;
+}
+
+type ReadyCase = {
+  id: string;
+  status: JsonObject;
+  meta: JsonObject;
+  recommendation: JsonObject;
+  candidate: JsonObject;
+};
+
+async function createReadyCase(
+  request: APIRequestContext,
+  context: { snapshotId: string; planVersion: number },
+  label: string,
+): Promise<ReadyCase> {
+  const created = await createCase(request, context, liveRequest("LIVE", {
+    trigger: { type: "MANUAL_REPLAN", reason: label },
+  }));
+  expect(created.response.status()).toBe(202);
+  const id = string(envelopeData(await json(created.response)).decision_case_id, `${label} case id`);
+  await waitForCase(request, id, ["AWAITING_APPROVAL"]);
+  const readResponse = await request.get(`${apiBase}/api/v1/decision-cases/${id}`);
+  expect(readResponse.status()).toBe(200);
+  const read = await json(readResponse);
+  const recommendationResponse = await request.get(`${apiBase}/api/v1/decision-cases/${id}/recommendation`);
+  expect(recommendationResponse.status()).toBe(200);
+  const recommendation = record(envelopeData(await json(recommendationResponse)).recommendation);
+  const candidate = array(recommendation.candidate_plans).map(record)
+    .find(value => value.candidate_plan_id === recommendation.recommended_plan_id);
+  expect(candidate).toBeTruthy();
+  return { id, status: envelopeData(read), meta: record(read.meta), recommendation, candidate: candidate! };
+}
+
+function commandIdentity(item: ReadyCase) {
+  return {
+    schema_version: "3.0",
+    decision_case_id: item.id,
+    recommendation_id: item.recommendation.recommendation_id,
+    candidate_plan_id: item.candidate.candidate_plan_id,
+    candidate_version: item.candidate.plan_version,
+    expected_snapshot_id: item.status.snapshot_id,
+    expected_plan_version: item.meta.base_plan_version,
+  };
+}
+
+async function approveCase(request: APIRequestContext, item: ReadyCase, key = `approve-${randomUUID()}`) {
+  const body = { ...commandIdentity(item), command: "APPROVE", expected_case_revision: item.meta.case_revision };
+  const response = await request.post(`${apiBase}/api/v1/decision-cases/${item.id}/decision`, {
+    headers: { "Idempotency-Key": key }, data: body,
+  });
+  expect(response.status()).toBe(200);
+  const payload = await json(response);
+  expect(envelopeData(payload).status).toBe("APPROVED");
+  return { body, payload, key };
+}
+
+function commitCommand(item: ReadyCase, approved: JsonObject) {
+  return {
+    ...commandIdentity(item),
+    command: "COMMIT",
+    expected_case_revision: record(approved.meta).case_revision,
+  };
+}
+
+const caseDatabaseState = (caseId: string) => databaseQuery(`SELECT jsonb_build_object(
+  'case', (SELECT to_jsonb(c) FROM decision_cases c WHERE c.id = $1::uuid),
+  'decision', (SELECT to_jsonb(d) FROM decision_human_records d WHERE d.case_id = $1::uuid),
+  'commit', (SELECT to_jsonb(c) FROM decision_commits c WHERE c.case_id = $1::uuid),
+  'events', (SELECT jsonb_agg(to_jsonb(e) ORDER BY sequence) FROM decision_case_events e WHERE e.case_id = $1::uuid),
+  'receipts', (SELECT jsonb_agg(to_jsonb(r) ORDER BY created_at, id) FROM decision_case_idempotency_receipts r WHERE r.case_id = $1::uuid)
+) AS state`, caseId);
+
+async function listAllCases(request: APIRequestContext, query: Record<string, string>): Promise<JsonObject[]> {
+  const rows: JsonObject[] = [];
+  let cursor: string | null = null;
+  do {
+    const response = await request.get(`${apiBase}/api/v1/decision-cases`, {
+      params: { ...query, factory_id: factoryId, limit: "2", ...(cursor ? { cursor } : {}) },
+    });
+    expect(response.status()).toBe(200);
+    const payload = await json(response);
+    rows.push(...array(envelopeValue(payload)).map(record));
+    const meta = record(payload.meta);
+    cursor = meta.has_more ? string(meta.next_cursor, "next cursor") : null;
+  } while (cursor);
+  expect(new Set(rows.map(row => row.decision_case_id)).size).toBe(rows.length);
+  return rows;
 }
 
 function recommendationFingerprint(recommendation: JsonObject): string {
@@ -444,6 +543,200 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(decisionSubmissions).toHaveLength(4);
   await page.unroute(decisionUrl);
 
+  // REJECT is exercised against the real worker artifact and must not publish anything.
+  const rejectBasis = await currentContext(page.request);
+  const rejectCase = await createReadyCase(page.request, rejectBasis, "Real-service rejection");
+  const rejectScheduleBefore = await currentSchedule(page.request);
+  const rejectPublicationBefore = await publicationState();
+  const rejectResponse = await page.request.post(`${apiBase}/api/v1/decision-cases/${rejectCase.id}/decision`, {
+    headers: { "Idempotency-Key": `reject-${randomUUID()}` },
+    data: {
+      schema_version: "3.0", command: "REJECT", decision_case_id: rejectCase.id,
+      recommendation_id: rejectCase.recommendation.recommendation_id,
+      expected_snapshot_id: rejectCase.status.snapshot_id,
+      expected_case_revision: rejectCase.meta.case_revision,
+      expected_plan_version: rejectCase.meta.base_plan_version,
+      note: "Rejected by the real-service browser acceptance flow",
+    },
+  });
+  expect(rejectResponse.status()).toBe(200);
+  expect(envelopeData(await json(rejectResponse)).status).toBe("REJECTED");
+  expect(await currentSchedule(page.request)).toEqual(rejectScheduleBefore);
+  expect(await publicationState()).toEqual(rejectPublicationBefore);
+  const rejectEventsResponse = await page.request.get(`${apiBase}/api/v1/decision-cases/${rejectCase.id}/events`);
+  const rejectEvents = array(envelopeValue(await json(rejectEventsResponse))).map(record);
+  expect(record(rejectEvents.at(-1)!.payload)).toMatchObject({ command: "REJECT", candidate_plan_id: null });
+  expect(record(rejectEvents.at(-1)!.actor).id).toBe(actorId);
+
+  // Keep a stale confirmation open while another valid case advances the head.
+  const staleBasis = await currentContext(page.request);
+  const staleSubject = await createReadyCase(page.request, staleBasis, "Stale confirmation subject");
+  const staleAdvancer = await createReadyCase(page.request, staleBasis, "Stale confirmation head advancer");
+  const staleSubjectApproval = await approveCase(page.request, staleSubject);
+  const staleAdvancerApproval = await approveCase(page.request, staleAdvancer);
+  const staleSubjectBefore = await caseDatabaseState(staleSubject.id);
+  await page.goto(`/operations/recommendations?caseId=${encodeURIComponent(staleSubject.id)}`);
+  await expect(page.getByRole("button", { name: "Commit approved schedule" })).toBeEnabled();
+  await page.getByRole("button", { name: "Commit approved schedule" }).click();
+  await expect(page.getByRole("heading", { name: "Confirm commit" })).toBeVisible();
+
+  const advancingCommit = commitCommand(staleAdvancer, staleAdvancerApproval.payload);
+  const advancingResponse = await page.request.post(`${apiBase}/api/v1/decision-cases/${staleAdvancer.id}/decision`, {
+    headers: { "Idempotency-Key": `stale-advance-${randomUUID()}` }, data: advancingCommit,
+  });
+  expect(advancingResponse.status()).toBe(200);
+  expect(envelopeData(await json(advancingResponse)).status).toBe("COMMITTED");
+
+  const staleDecisionUrl = `${apiBase}/api/v1/decision-cases/${staleSubject.id}/decision`;
+  const staleSubmissions: Array<{ key?: string; body: JsonObject; status: number; response: JsonObject }> = [];
+  await page.route(staleDecisionUrl, async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    const response = await route.fetch();
+    const bytes = await response.body();
+    staleSubmissions.push({
+      key: route.request().headers()["idempotency-key"],
+      body: record(route.request().postDataJSON()),
+      status: response.status(),
+      response: record(JSON.parse(bytes.toString("utf8"))),
+    });
+    await route.fulfill({ response, body: bytes });
+  });
+  await page.getByRole("button", { name: "Confirm commit", exact: true }).click();
+  await expect(page.locator('p[role="alert"]').filter({ hasText: "Refresh and review again" })).toContainText(
+    "this request will not be resubmitted with new tokens",
+  );
+  await expect(page.getByRole("button", { name: "I have reviewed the refreshed case" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Commit approved schedule" })).toBeDisabled();
+  expect(staleSubmissions).toHaveLength(1);
+  expect(staleSubmissions[0].status).toBe(409);
+  expect(record(staleSubmissions[0].response.error).code).toBe("PLAN_VERSION_CONFLICT");
+  expect(staleSubmissions[0].body).toMatchObject({
+    expected_plan_version: staleBasis.planVersion,
+    expected_case_revision: record(staleSubjectApproval.payload.meta).case_revision,
+  });
+  await page.waitForTimeout(500);
+  expect(staleSubmissions).toHaveLength(1);
+  expect(await caseDatabaseState(staleSubject.id)).toEqual(staleSubjectBefore);
+  await page.unroute(staleDecisionUrl);
+
+  // Two approved LIVE cases race without assigning either one as the expected winner.
+  const raceBasis = await currentContext(page.request);
+  const raceCases = await Promise.all([
+    createReadyCase(page.request, raceBasis, "Commit race case A"),
+    createReadyCase(page.request, raceBasis, "Commit race case B"),
+  ]);
+  const raceApprovals = await Promise.all(raceCases.map(item => approveCase(page.request, item)));
+  const raceCommands = raceCases.map((item, index) => commitCommand(item, raceApprovals[index].payload));
+  const raceKeys = raceCases.map(() => `race-commit-${randomUUID()}`);
+  const raceScheduleBefore = await currentSchedule(page.request);
+  const raceCountsBefore = array(await databaseQuery(`SELECT
+    (SELECT count(*)::int FROM decision_commits) AS publications,
+    (SELECT count(*)::int FROM operation_schedules) AS schedules`))[0] as JsonObject;
+  const raceCaseStateBefore = await Promise.all(raceCases.map(item => caseDatabaseState(item.id)));
+  const raceResponses = await Promise.all(raceCases.map((item, index) => page.request.post(
+    `${apiBase}/api/v1/decision-cases/${item.id}/decision`,
+    { headers: { "Idempotency-Key": raceKeys[index] }, data: raceCommands[index] },
+  )));
+  expect(raceResponses.map(response => response.status()).sort()).toEqual([200, 409]);
+  const racePayloads = await Promise.all(raceResponses.map(json));
+  const winnerIndex = raceResponses.findIndex(response => response.status() === 200);
+  const loserIndex = raceResponses.findIndex(response => response.status() === 409);
+  expect(winnerIndex).toBeGreaterThanOrEqual(0);
+  expect(loserIndex).toBeGreaterThanOrEqual(0);
+  const winner = raceCases[winnerIndex];
+  const loser = raceCases[loserIndex];
+  expect(record(racePayloads[loserIndex].error).code).toBe("PLAN_VERSION_CONFLICT");
+
+  const winnerReplay = await page.request.post(`${apiBase}/api/v1/decision-cases/${winner.id}/decision`, {
+    headers: { "Idempotency-Key": raceKeys[winnerIndex] }, data: raceCommands[winnerIndex],
+  });
+  expect(winnerReplay.status()).toBe(200);
+  expect(winnerReplay.headers()["idempotency-replayed"]).toBe("true");
+  expect(await json(winnerReplay)).toEqual(racePayloads[winnerIndex]);
+  const loserReplay = await page.request.post(`${apiBase}/api/v1/decision-cases/${loser.id}/decision`, {
+    headers: { "Idempotency-Key": raceKeys[loserIndex] }, data: raceCommands[loserIndex],
+  });
+  expect(loserReplay.status()).toBe(409);
+  expect(record((await json(loserReplay)).error).code).toBe("PLAN_VERSION_CONFLICT");
+
+  const racePublished = await currentSchedule(page.request);
+  expect(racePublished.plan_version).toBe(number(raceScheduleBefore.plan_version, "race base plan version") + 1);
+  expect(racePublished.schedule).toEqual(winner.candidate.schedule);
+  expect(record(racePublished.commit).decision_case_id).toBe(winner.id);
+  expect(record(racePublished.commit).actor_id).toBe(actorId);
+  const raceCountsAfter = array(await databaseQuery(`SELECT
+    (SELECT count(*)::int FROM decision_commits) AS publications,
+    (SELECT count(*)::int FROM operation_schedules) AS schedules`))[0] as JsonObject;
+  expect(raceCountsAfter).toEqual({
+    publications: number(raceCountsBefore.publications, "publication count") + 1,
+    schedules: number(raceCountsBefore.schedules, "schedule count") + 1,
+  });
+  expect(await caseDatabaseState(loser.id)).toEqual(raceCaseStateBefore[loserIndex]);
+  expect(await databaseQuery('SELECT case_id::text FROM decision_commits WHERE case_id IN ($1::uuid, $2::uuid)', raceCases[0].id, raceCases[1].id))
+    .toEqual([{ case_id: winner.id }]);
+
+  const winnerReadResponse = await page.request.get(`${apiBase}/api/v1/decision-cases/${winner.id}`);
+  const winnerRead = await json(winnerReadResponse);
+  expect(envelopeData(winnerRead).status).toBe("COMMITTED");
+  expect(record(record(winnerRead.meta).commit).actor_id).toBe(actorId);
+  const winnerEventsResponse = await page.request.get(`${apiBase}/api/v1/decision-cases/${winner.id}/events`);
+  const winnerEvents = array(envelopeValue(await json(winnerEventsResponse))).map(record);
+  expect(winnerEvents.slice(-2).map(event => record(event.payload).command)).toEqual(["APPROVE", "COMMIT"]);
+  expect(winnerEvents.slice(-2).every(event => record(event.actor).id === actorId)).toBe(true);
+  const winnerDatabaseEvents = array(await databaseQuery(
+    'SELECT sequence, type, actor_id, actor_kind, occurred_at, payload_json FROM decision_case_events WHERE case_id=$1::uuid ORDER BY sequence',
+    winner.id,
+  )).map(record);
+  expect(winnerEvents).toHaveLength(winnerDatabaseEvents.length);
+  for (const [index, event] of winnerEvents.entries()) {
+    const stored = winnerDatabaseEvents[index];
+    expect(event.sequence).toBe(stored.sequence);
+    expect(event.type).toBe(stored.type);
+    expect(record(event.actor)).toEqual({ kind: stored.actor_kind, id: stored.actor_id });
+    expect(Date.parse(string(event.occurred_at, "event occurred_at"))).toBe(new Date(stored.occurred_at as string | Date).getTime());
+    expect(record(stored.payload_json)).toMatchObject(record(event.payload));
+  }
+
+  // A granted VIEWER can read/list but cannot write; an ungranted VIEWER cannot discover the factory or case.
+  const viewer = await loginContext(browser, viewerUsername, rolePassword);
+  const viewerRead = await viewer.request.get(`${apiBase}/api/v1/decision-cases/${winner.id}`);
+  expect(viewerRead.status()).toBe(200);
+  expect(record((await json(viewerRead)).meta).available_commands).toEqual([]);
+  const viewerWrite = await viewer.request.post(`${apiBase}/api/v1/decision-cases/${loser.id}/decision`, {
+    headers: { "Idempotency-Key": `viewer-forbidden-${randomUUID()}` }, data: raceCommands[loserIndex],
+  });
+  expect(viewerWrite.status()).toBe(403);
+  expect(record((await json(viewerWrite)).error).code).toBe("FORBIDDEN");
+  const liveRows = await listAllCases(viewer.request, { mode: "LIVE" });
+  expect(liveRows.map(row => row.decision_case_id)).toEqual(expect.arrayContaining([winner.id, loser.id, rejectCase.id]));
+  const committedRows = await listAllCases(viewer.request, { status: "COMMITTED" });
+  expect(committedRows.some(row => row.decision_case_id === winner.id)).toBe(true);
+  const rejectedRows = await listAllCases(viewer.request, { status: "REJECTED" });
+  expect(rejectedRows.map(row => row.decision_case_id)).toContain(rejectCase.id);
+  const outsider = await loginContext(browser, outsiderUsername, rolePassword);
+  for (const response of [
+    await outsider.request.get(`${apiBase}/api/v1/operations/snapshot`, { params: { factory_id: factoryId } }),
+    await outsider.request.get(`${apiBase}/api/v1/decision-cases`, { params: { factory_id: factoryId } }),
+    await outsider.request.get(`${apiBase}/api/v1/decision-cases/${winner.id}`),
+  ]) {
+    expect(response.status()).toBe(404);
+    const payload = await json(response);
+    const publicError = record(payload.error ?? payload);
+    expect(publicError.code).toMatch(/^(FACTORY_NOT_FOUND|DECISION_CASE_NOT_FOUND)$/);
+    expect(JSON.stringify(payload)).not.toContain(winner.id);
+  }
+  await viewer.close();
+  await outsider.close();
+
+  // Rediscover the committed case through a paged service read after closing the tab, then reopen it in a new tab.
+  expect(liveRows.some(row => row.decision_case_id === winner.id)).toBe(true);
+  const adminContext = page.context();
+  await page.close();
+  const reopened = await adminContext.newPage();
+  await reopened.goto(`/operations/recommendations?caseId=${encodeURIComponent(winner.id)}`);
+  await expect(reopened.getByRole("heading", { name: "Published schedule", exact: true })).toBeVisible();
+  await expect(reopened.getByText(winner.id, { exact: true }).first()).toBeVisible();
+
   const evidence = {
     schema_version: "1.0",
     run: process.env.OPERATIONS_E2E_RUN || "1",
@@ -457,7 +750,9 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     candidate_count: candidates.length,
     recommendation_fingerprint: recommendationFingerprint(recommendation),
     event_sequences: events.map(value => record(value).sequence),
-    published_plan_version: published.plan_version,
+    published_plan_version: racePublished.plan_version,
+    race_winner_case_id: winner.id,
+    race_loser_case_id: loser.id,
     decision_submissions: decisionSubmissions,
     checks: {
       real_fastapi_recommendation: "passed",
@@ -470,9 +765,16 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
       reload_preserved_recommendation: "passed",
       decision_write_http_status: simulationCommit.status(),
       full_approval_commit_flow: "passed",
-      stale_decision_command: "not_executed",
-      competing_commits: "not_executed",
+      stale_decision_command: "passed",
+      competing_commits: "passed",
       decision_command_receipt_replay: "passed",
+      real_service_reject: "passed",
+      read_only_role: "passed",
+      factory_isolation: "passed",
+      case_list_filter_and_pagination: "passed",
+      close_reopen_case_recovery: "passed",
+      audit_timeline_matches_postgresql: "passed",
+      frontend_case_list_navigation: "not_available",
     },
   };
   await mkdir(path.dirname(evidenceFile), { recursive: true });

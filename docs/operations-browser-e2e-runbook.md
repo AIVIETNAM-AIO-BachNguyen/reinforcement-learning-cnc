@@ -62,6 +62,12 @@ CREATED -> ANALYZING -> GENERATING -> VALIDATING
 The browser verifies 1–3 valid candidates, matching factory/snapshot/case IDs,
 ordered event history, and the same persisted package after reload.
 
+The full gate runs the lightweight Next.js browser contract suite first and
+waits for its web server to stop before starting this real-service suite. The
+two Next.js processes never overlap. The real-service harness owns temporary
+ports and a `product_api_it_browser_*` schema, and removes every process, port
+and schema from `finally` on pass, failure, `SIGINT`, or `SIGTERM`.
+
 ## Three consecutive demo runs from reset
 
 Each repetition uses a newly migrated schema, so it starts from a complete
@@ -110,6 +116,20 @@ The current suite verifies:
   byte-for-byte unchanged;
 - a browser reload reads the same persisted recommendation and complete event
   sequence.
+- a confirmation opened against an old case/head revision receives `409`, asks
+  the operator to review the refreshed case, and never rewrites tokens or
+  automatically submits a second command;
+- two approved LIVE cases with one immutable basis race to commit; the suite
+  discovers the winner from the responses and requires exactly one publication
+  and one plan-version increment;
+- the winning commit receipt replays byte-for-byte with its original key/body,
+  while the losing request leaves its case, events, receipts and publications
+  unchanged;
+- real-service rejection, VIEWER read-only permissions and factory isolation;
+- signed-cursor paging and LIVE/status filters, plus a close/reopen tab recovery
+  using the case rediscovered from the service;
+- the complete public event timeline matches the PostgreSQL event sequence,
+  actor, type, timestamp and allowlisted payload fields.
 
 The harness now includes main's decision endpoint. Simulation approval must return
 `200`, and its commit must return `409 SIMULATION_ONLY` with no change to the case,
@@ -118,6 +138,26 @@ after the backend succeeds, then recovered after reload with the same key/body.
 Approval leaves the schedule unchanged; commit publishes the exact approved
 schedule once and advances the plan version by one. Reload never sends a POST.
 The committed actor is checked against the authenticated creator.
+
+Main currently has the Decision Case list/read API but no frontend case-list
+screen. The service pagination/filter and direct-link close/reopen recovery are
+therefore asserted and recorded as passed; evidence records
+`frontend_case_list_navigation: not_available` rather than claiming a browser
+list UI was exercised. Once that screen exists, replace this marker with an
+actual UI assertion before it may become `passed`.
+
+## Evidence rules
+
+An evidence check is written as `passed` only after its assertion completes.
+The evidence file is written at the end of the test, so a failed assertion
+cannot leave a misleading successful run record. Missing product capability is
+written as `not_available`; it is never treated as enforcement passing.
+
+CI invokes the real-service suite with `--repeat=3`. Each repetition migrates a
+different empty schema, starts PostgreSQL-backed API/worker/FastAPI/Next.js and
+real Chromium, and cleans the whole scope before the next repetition. The
+summary is keyed by the tested Git SHA and is created only when all three runs
+pass.
 
 ## Explicit long-lived demo schema reset
 
