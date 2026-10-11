@@ -4,8 +4,10 @@ const { requireAuth } = require('../../middlewares/auth.middleware');
 const { createDecisionCase, getDecisionCase,
   getDecisionCaseEvents } = require('../../services/decision-case.service');
 const { getDecisionRecommendation } = require('../../services/decision-planning.service');
+const { listDecisionCases } = require('../../services/decision-case-list.service');
 router.use(requireAuth);
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+router.get('/', async (req, res) => res.json(await listDecisionCases(db, req.user, req.query)));
 router.post('/', async (req, res) => {
   const result = await createDecisionCase(db, req.user, req.body, req.get('Idempotency-Key'));
   res.status(202).set('Location', result.location);

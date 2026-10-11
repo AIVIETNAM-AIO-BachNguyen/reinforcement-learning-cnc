@@ -648,12 +648,54 @@ paths:
           description: >-
             VALIDATION_ERROR: missing/invalid/unknown/repeated query parameters or invalid limit. INVALID_CURSOR:
             cursor format, signature, version or scope error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INVALID_CURSOR
+                  message: >-
+                    VALIDATION_ERROR: missing/invalid/unknown/repeated query parameters or invalid limit.
+                    INVALID_CURSOR: cursor format, signature, version or scope error.
+                requestId: list-request-1
         '401':
           description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: UNAUTHORIZED
+                  message: UNAUTHORIZED
+                requestId: list-request-1
         '404':
           description: 'FACTORY_NOT_FOUND: absent or inaccessible factory'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: FACTORY_NOT_FOUND
+                  message: 'FACTORY_NOT_FOUND: absent or inaccessible factory'
+                requestId: list-request-1
         '503':
-          description: FACTORY_ACCESS_UNAVAILABLE or DB_UNAVAILABLE
+          description: FACTORY_ACCESS_UNAVAILABLE or DB_UNAVAILABLE; CURSOR_SIGNING_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: FACTORY_ACCESS_UNAVAILABLE
+                  message: FACTORY_ACCESS_UNAVAILABLE or DB_UNAVAILABLE
+                requestId: list-request-1
     post:
       summary: Create a case without executing a planner
       description: >-
@@ -726,16 +768,17 @@ paths:
       summary: Read sanitized events ascending by sequence; limit + 1 determines has_more
       description: >-
         Read-only factory-authorized history; missing/inaccessible cases return 404 DECISION_CASE_NOT_FOUND.
-        after_sequence is exclusive, default 0; limit defaults to 100 and is bounded 1..200. Sort by sequence ASC,
-        never timestamp. Sequence is unique per case and need not equal case_revision (worker heartbeat revisions
-        can have no event). Continue or poll using meta.next_after_sequence, even when has_more=false; empty pages
-        echo the supplied sequence. Actor kind/id and occurred_at are server-owned. HUMAN CASE_STATUS_CHANGED events
-        for APPROVE/REJECT/COMMIT include command, recommendation_id, candidate_plan_id/version/hash, schedule_hash
-        and head plan_version. REJECT has null candidate fields. APPROVE/REJECT report unchanged head version;
-        COMMIT reports the new version. Publication schedule ID/basis/time are available in case meta.commit or
-        current-schedule commit metadata. Worker transitions have SYSTEM actors and may omit command fields. Unknown
-        event types expose an empty payload. Raw request/artifact/snapshot, notes and leases are excluded. Every
-        page rechecks authentication/factory access. Cache-Control: no-store.
+        after_sequence is exclusive, default 0; limit defaults to 100 and is bounded 1..200. Sort by sequence
+        ASC, never timestamp. Sequence is unique per case and need not equal case_revision (worker heartbeat
+        revisions can have no event). Continue or poll using meta.next_after_sequence, even when has_more=false;
+        empty pages echo the supplied sequence. Actor kind/id and occurred_at are server-owned. HUMAN
+        CASE_STATUS_CHANGED events for APPROVE/REJECT/COMMIT include command, recommendation_id,
+        candidate_plan_id/version/hash, schedule_hash and head plan_version. REJECT has null candidate fields.
+        APPROVE/REJECT report unchanged head version; COMMIT reports the new version. Publication schedule
+        ID/basis/time are available in case meta.commit or current-schedule commit metadata. Worker transitions
+        have SYSTEM actors and may omit command fields. Unknown event types expose an empty payload. Raw
+        request/artifact/snapshot, notes and leases are excluded. Every page rechecks authentication/factory
+        access. Cache-Control: no-store.
       parameters:
         - in: path
           name: id
@@ -764,8 +807,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DecisionCaseEventsResponse'
+              example:
+                success: true
+                data:
+                  - id: cccccccc-cccc-4ccc-8ccc-ccccccccccc0
+                    case_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    sequence: 7
+                    type: CASE_STATUS_CHANGED
+                    actor:
+                      kind: HUMAN
+                      id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    occurred_at: '2026-10-11T02:00:00.000Z'
+                    payload:
+                      from_status: AWAITING_APPROVAL
+                      to_status: APPROVED
+                      revision: 7
+                      command: APPROVE
+                      recommendation_id: recommendation-1
+                      candidate_plan_id: candidate-1
+                      candidate_version: 17
+                      candidate_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                      schedule_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                      plan_version: 0
+                  - id: cccccccc-cccc-4ccc-8ccc-ccccccccccc1
+                    case_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                    sequence: 8
+                    type: CASE_STATUS_CHANGED
+                    actor:
+                      kind: HUMAN
+                      id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                    occurred_at: '2026-10-11T02:01:00.000Z'
+                    payload:
+                      from_status: APPROVED
+                      to_status: COMMITTED
+                      revision: 8
+                      command: COMMIT
+                      recommendation_id: recommendation-1
+                      candidate_plan_id: candidate-1
+                      candidate_version: 17
+                      candidate_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                      schedule_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                      plan_version: 1
+                meta:
+                  has_more: false
+                  next_after_sequence: 8
         '400':
-          description: 'Invalid strict body, trigger, idempotency key or cursor'
+          description: 'VALIDATION_ERROR: invalid, unknown or repeated after_sequence/limit query parameters.'
         '401':
           description: Authentication required
         '404':

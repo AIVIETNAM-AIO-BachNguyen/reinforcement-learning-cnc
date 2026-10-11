@@ -16,10 +16,12 @@ existing factory. Unknown and inaccessible factories return the same 404
 `FACTORY_NOT_FOUND`. An accessible factory with no matching cases returns an empty page.
 
 ```ts
+let nextCursor: string | null = null; // Keep between page requests; reset on filter change.
 const query = new URLSearchParams({ factory_id: factoryId, limit: '25' });
 // Add the same status/mode filters on every page when selected.
 if (nextCursor !== null) query.set('cursor', nextCursor);
 const response = await fetch(`/api/v1/decision-cases?${query}`, { credentials: 'include' });
+if (!response.ok) throw new Error(`List failed: ${response.status}`);
 const page = await response.json();
 // Render page.data; use item.decision_case_id to open existing case detail APIs.
 // Continue only if page.meta.has_more; persist factory/filter selection for rediscovery.
@@ -48,6 +50,8 @@ after its own commit. Candidate version, case revision and head plan version rem
 different values. Existing detail, command and canonical status contracts are unchanged.
 
 ## Events
+
+[APPROVE/COMMIT event page example](../../examples/decision-case-events.page.json).
 
 ```http
 GET /api/v1/decision-cases/<caseId>/events?after_sequence=0&limit=100
