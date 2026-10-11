@@ -537,6 +537,123 @@ paths:
         '503':
           description: Contract validator unavailable
   /decision-cases:
+    get:
+      summary: Find decision cases within one authorized factory
+      description: >-
+        Read-only summary list. All authenticated roles require factory access; ADMIN can access any existing
+        factory. Missing/inaccessible factories return the same 404. Sort: created_at DESC, id DESC; full
+        PostgreSQL microsecond precision is retained in the cursor. Single-value filters combine with AND. No raw
+        request, snapshot, artifact, note, lease or receipt. Each page uses repeatable-read for consistent
+        case/head/provenance. stale compares original case basis with current head, including after its own
+        commit. Opaque signed cursors bind actor/factory/status/mode; keep this scope on subsequent requests.
+        Limit may change. Malformed, tampered, unsupported or scope-mismatched cursors return INVALID_CURSOR. No
+        time expiry; signing-key rotation invalidates cursors. Every page rechecks authorization. Fixed data has
+        no duplicated/missing items; pages are not a cross-request snapshot, so restart without a cursor when
+        refreshing a changing dataset. has_more uses limit+1; next_cursor is null on final/empty pages. No total
+        count.
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/CaseContractDecisionCaseStatus'
+        - in: query
+          name: mode
+          required: false
+          schema:
+            enum:
+              - LIVE
+              - SIMULATION_ONLY
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2048
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: 'Summary page. Cache-Control: no-store.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionCaseListResponse'
+              examples:
+                committed:
+                  value:
+                    success: true
+                    data:
+                      - schema_version: '3.0'
+                        decision_case_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+                        mode: LIVE
+                        status: COMMITTED
+                        snapshot_id: snapshot-1
+                        created_at: '2026-10-09T04:00:00.000Z'
+                        updated_at: '2026-10-09T04:00:00.000Z'
+                        recommendation_id: recommendation-1
+                        committed_schedule_id: schedule-1
+                        error_code: null
+                        factory_id: factory-1
+                        base_plan_version: 0
+                        case_revision: 8
+                        current_context:
+                          snapshot_id: snapshot-1
+                          plan_version: 1
+                        stale: true
+                        human_decision:
+                          decision: APPROVE
+                          recommendation_id: recommendation-1
+                          candidate_plan_id: candidate-1
+                          candidate_version: 17
+                          actor_id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                          decided_at: '2026-10-09T04:00:00.000Z'
+                        publication:
+                          schedule_id: schedule-1
+                          schedule_revision: 9
+                          plan_version: 1
+                          snapshot_id: snapshot-1
+                          actor_id: bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+                          committed_at: '2026-10-09T04:00:00.000Z'
+                    meta:
+                      factory_id: factory-1
+                      limit: 25
+                      has_more: false
+                      next_cursor: null
+                empty:
+                  value:
+                    success: true
+                    data: []
+                    meta:
+                      factory_id: factory-1
+                      limit: 25
+                      has_more: false
+                      next_cursor: null
+        '400':
+          description: >-
+            VALIDATION_ERROR: missing/invalid/unknown/repeated query parameters or invalid limit. INVALID_CURSOR:
+            cursor format, signature, version or scope error.
+        '401':
+          description: UNAUTHORIZED
+        '404':
+          description: 'FACTORY_NOT_FOUND: absent or inaccessible factory'
+        '503':
+          description: FACTORY_ACCESS_UNAVAILABLE or DB_UNAVAILABLE
     post:
       summary: Create a case without executing a planner
       description: >-
@@ -607,6 +724,18 @@ paths:
   '/decision-cases/{id}/events':
     get:
       summary: Read sanitized events ascending by sequence; limit + 1 determines has_more
+      description: >-
+        Read-only factory-authorized history; missing/inaccessible cases return 404 DECISION_CASE_NOT_FOUND.
+        after_sequence is exclusive, default 0; limit defaults to 100 and is bounded 1..200. Sort by sequence ASC,
+        never timestamp. Sequence is unique per case and need not equal case_revision (worker heartbeat revisions
+        can have no event). Continue or poll using meta.next_after_sequence, even when has_more=false; empty pages
+        echo the supplied sequence. Actor kind/id and occurred_at are server-owned. HUMAN CASE_STATUS_CHANGED events
+        for APPROVE/REJECT/COMMIT include command, recommendation_id, candidate_plan_id/version/hash, schedule_hash
+        and head plan_version. REJECT has null candidate fields. APPROVE/REJECT report unchanged head version;
+        COMMIT reports the new version. Publication schedule ID/basis/time are available in case meta.commit or
+        current-schedule commit metadata. Worker transitions have SYSTEM actors and may omit command fields. Unknown
+        event types expose an empty payload. Raw request/artifact/snapshot, notes and leases are excluded. Every
+        page rechecks authentication/factory access. Cache-Control: no-store.
       parameters:
         - in: path
           name: id
@@ -3241,6 +3370,209 @@ components:
         - $ref: '#/components/schemas/DecisionCommitCommand'
       discriminator:
         propertyName: command
+    DecisionCaseListHumanSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - decision
+        - recommendation_id
+        - candidate_plan_id
+        - candidate_version
+        - actor_id
+        - decided_at
+      properties:
+        decision:
+          enum:
+            - APPROVE
+            - REJECT
+        recommendation_id:
+          type: string
+        candidate_plan_id:
+          anyOf:
+            - type: string
+            - type: 'null'
+        candidate_version:
+          anyOf:
+            - type: integer
+              minimum: 1
+            - type: 'null'
+        actor_id:
+          type: string
+          format: uuid
+        decided_at:
+          type: string
+          format: date-time
+    DecisionCaseListPublicationSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - schedule_id
+        - schedule_revision
+        - plan_version
+        - snapshot_id
+        - actor_id
+        - committed_at
+      properties:
+        schedule_id:
+          type: string
+        schedule_revision:
+          type: integer
+          minimum: 1
+        plan_version:
+          type: integer
+          minimum: 1
+        snapshot_id:
+          type: string
+        actor_id:
+          type: string
+          format: uuid
+        committed_at:
+          type: string
+          format: date-time
+    DecisionCaseListItem:
+      type: object
+      additionalProperties: false
+      required:
+        - committed_schedule_id
+        - created_at
+        - decision_case_id
+        - error_code
+        - mode
+        - recommendation_id
+        - schema_version
+        - snapshot_id
+        - status
+        - updated_at
+        - factory_id
+        - base_plan_version
+        - case_revision
+        - current_context
+        - stale
+        - human_decision
+        - publication
+      properties:
+        committed_schedule_id:
+          anyOf:
+            - maxLength: 128
+              minLength: 1
+              pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+              type: string
+            - type: 'null'
+          default: null
+          title: Committed Schedule Id
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        decision_case_id:
+          maxLength: 128
+          minLength: 1
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+          title: Decision Case Id
+          type: string
+        error_code:
+          anyOf:
+            - maxLength: 128
+              minLength: 1
+              pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+              type: string
+            - type: 'null'
+          default: null
+          title: Error Code
+        mode:
+          $ref: '#/components/schemas/CaseContractDecisionMode'
+        recommendation_id:
+          anyOf:
+            - maxLength: 128
+              minLength: 1
+              pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+              type: string
+            - type: 'null'
+          default: null
+          title: Recommendation Id
+        schema_version:
+          const: '3.0'
+          default: '3.0'
+          title: Schema Version
+          type: string
+        snapshot_id:
+          maxLength: 128
+          minLength: 1
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+          title: Snapshot Id
+          type: string
+        status:
+          $ref: '#/components/schemas/CaseContractDecisionCaseStatus'
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+        factory_id:
+          type: string
+        base_plan_version:
+          type: integer
+          minimum: 0
+        case_revision:
+          type: integer
+          minimum: 1
+        current_context:
+          type: object
+          additionalProperties: false
+          required:
+            - snapshot_id
+            - plan_version
+          properties:
+            snapshot_id:
+              type: string
+            plan_version:
+              type: integer
+              minimum: 0
+        stale:
+          type: boolean
+        human_decision:
+          anyOf:
+            - $ref: '#/components/schemas/DecisionCaseListHumanSummary'
+            - type: 'null'
+        publication:
+          anyOf:
+            - $ref: '#/components/schemas/DecisionCaseListPublicationSummary'
+            - type: 'null'
+    DecisionCaseListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionCaseListItem'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+            - factory_id
+            - limit
+            - has_more
+            - next_cursor
+          properties:
+            factory_id:
+              type: string
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+            has_more:
+              type: boolean
+            next_cursor:
+              anyOf:
+                - type: string
+                  maxLength: 2048
+                - type: 'null'
     DecisionCaseResponse:
       type: object
       required:
