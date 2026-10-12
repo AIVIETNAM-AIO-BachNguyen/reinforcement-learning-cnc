@@ -36,8 +36,9 @@ timeline. It does not introduce a landing page, schedule editor or KPI logic.
 ## Discovery and pagination
 
 Factory ID is required; no guessed list of authorized factories is displayed.
-Status/mode combine with AND. Apply stores filter selection in the URL so a
-reload reopens the same scope; cursor position is deliberately not persisted.
+Status/mode combine with AND. Apply uses Next router replacement so the URL and
+cached route agree; reload and browser Back after opening a recommendation restore
+the applied factory/status/mode scope. Cursor position is deliberately not persisted.
 Only the backend's opaque cursor is sent to subsequent pages. A filter change
 aborts the old request and starts without a cursor. Late responses cannot
 replace another scope. Loading the next page is synchronously locked against
@@ -112,7 +113,8 @@ unknown event types, publication metadata and fail-closed mismatches.
 
 `tests/browser/decision-cases-audit.spec.ts` runs desktop/mobile through the real
 HTTP adapter with a stateful **contract harness**. It verifies 26-case paging,
-URL filter recovery, reopening a committed case, a four-page history, refresh
+URL filter recovery including browser Back without an intervening reload,
+reopening a committed case, a four-page history, refresh
 and reload with zero case writes, loading/empty/network/retry/auth and viewport
 overflow. This is not a PostgreSQL or worker acceptance claim.
 
@@ -160,3 +162,11 @@ The PR handoff must state the exact tested SHA and distinguish contract/browser
 results from this real-service gate. At local implementation time no PostgreSQL
 listener, backend service or live credentials were configured. Keep the PR
 **draft** until the real-service gate passes; do not substitute fixture evidence.
+
+## Integration after PR #42
+
+The real-service E2E retains both discovery/audit and stale/competing commit flows.
+Discovery runs before the race phase closes the original page. Its read-only
+command evidence is captured at the end of discovery, so later intentional race
+commands are not included. Desktop/mobile acceptance applies filters through the
+form, opens the case and uses browser Back to confirm the same scoped list.

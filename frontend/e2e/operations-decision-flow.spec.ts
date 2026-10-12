@@ -592,7 +592,11 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(freshEvents.filter(item => record(item.payload).command === "COMMIT")).toHaveLength(1);
   for (const [name, width, height] of [["desktop", 1440, 1000], ["mobile", 390, 844]] as const) {
     await page.setViewportSize({ width, height });
-    await page.goto(`/operations/cases?${new URLSearchParams({ factory_id: factoryId, status: "COMMITTED", mode: "LIVE" })}`);
+    await page.goto(`/operations/cases?${new URLSearchParams({ factory_id: factoryId })}`);
+    await expect(page.getByRole("button", { name: "Refresh cases" })).toBeEnabled();
+    await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("COMMITTED");
+    await page.getByRole("combobox", { name: "Case mode", exact: true }).selectOption("LIVE");
+    await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
     await expect(page.getByRole("combobox", { name: "Case mode", exact: true })).toHaveValue("LIVE");
     const open = page.getByRole("link", { name: `Open recommendation for ${caseId}` });
@@ -604,6 +608,13 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     const timeline = page.getByRole("list", { name: "Decision case audit events" });
     await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
     expect(await timeline.getByRole("listitem").evaluateAll(nodes => nodes.map(node => Number(node.getAttribute("data-sequence"))))).toEqual(freshSequences);
+    await page.goBack();
+    await expect(page).toHaveURL(/status=COMMITTED&mode=LIVE/);
+    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
+    await expect(page.getByRole("combobox", { name: "Case mode", exact: true })).toHaveValue("LIVE");
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await open.click();
+    await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
     await page.locator("#decision-case-audit").screenshot({ path: test.info().outputPath(`real-case-audit-${name}.png`), style: "header.sticky { visibility: hidden !important; }" });
     await page.getByRole("button", { name: "Refresh history" }).click();
     await expect(page.getByRole("button", { name: "Refresh history" })).toBeEnabled();
@@ -850,6 +861,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
       frontend_case_list_navigation: "passed",
       case_list_scoped_cursor: "passed",
       case_filters_and_reopen: "passed",
+      case_filters_survive_browser_back: "passed",
       complete_audit_refresh_reload: "passed",
       discovery_audit_desktop_mobile: "passed",
       discovery_refresh_is_read_only: "passed",

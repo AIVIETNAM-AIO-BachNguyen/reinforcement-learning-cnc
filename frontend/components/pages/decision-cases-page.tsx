@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { OperationsPanel, OperationsShell, OperationsStatus } from "@/components/operations/operations-shell";
@@ -42,6 +43,7 @@ export function DecisionCaseRow({ item }: { item: DecisionCaseListItem }) {
 export function DecisionCasesPage({ api, apiMode, initialQuery }: {
   api?: OperationsApiClient; apiMode?: OperationsApiMode; initialQuery?: Omit<DecisionCaseListQuery, "cursor">;
 } = {}) {
+  const router = useRouter();
   const client = useMemo(() => api ?? getOperationsApiClient(), [api]);
   const mode = apiMode ?? getOperationsApiMode();
   const [query, setQuery] = useState<Omit<DecisionCaseListQuery, "cursor">>(initialQuery ?? { factory_id: getOperationsFactoryId(), limit: 25 });
@@ -57,7 +59,7 @@ export function DecisionCasesPage({ api, apiMode, initialQuery }: {
     const params = new URLSearchParams({ factory_id: next.factory_id });
     if (next.status) params.set("status", next.status);
     if (next.mode) params.set("mode", next.mode);
-    window.history.replaceState(window.history.state, "", `/operations/cases?${params}`);
+    router.replace(`/operations/cases?${params}`, { scroll: false });
     if (JSON.stringify(next) === JSON.stringify(query)) refresh();
     else setQuery(next);
   }

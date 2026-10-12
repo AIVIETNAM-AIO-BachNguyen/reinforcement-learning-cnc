@@ -8,7 +8,8 @@ import { createMockOperationsApiClient } from "@/lib/operations-api/mock";
 import { caseListFixture } from "./decision-case-read-fixtures";
 
 vi.mock("@/components/app-shell", () => ({ AppShell: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/operations/cases" }));
+const replace = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ usePathname: () => "/operations/cases", useRouter: () => ({ replace }) }));
 
 describe("Decision Cases discovery", () => {
   it("renders backend identity/basis/head/stale/publication and opens the exact case", async () => {
@@ -45,7 +46,7 @@ describe("Decision Cases discovery", () => {
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(1));
     const filtered = new URL(String(fetcher.mock.lastCall?.[0]), "http://localhost");
     expect(Object.fromEntries(filtered.searchParams)).toEqual({ factory_id: "factory-1", status: "APPROVED", mode: "SIMULATION_ONLY", limit: "1" });
-    expect(window.location.search).toContain("mode=SIMULATION_ONLY");
+    expect(replace).toHaveBeenCalledWith("/operations/cases?factory_id=factory-1&status=APPROVED&mode=SIMULATION_ONLY", { scroll: false });
     await user.click(screen.getByRole("button", { name: "Refresh cases" }));
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4));
     expect(String(fetcher.mock.lastCall?.[0])).not.toContain("cursor=");

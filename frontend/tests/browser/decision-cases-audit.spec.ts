@@ -145,3 +145,25 @@ test("loading, read errors, network retry and authorization discard rows", async
   await capture(page, info, "authorization");
   expect(harness.writes).toEqual([]);
 });
+
+
+test("browser Back restores applied case filters and performs no commands", async ({ page }) => {
+  const harness = await readContractHarness(page);
+  await page.goto("/operations/cases");
+  await expect(page.getByText("25 cases loaded", { exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("COMMITTED");
+  await page.getByRole("combobox", { name: "Case mode", exact: true }).selectOption("LIVE");
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(page.getByText("1 case loaded", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: `Open recommendation for ${harness.committedId}` }).click();
+  await expect(page.getByRole("list", { name: "Decision case audit events" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/status=COMMITTED/);
+  await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
+  await expect(page.getByRole("combobox", { name: "Case mode", exact: true })).toHaveValue("LIVE");
+  await expect(page.getByText("1 case loaded", { exact: true })).toBeVisible();
+  const lastListRead = harness.reads.filter(url => url.pathname.endsWith("/decision-cases")).at(-1)!;
+  expect(lastListRead.searchParams.get("status")).toBe("COMMITTED");
+  expect(lastListRead.searchParams.get("mode")).toBe("LIVE");
+  expect(harness.writes).toEqual([]);
+});
