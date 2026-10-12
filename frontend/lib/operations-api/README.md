@@ -21,6 +21,11 @@ DB_UNAVAILABLE). Errors use `OperationsApiError` with canonical v3 `ErrorRespons
 payloads, available through `contractError`, matching `backend/workflow` read routes.
 Unknown factories return 404. Pre-aborted read signals reject with AbortError.
 Event streams remain outside this mock's scope and fail explicitly with 501.
+Paged `listEvents` reads are supported for mock-created cases: they use the
+backend HistoryEvent envelope, retain sequence metadata and never repeat an
+event on receipt replay. `listDecisionCases` uses the same backend list DTO,
+factory/status/mode AND filters and scoped opaque keyset cursors. Both reads
+are side-effect free; only the existing mock worker status read advances a case.
 Missing preview cases return 404. `/operations`
 selects this adapter by default through `NEXT_PUBLIC_OPERATIONS_API_MODE=mock`.
 Set that variable to `real` and configure `NEXT_PUBLIC_OPERATIONS_FACTORY_ID`
@@ -36,11 +41,13 @@ Keys and historical responses are stored in preview receipts and replayed before
 head fencing, including when the current version has advanced. A key reused with
 different content returns 409. This preview never calculates KPI or validation.
 
-`persist: true` keeps preview cases, receipts and publication in session storage;
+`persist: true` keeps preview cases, public events, receipts and publication in session storage;
 the page's default adapter enables it so mock reload preserves workflow state.
 Tests use isolated in-memory instances unless persistence is explicitly requested.
 Real mode never reads this preview store. See the complete
 [workflow and acceptance notes](../../../docs/frontend-live-decision-workflow.md).
+See [case discovery and audit notes](../../../docs/frontend-decision-cases-audit.md)
+for complete-page reads, real-service prerequisites and evidence by Git SHA.
 
 From `frontend`, run `npm test -- tests/operations-api-client.test.ts
 tests/operations-api-mock.test.ts` and `npm run typecheck`. Parity tests compare

@@ -41,6 +41,9 @@ async function backendContractHarness(page: Page) {
         const response = await api.submitDecisionCommand(segments[4], body, { idempotencyKey: key });
         if (options.loseResponse) { options.loseResponse = false; await route.abort("failed"); return; }
         data = response.caseStatus; meta = response.meta;
+      } else if (url.pathname.endsWith("/events")) {
+        const response = await api.listEvents(segments[4], Number(url.searchParams.get("after_sequence") ?? 0), { limit: Number(url.searchParams.get("limit") ?? 100) });
+        data = response.data; meta = response.meta;
       } else if (url.pathname.endsWith("/recommendation")) data = await api.getDecisionCaseRecommendation(segments[4]);
       else if (segments[3] === "decision-cases") {
         const response = await api.getDecisionCase(segments[4]);

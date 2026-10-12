@@ -81,7 +81,7 @@ describe("canonical operations mock / HTTP parity", () => {
     const mock = createMockOperationsApiClient();
     await expect(mock.getDecisionCase("case")).rejects.toMatchObject({ status: 404 });
     await expect(mock.getDecisionCaseRecommendation("case")).rejects.toMatchObject({ status: 404 });
-    await expect(mock.listEvents("case")).rejects.toMatchObject({ status: 501 });
+    await expect(mock.listEvents("case")).rejects.toMatchObject({ status: 404 });
     expect(() => mock.eventsUrl("case")).toThrow(OperationsApiError);
   });
 });

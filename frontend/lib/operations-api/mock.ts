@@ -9,6 +9,7 @@ import {
   type OperationsWriteOptions,
 } from "./client";
 import { createOperationsDemoFixtures, createOperationsRecommendationFixture } from "./fixtures";
+import type { DecisionCaseHistoryEvent, DecisionCaseListItem } from "./decision-case-reads";
 
 function normalizedRequest(value: unknown): string {
   return JSON.stringify(value, (_key, item: unknown) => {
@@ -31,6 +32,7 @@ export function createMockOperationsApiClient({
   let commit: OperationsCurrentScheduleResponse["commit"] = null;
   const cases = new Map<string, { response: OperationsDecisionCaseReadResponse; artifact: OperationsDecisionCaseRecommendationResponse }>();
   const receipts = new Map<string, { body: string; response: OperationsDecisionCaseReadResponse }>();
+  const events = new Map<string, DecisionCaseHistoryEvent[]>();
   const storageKey = `operations-preview:v1:${mode}`;
   if (persist && typeof sessionStorage !== "undefined") {
     try {
@@ -38,17 +40,19 @@ export function createMockOperationsApiClient({
         published: typeof published; planVersion: number; commit: typeof commit;
         cases: [string, { response: OperationsDecisionCaseReadResponse; artifact: OperationsDecisionCaseRecommendationResponse }][];
         receipts: [string, { body: string; response: OperationsDecisionCaseReadResponse }][];
+        events?: [string, DecisionCaseHistoryEvent[]][];
       } | null;
       if (saved) {
         published = saved.published; planVersion = saved.planVersion; commit = saved.commit;
         for (const [key, value] of saved.cases) cases.set(key, value);
         for (const [key, value] of saved.receipts) receipts.set(key, value);
+        for (const [key, value] of saved.events ?? []) events.set(key, value);
       }
     } catch { /* A corrupt/disabled preview store starts a fresh explicit preview. */ }
   }
   function save() {
     if (!persist || typeof sessionStorage === "undefined") return;
-    try { sessionStorage.setItem(storageKey, JSON.stringify({ published, planVersion, commit, cases: [...cases], receipts: [...receipts] })); }
+    try { sessionStorage.setItem(storageKey, JSON.stringify({ published, planVersion, commit, cases: [...cases], receipts: [...receipts], events: [...events] })); }
     catch { /* Preview remains available in memory; real mode never uses this store. */ }
   }
   function fail(status: number, code: string, message: string): never {
@@ -72,12 +76,52 @@ export function createMockOperationsApiClient({
     return snapshot;
   }
 
-  async function unsupported(options?: OperationsRequestOptions): Promise<never> {
-    check(options);
-    return fail(501, "NOT_IMPLEMENTED", "The operations mock supports snapshot and current schedule reads only");
+  function recordEvent(caseId: string, type: string, payload: DecisionCaseHistoryEvent["payload"], kind: "HUMAN" | "SYSTEM" = "HUMAN") {
+    const history = events.get(caseId) ?? [];
+    history.push({ id: crypto.randomUUID(), case_id: caseId, sequence: history.length + 1, type,
+      actor: { kind, id: "preview-operator" }, occurred_at: new Date().toISOString(), payload });
+    events.set(caseId, history);
+  }
+  function listItem(response: OperationsDecisionCaseReadResponse): DecisionCaseListItem {
+    const meta = response.meta!;
+    const human = meta.human_decision;
+    const publication = meta.commit;
+    return { ...structuredClone(response.caseStatus), schema_version: "3.0", factory_id: meta.factory_id,
+      recommendation_id: response.caseStatus.recommendation_id ?? null,
+      committed_schedule_id: response.caseStatus.committed_schedule_id ?? null, error_code: response.caseStatus.error_code ?? null,
+      base_plan_version: meta.base_plan_version, case_revision: meta.case_revision,
+      current_context: { snapshot_id: basis.snapshot_id, plan_version: planVersion },
+      stale: meta.base_plan_version !== planVersion,
+      human_decision: human ? { decision: human.decision, recommendation_id: human.recommendation_id,
+        candidate_plan_id: human.candidate_plan_id, candidate_version: human.candidate_version, actor_id: human.actor_id, decided_at: human.decided_at } : null,
+      publication: publication ? { schedule_id: publication.schedule_id, schedule_revision: publication.schedule_revision,
+        plan_version: publication.plan_version, snapshot_id: publication.snapshot_id, actor_id: publication.actor_id, committed_at: publication.committed_at } : null };
   }
 
   return {
+    async listDecisionCases(query, options) {
+      read(query.factory_id, options);
+      const limit = query.limit ?? 25;
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) fail(400, "VALIDATION_ERROR", "Invalid page limit");
+      const scope = JSON.stringify([query.factory_id, query.status ?? null, query.mode ?? null]);
+      type PreviewCursor = { scope: string; created: string; id: string };
+      let after: PreviewCursor | null = null;
+      if (query.cursor !== undefined) {
+        try {
+          after = JSON.parse(decodeURIComponent(query.cursor)) as PreviewCursor;
+          if (!after || after.scope !== scope || typeof after.created !== "string" || typeof after.id !== "string") throw new Error("Invalid preview cursor");
+        } catch { fail(400, "INVALID_CURSOR", "Cursor does not match preview filters"); }
+      }
+      const filtered = [...cases.values()].map(item => listItem(item.response)).filter(item =>
+        item.factory_id === query.factory_id && (!query.status || item.status === query.status) && (!query.mode || item.mode === query.mode))
+        .sort((left, right) => right.created_at.localeCompare(left.created_at) || right.decision_case_id.localeCompare(left.decision_case_id))
+        .filter(item => !after || item.created_at < after.created || (item.created_at === after.created && item.decision_case_id < after.id));
+      const data = filtered.slice(0, limit);
+      const has_more = filtered.length > limit;
+      const last = data.at(-1);
+      return { success: true, data, meta: { factory_id: query.factory_id, limit, has_more,
+        next_cursor: has_more && last ? encodeURIComponent(JSON.stringify({ scope, created: last.created_at, id: last.decision_case_id })) : null } };
+    },
     async getOperationsSnapshot(factoryId, options): Promise<OperationsSnapshotResponse> {
       const snapshot = read(factoryId, options);
       return {
@@ -111,6 +155,7 @@ export function createMockOperationsApiClient({
         item.response.caseStatus.recommendation_id = item.artifact.recommendation.recommendation_id;
         item.response.meta!.case_revision += 1;
         item.response.meta!.processing = { status: "SUCCEEDED", attempt: 1, error_code: null };
+        recordEvent(caseId, "CASE_STATUS_CHANGED", { from_status: "CREATED", to_status: "AWAITING_APPROVAL", revision: item.response.meta!.case_revision }, "SYSTEM");
         save();
       }
       response.meta!.current_context = { snapshot_id: basis.snapshot_id, plan_version: planVersion };
@@ -144,6 +189,7 @@ export function createMockOperationsApiClient({
           available_commands: [], approved_candidate: null, human_decision: null, commit: null },
       };
       cases.set(caseId, { response, artifact: { recommendation: createOperationsRecommendationFixture(caseId), snapshot: structuredClone(basis) } });
+      recordEvent(caseId, "CASE_CREATED", { status: "CREATED", revision: 1 });
       receipts.set(options.idempotencyKey, { body: normalizedRequest(body), response: structuredClone(response) });
       save();
       return structuredClone(response);
@@ -155,6 +201,7 @@ export function createMockOperationsApiClient({
       const item = cases.get(caseId);
       if (!item) fail(404, "DECISION_CASE_NOT_FOUND", "Preview case not found");
       const response = item.response;
+      const fromStatus = response.caseStatus.status;
       const meta = response.meta!;
       if (body.decision_case_id !== caseId || body.expected_snapshot_id !== basis.snapshot_id
         || body.expected_plan_version !== planVersion || meta.base_plan_version !== planVersion
@@ -194,11 +241,25 @@ export function createMockOperationsApiClient({
       meta.current_context = { snapshot_id: basis.snapshot_id, plan_version: planVersion };
       meta.available_commands = response.caseStatus.status === "APPROVED" && response.caseStatus.mode === "LIVE" ? ["COMMIT"] : [];
       response.caseStatus.updated_at = now;
+      recordEvent(caseId, "CASE_STATUS_CHANGED", { from_status: fromStatus, to_status: response.caseStatus.status,
+        revision: meta.case_revision, command: body.command, recommendation_id: body.recommendation_id,
+        candidate_plan_id: body.command === "REJECT" ? null : body.candidate_plan_id,
+        candidate_version: body.command === "REJECT" ? null : body.candidate_version,
+        candidate_hash: body.command === "REJECT" ? null : meta.approved_candidate?.candidate_hash,
+        schedule_hash: body.command === "REJECT" ? null : meta.approved_candidate?.schedule_hash, plan_version: planVersion });
       receipts.set(options.idempotencyKey, { body: normalizedRequest(body), response: structuredClone(response) });
       save();
       return structuredClone(response);
     },
-    listEvents: (_caseId, _afterSequence, options) => unsupported(options),
+    async listEvents(caseId, afterSequence = 0, options) {
+      check(options);
+      if (!cases.has(caseId)) fail(404, "DECISION_CASE_NOT_FOUND", "Preview case not found");
+      const limit = options?.limit ?? 100;
+      if (!Number.isInteger(afterSequence) || afterSequence < 0 || !Number.isInteger(limit) || limit < 1 || limit > 200) fail(400, "VALIDATION_ERROR", "Invalid history pagination");
+      const rows = (events.get(caseId) ?? []).filter(event => event.sequence > afterSequence);
+      const data = structuredClone(rows.slice(0, limit));
+      return { success: true, data, meta: { has_more: rows.length > limit, next_after_sequence: data.at(-1)?.sequence ?? afterSequence } };
+    },
     eventsUrl: () => fail(501, "NOT_IMPLEMENTED", "The operations mock does not provide an event stream"),
   };
 
