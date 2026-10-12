@@ -123,6 +123,17 @@ flag unset for the complete regression suite to avoid regenerating #37 images.
 
 ### Real-service acceptance (no interception)
 
+The existing `frontend/e2e/operations-decision-flow.spec.ts` also verifies
+discovery/audit after its original #37 approval/commit checks, against the same
+real API and isolated PostgreSQL schema. It adds no setup/commands or GET
+interception: it reads all list/event pages at limit one, opens the committed
+case with factory/status/mode filters, compares every UI sequence with the API,
+refreshes/reloads with zero case writes and captures desktop/mobile viewports.
+The existing Operations integration CI/harness runs it automatically and adds
+these checks plus pagination metadata to `evidence.json` under the tested SHA.
+No backend, runner script or CI configuration is changed. It remains a pending
+gate until that integration run actually succeeds.
+
 `npm run test:cases:live` uses a separate desktop/mobile config. It intentionally
 fails when configuration is missing; it never starts a fixture server or marks
 the gate skipped/successful. Configure these only in the local shell or CI
