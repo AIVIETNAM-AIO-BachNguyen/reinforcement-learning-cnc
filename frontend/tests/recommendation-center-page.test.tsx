@@ -214,7 +214,7 @@ describe("RecommendationCenterPage live integration", () => {
     render(<RecommendationCenterPage dataSource={createRealRecommendationCenterDataSource(api)} />);
 
     expect(await screen.findByRole("heading", { name: "Decision case ID required" })).toBeInTheDocument();
-    expect(screen.getByText(/\?caseId=/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Browse decision cases" })).toHaveAttribute("href", "/operations/cases");
     expect(getDecisionCase).not.toHaveBeenCalled();
   });
 

@@ -1,10 +1,12 @@
 import { authFetch, endpoint } from "@/lib/auth";
 import type {
-  DecisionCaseStatusResponse, DecisionEvent, ErrorResponse, FactorySnapshot,
+  DecisionCaseStatusResponse, ErrorResponse, FactorySnapshot,
   PlanningConfig, RecommendationPackage, RunDecisionCaseRequest, Schedule,
 } from "@/types/generated/operations";
+import type { DecisionCaseListQuery, DecisionCaseListResponse, DecisionCaseEventsResponse } from "./decision-case-reads";
 
 export interface OperationsRequestOptions { signal?: AbortSignal }
+export interface OperationsEventRequestOptions extends OperationsRequestOptions { limit?: number }
 export interface OperationsWriteOptions extends OperationsRequestOptions { idempotencyKey: string }
 type ClientTrigger<T> = T extends { type?: infer K } ? Omit<T, "event_id" | "occurred_at" | "requested_by_user_id" | "type"> & { type: NonNullable<K> } : never;
 export type OperationsCreateDecisionCaseRequest = {
@@ -164,6 +166,20 @@ export function createOperationsApiClient({
     return { caseStatus: envelope.data, meta: envelope.meta };
   }
   return {
+    listDecisionCases: async (query: DecisionCaseListQuery, options?: OperationsRequestOptions): Promise<DecisionCaseListResponse> => {
+      const params = new URLSearchParams({ factory_id: query.factory_id });
+      if (query.status) params.set("status", query.status);
+      if (query.mode) params.set("mode", query.mode);
+      if (query.cursor !== undefined) params.set("cursor", query.cursor);
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      const envelope = await requestEnvelope<DecisionCaseListResponse["data"], DecisionCaseListResponse["meta"]>(`/decision-cases?${params}`, options);
+      if (!Array.isArray(envelope.data) || !envelope.meta || typeof envelope.meta.has_more !== "boolean"
+        || typeof envelope.meta.factory_id !== "string" || !Number.isInteger(envelope.meta.limit)
+        || !(envelope.meta.next_cursor === null || typeof envelope.meta.next_cursor === "string")) {
+        throw new OperationsApiError(200, envelope);
+      }
+      return { success: true, data: envelope.data, meta: envelope.meta };
+    },
     getOperationsSnapshot: (factoryId: string, options?: OperationsRequestOptions) => request<OperationsSnapshotResponse>(`/operations/snapshot?factory_id=${id(factoryId)}`, options),
     getCurrentSchedule: (factoryId: string, options?: OperationsRequestOptions) => request<OperationsCurrentScheduleResponse>(`/schedules/current?factory_id=${id(factoryId)}`, options),
     getDecisionCase: async (caseId: string, options?: OperationsRequestOptions): Promise<OperationsDecisionCaseReadResponse> => {
@@ -172,7 +188,16 @@ export function createOperationsApiClient({
     getDecisionCaseRecommendation: (caseId: string, options?: OperationsRequestOptions) => request<OperationsDecisionCaseRecommendationResponse>(`/decision-cases/${id(caseId)}/recommendation`, options),
     createDecisionCase: (body: OperationsCreateDecisionCaseRequest, options: OperationsWriteOptions) => caseRequest("/decision-cases", options, body),
     submitDecisionCommand: (caseId: string, body: OperationsDecisionCommand, options: OperationsWriteOptions) => caseRequest(`/decision-cases/${id(caseId)}/decision`, options, body),
-    listEvents: (caseId: string, afterSequence = 0, options?: OperationsRequestOptions) => request<DecisionEvent[]>(`/decision-cases/${id(caseId)}/events?after_sequence=${afterSequence}`, options),
+    listEvents: async (caseId: string, afterSequence = 0, options?: OperationsEventRequestOptions): Promise<DecisionCaseEventsResponse> => {
+      const params = new URLSearchParams({ after_sequence: String(afterSequence) });
+      if (options?.limit !== undefined) params.set("limit", String(options.limit));
+      const envelope = await requestEnvelope<DecisionCaseEventsResponse["data"], DecisionCaseEventsResponse["meta"]>(`/decision-cases/${id(caseId)}/events?${params}`, options);
+      if (!Array.isArray(envelope.data) || !envelope.meta || typeof envelope.meta.has_more !== "boolean"
+        || !Number.isSafeInteger(envelope.meta.next_after_sequence) || envelope.meta.next_after_sequence < 0) {
+        throw new OperationsApiError(200, envelope);
+      }
+      return { success: true, data: envelope.data, meta: envelope.meta };
+    },
     eventsUrl: (caseId: string) => `${base}/decision-cases/${id(caseId)}/events`,
   };
 }

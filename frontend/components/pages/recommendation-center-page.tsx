@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { DecisionControls } from "@/components/operations/decision-controls";
+import { DecisionCaseAuditTimeline } from "@/components/operations/decision-case-audit-timeline";
 import { LiveDecisionControls, PublishedDecisionSchedule } from "@/components/operations/live-decision-controls";
 import { OperationsPanel, OperationsShell, OperationsStatus } from "@/components/operations/operations-shell";
 import { isSelectableRecommendationCandidate, RecommendationPackageView } from "@/components/operations/recommendation-package-view";
@@ -205,8 +206,11 @@ function RealRecommendation({
         />
       ) : null}
 
+      <a href="#decision-case-audit" className="inline-flex min-h-10 items-center rounded-md border bg-white px-4 text-sm font-medium">View audit timeline</a>
       {data.artifactState === "ready" ? <LiveDecisionControls api={api} data={data} selectedCandidateId={effectiveCandidateId} refreshing={refreshing} onRefresh={onRetry} /> : null}
       {data.artifactState === "ready" && decisionCase.status === "COMMITTED" && data.caseMeta?.commit ? <PublishedDecisionSchedule api={api} commit={data.caseMeta.commit} /> : null}
+      <DecisionCaseAuditTimeline api={api} caseId={decisionCase.decision_case_id} publication={data.caseMeta?.commit}
+        refreshToken={`${decisionCase.updated_at}:${data.caseMeta?.case_revision ?? ""}`} />
     </>
   );
 }
@@ -253,7 +257,7 @@ export function RecommendationCenterPage({
       )}
     >
       {state.kind === "loading" ? <AsyncState kind="loading" title="Loading decision case" description={`Requesting authoritative status for ${selectedCaseId ?? "the selected case"}.`} /> : null}
-      {state.kind === "missing-case-id" ? <AsyncState kind="empty" title="Decision case ID required" description="Open this page with ?caseId=... or configure NEXT_PUBLIC_OPERATIONS_DECISION_CASE_ID before using real mode." /> : null}
+      {state.kind === "missing-case-id" ? <AsyncState kind="empty" title="Decision case ID required" description="Find an existing case in Decision Cases, or create a new one from Overview." action={<Link href="/operations/cases" className="min-h-10 rounded-md border bg-white px-4 py-2 text-sm font-medium">Browse decision cases</Link>} /> : null}
       {state.kind === "unauthorized" ? <AsyncState kind="error" title="Recommendation access required" description={state.message} action={<Link href="/login" className="inline-flex min-h-10 items-center rounded-md border border-[var(--color-stone-border)] bg-white px-4 text-sm font-medium">Sign in</Link>} /> : null}
       {state.kind === "not-found" ? <AsyncState kind="empty" title="Decision case not found" description={state.message} onRetry={retry} retryLabel="Retry case" /> : null}
       {state.kind === "conflict" ? <AsyncState kind="error" title="Decision case changed" description={state.message} onRetry={retry} retryLabel="Refresh case" /> : null}

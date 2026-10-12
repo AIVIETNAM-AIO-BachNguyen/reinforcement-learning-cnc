@@ -543,6 +543,88 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(decisionSubmissions).toHaveLength(4);
   await page.unroute(decisionUrl);
 
+  // Discovery/audit acceptance against the same real API and harness-owned DB.
+  // No new cases/commands, mocks or GET interception are introduced here.
+  const discoveryWrites: string[] = [];
+  page.on("request", request => {
+    if (request.method() !== "GET" && new URL(request.url()).pathname.startsWith("/api/v1/decision-cases")) discoveryWrites.push(request.method());
+  });
+  const listPages: JsonObject[] = [];
+  const discovered: JsonObject[] = [];
+  let listCursor: string | undefined;
+  do {
+    const response = await page.request.get(`${apiBase}/api/v1/decision-cases`, {
+      params: { factory_id: factoryId, limit: "1", ...(listCursor ? { cursor: listCursor } : {}) },
+    });
+    expect(response.status()).toBe(200);
+    const payload = await json(response);
+    const metadata = record(payload.meta);
+    expect(metadata.factory_id).toBe(factoryId);
+    discovered.push(...array(envelopeValue(payload)).map(record));
+    listPages.push(metadata);
+    if (!metadata.has_more) break;
+    const next = string(metadata.next_cursor, "list next_cursor");
+    expect(next).not.toBe(listCursor);
+    listCursor = next;
+  } while (true);
+  expect(discovered.length).toBeGreaterThanOrEqual(3);
+  expect(new Set(discovered.map(item => item.decision_case_id)).size).toBe(discovered.length);
+  expect(discovered.find(item => item.decision_case_id === caseId)?.publication).toMatchObject({ actor_id: actorId, plan_version: published.plan_version });
+  const freshEvents: JsonObject[] = [];
+  const auditPages: JsonObject[] = [];
+  let afterSequence = 0;
+  do {
+    const response = await page.request.get(`${apiBase}/api/v1/decision-cases/${caseId}/events`, {
+      params: { after_sequence: String(afterSequence), limit: "1" },
+    });
+    expect(response.status()).toBe(200);
+    const payload = await json(response);
+    freshEvents.push(...array(envelopeValue(payload)).map(record));
+    const metadata = record(payload.meta);
+    auditPages.push(metadata);
+    if (!metadata.has_more) break;
+    const next = number(metadata.next_after_sequence, "audit next_after_sequence");
+    expect(next).toBeGreaterThan(afterSequence);
+    afterSequence = next;
+  } while (true);
+  const freshSequences = freshEvents.map(item => number(item.sequence, "event sequence"));
+  expect(new Set(freshSequences).size).toBe(freshSequences.length);
+  expect(freshEvents.filter(item => record(item.payload).command === "COMMIT")).toHaveLength(1);
+  for (const [name, width, height] of [["desktop", 1440, 1000], ["mobile", 390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto(`/operations/cases?${new URLSearchParams({ factory_id: factoryId })}`);
+    await expect(page.getByRole("button", { name: "Refresh cases" })).toBeEnabled();
+    await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("COMMITTED");
+    await page.getByRole("combobox", { name: "Case mode", exact: true }).selectOption("LIVE");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
+    await expect(page.getByRole("combobox", { name: "Case mode", exact: true })).toHaveValue("LIVE");
+    const open = page.getByRole("link", { name: `Open recommendation for ${caseId}` });
+    await expect(open).toBeVisible();
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await page.screenshot({ path: test.info().outputPath(`real-case-list-${name}.png`), fullPage: true });
+    await open.click();
+    await expect(page).toHaveURL(new RegExp(`recommendations\\?caseId=${caseId}`));
+    const timeline = page.getByRole("list", { name: "Decision case audit events" });
+    await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
+    expect(await timeline.getByRole("listitem").evaluateAll(nodes => nodes.map(node => Number(node.getAttribute("data-sequence"))))).toEqual(freshSequences);
+    await page.goBack();
+    await expect(page).toHaveURL(/status=COMMITTED&mode=LIVE/);
+    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
+    await expect(page.getByRole("combobox", { name: "Case mode", exact: true })).toHaveValue("LIVE");
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await open.click();
+    await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
+    await page.locator("#decision-case-audit").screenshot({ path: test.info().outputPath(`real-case-audit-${name}.png`), style: "header.sticky { visibility: hidden !important; }" });
+    await page.getByRole("button", { name: "Refresh history" }).click();
+    await expect(page.getByRole("button", { name: "Refresh history" })).toBeEnabled();
+    await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
+    await page.reload();
+    await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+  expect(discoveryWrites).toEqual([]);
+  const completedDiscoveryWrites = [...discoveryWrites];
   // REJECT is exercised against the real worker artifact and must not publish anything.
   const rejectBasis = await currentContext(page.request);
   const rejectCase = await createReadyCase(page.request, rejectBasis, "Real-service rejection");
@@ -754,6 +836,8 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     race_winner_case_id: winner.id,
     race_loser_case_id: loser.id,
     decision_submissions: decisionSubmissions,
+    case_discovery: { list_pages: listPages, audit_pages: auditPages, event_sequences: freshSequences,
+      viewports: ["desktop", "mobile"], case_commands: completedDiscoveryWrites, read_interception: false },
     checks: {
       real_fastapi_recommendation: "passed",
       exact_same_request_replay: "passed",
@@ -774,7 +858,13 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
       case_list_filter_and_pagination: "passed",
       close_reopen_case_recovery: "passed",
       audit_timeline_matches_postgresql: "passed",
-      frontend_case_list_navigation: "not_available",
+      frontend_case_list_navigation: "passed",
+      case_list_scoped_cursor: "passed",
+      case_filters_and_reopen: "passed",
+      case_filters_survive_browser_back: "passed",
+      complete_audit_refresh_reload: "passed",
+      discovery_audit_desktop_mobile: "passed",
+      discovery_refresh_is_read_only: "passed",
     },
   };
   await mkdir(path.dirname(evidenceFile), { recursive: true });
