@@ -62,6 +62,27 @@ export function AppShell({
   const router = useRouter();
   const [user, setUser] = useState<TokenUser | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [density, setDensity] = useState<"comfortable" | "compact">(
+    "comfortable",
+  );
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("dss-density") === "compact")
+        setDensity("compact");
+    } catch {
+      /* Storage may be disabled; the control still works for this session. */
+    }
+  }, []);
+
+  const changeDensity = (value: "comfortable" | "compact") => {
+    setDensity(value);
+    try {
+      localStorage.setItem("dss-density", value);
+    } catch {
+      /* Session-only preference. */
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +106,10 @@ export function AppShell({
   const displayName = user.fullName || user.username || user.role;
 
   return (
-    <div className={`workspace-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+    <div
+      className={`workspace-shell ${collapsed ? "sidebar-collapsed" : ""}`}
+      data-density={density}
+    >
       <a href="#workspace-content" className="skip-link">
         Skip to content
       </a>
@@ -175,7 +199,23 @@ export function AppShell({
             <ChevronRight size={15} aria-hidden="true" />
             <p>{title}</p>
           </div>
-          <span className="workspace-context">CNC maintenance & planning</span>
+          <div
+            className="workspace-display-controls"
+            role="group"
+            aria-label="Display density"
+          >
+            <span>Density</span>
+            {(["comfortable", "compact"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={density === value}
+                onClick={() => changeDensity(value)}
+              >
+                {value === "comfortable" ? "Comfortable" : "Compact"}
+              </button>
+            ))}
+          </div>
         </header>
         <div id="workspace-content" tabIndex={-1}>
           <ErrorBoundary>{children}</ErrorBoundary>

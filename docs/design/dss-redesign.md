@@ -1,5 +1,7 @@
 # Industrial DSS desktop redesign
 
+> Initial overhaul record. The latest visual direction is the user-selected Dub reference, documented in [dub-design-selection.md](dub-design-selection.md). Current previews and desktop verification describe that revision.
+
 14 October 2026. Branch: `frontend-redesign`.
 
 ## Design intent

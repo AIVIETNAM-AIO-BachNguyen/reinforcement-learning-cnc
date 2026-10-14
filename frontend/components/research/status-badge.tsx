@@ -61,8 +61,8 @@ export function StatusBadge<Status extends string = ResearchStatus>({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-md px-2.5 py-1",
-        "text-[13px] font-semibold leading-normal",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-0.5",
+        "text-[13px] font-medium leading-normal",
         tone.badge,
         className,
       )}

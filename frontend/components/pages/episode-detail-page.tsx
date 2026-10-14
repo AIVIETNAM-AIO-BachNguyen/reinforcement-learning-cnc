@@ -82,7 +82,7 @@ function ReturnedValue({
   return (
     <div className="returned-value">
       <dt title={label}>{FIELD_LABELS[label] ?? label.replaceAll("_", " ")}</dt>
-      <dd>
+      <dd className={typeof value === "number" ? "numeric" : undefined}>
         {value === undefined || value === null ? (
           <span className="value-unavailable">Not returned</span>
         ) : (

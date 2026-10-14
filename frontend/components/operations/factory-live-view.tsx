@@ -26,60 +26,18 @@ const statusLabels: Record<MachineStatus, string> = {
   MAINTENANCE: "Under maintenance",
 };
 
-function MachineDrawing() {
-  return (
-    <svg viewBox="0 0 180 110" className="machine-drawing" aria-hidden="true">
-      <path d="M24 24 50 10 157 10 133 24Z" fill="var(--machine-top)" />
-      <path d="M133 24 157 10 157 89 133 104Z" fill="var(--machine-side)" />
-      <rect
-        x="24"
-        y="24"
-        width="109"
-        height="80"
-        rx="3"
-        fill="var(--machine-front)"
-      />
-      <rect
-        x="34"
-        y="34"
-        width="67"
-        height="57"
-        rx="2"
-        fill="var(--machine-window)"
-      />
-      <path
-        d="M67 36v24m-7 0h14l-4 12h-6Z"
-        fill="none"
-        stroke="var(--machine-tool)"
-        strokeWidth="5"
-      />
-      <path d="M44 81h49" stroke="var(--machine-tool)" strokeWidth="6" />
-      <rect
-        x="108"
-        y="37"
-        width="16"
-        height="14"
-        rx="1"
-        fill="var(--machine-screen)"
-      />
-      <path
-        d="M110 43h4l2-3 3 6 3-3"
-        fill="none"
-        stroke="white"
-        strokeWidth="1.5"
-      />
-      <circle cx="111" cy="59" r="2" fill="var(--machine-screen)" />
-      <circle cx="121" cy="59" r="2" fill="var(--machine-tool)" />
-      <path d="M27 106h104" stroke="var(--machine-side)" strokeWidth="4" />
-    </svg>
-  );
-}
-
-export function FactoryLiveView() {
+export function FactoryLiveView({
+  machineId,
+  onSelect,
+}: { machineId?: string; onSelect?: (id: string) => void } = {}) {
   const [playing, setPlaying] = useState(false);
   const [step, setStep] = useState(0);
-  const [selectedMachine, setSelectedMachine] = useState<string>("M03");
+  const [internalMachine, setSelectedMachine] = useState<string>("M03");
+  const selectedMachine = machineId ?? internalMachine;
   const [sample, setSample] = useState(5);
+  useEffect(() => {
+    setSample(5);
+  }, [selectedMachine]);
   const stage = factoryReplayStages[step];
   const maintenanceStarted = step === 2;
   const activeMachine =
@@ -106,8 +64,56 @@ export function FactoryLiveView() {
 
   const selectMachine = (id: string) => {
     setSelectedMachine(id);
+    onSelect?.(id);
     setSample(5);
   };
+  if (
+    !factoryReplayMachines.some((machine) => machine.id === selectedMachine) &&
+    attention
+  ) {
+    return (
+      <section className="dss-panel case-evidence-panel">
+        <aside
+          className="machine-inspector"
+          aria-label="Selected machine details"
+          tabIndex={-1}
+        >
+          <div className="inspector-title">
+            <h3>
+              {attention.machineId} · {attention.title}
+            </h3>
+          </div>
+          <p>{attention.action}</p>
+          <dl className="machine-signals">
+            <div>
+              <dt>Reported risk</dt>
+              <dd>{attention.risk}</dd>
+            </div>
+            <div>
+              <dt>Operational impact</dt>
+              <dd>{attention.impact}</dd>
+            </div>
+            <div>
+              <dt>Evidence reference</dt>
+              <dd>{attention.evidence}</dd>
+            </div>
+          </dl>
+          <p className="page-footnote">
+            No health or load samples are available for this machine in the
+            recorded dataset.
+          </p>
+          <button
+            type="button"
+            className="text-action"
+            onClick={() => selectMachine("M03")}
+          >
+            Inspect recorded machines{" "}
+            <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        </aside>
+      </section>
+    );
+  }
   const points = (values: readonly number[]) =>
     values.map((value, index) => `${16 + index * 60},${108 - value}`).join(" ");
 
@@ -118,8 +124,8 @@ export function FactoryLiveView() {
     >
       <div className="factory-toolbar">
         <div>
-          <h2 id="factory-live-heading">Factory floor</h2>
-          <p>3 demo cells shown · Select a machine to inspect</p>
+          <h2 id="factory-live-heading">Machine evidence</h2>
+          <p>Recorded samples and maintenance dispatch · 3 demo cells</p>
         </div>
         <div className="replay-controls">
           <span className="replay-clock">
@@ -172,8 +178,8 @@ export function FactoryLiveView() {
         <div className="factory-floor">
           <div className="factory-map">
             <div className="floor-label">
-              <span>Production cells</span>
-              <span>Demo layout</span>
+              <span>Recorded machine state</span>
+              <span>Demo snapshot</span>
             </div>
             <div className="machine-cells">
               {factoryReplayMachines.map((machine) => {
@@ -196,7 +202,6 @@ export function FactoryLiveView() {
                         className={`status-dot status-${status.toLowerCase()}`}
                       />
                     </span>
-                    <MachineDrawing />
                     <strong>{machine.name}</strong>
                     <span className="machine-status">
                       {statusLabels[status]}
@@ -264,6 +269,7 @@ export function FactoryLiveView() {
         <aside
           className="machine-inspector"
           aria-label="Selected machine details"
+          tabIndex={-1}
         >
           <div className="inspector-title">
             <h3>

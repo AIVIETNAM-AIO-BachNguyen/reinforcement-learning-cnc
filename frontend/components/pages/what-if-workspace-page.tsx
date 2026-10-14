@@ -138,38 +138,47 @@ export function WhatIfWorkspacePage({
                     Run {result.runId} · Seed {result.seed}
                   </span>
                 </div>
-                <table className="dss-table scenario-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Metric</th>
-                      <th scope="col">Baseline</th>
-                      <th scope="col">Simulated</th>
-                      <th scope="col">Interpretation</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.metrics.map((metric) => (
-                      <tr key={metric.label}>
-                        <th scope="row">{metric.label}</th>
-                        <td>{metric.baseline}</td>
-                        <td className={`metric-outcome outcome-${metric.tone}`}>
-                          {metric.simulated}
-                        </td>
-                        <td>
-                          <span
-                            className={`outcome-label outcome-${metric.tone}`}
-                          >
-                            {metric.tone === "positive"
-                              ? "Favorable tradeoff"
-                              : metric.tone === "negative"
-                                ? "Needs consideration"
-                                : "Context dependent"}
-                          </span>
-                        </td>
+                <div
+                  className="table-scroll"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Scenario comparison data"
+                >
+                  <table className="dss-table scenario-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Metric</th>
+                        <th scope="col">Baseline</th>
+                        <th scope="col">Simulated</th>
+                        <th scope="col">Interpretation</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {result.metrics.map((metric) => (
+                        <tr key={metric.label}>
+                          <th scope="row">{metric.label}</th>
+                          <td>{metric.baseline}</td>
+                          <td
+                            className={`metric-outcome outcome-${metric.tone}`}
+                          >
+                            {metric.simulated}
+                          </td>
+                          <td>
+                            <span
+                              className={`outcome-label outcome-${metric.tone}`}
+                            >
+                              {metric.tone === "positive"
+                                ? "Favorable tradeoff"
+                                : metric.tone === "negative"
+                                  ? "Needs consideration"
+                                  : "Context dependent"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {result.warnings.length > 0 && (
                   <div className="scenario-warnings">
                     <h3>

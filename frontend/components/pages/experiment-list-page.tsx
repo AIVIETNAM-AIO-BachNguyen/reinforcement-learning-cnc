@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FlaskConical, Plus, RefreshCw } from "lucide-react";
+import {
+  ArrowDownUp,
+  FlaskConical,
+  Plus,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/research/page-header";
@@ -59,17 +65,19 @@ function EpisodeCounts({ experiment }: { experiment: ExperimentListItem }) {
   ] as const;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+    <div className="episode-counts">
       <span className="font-semibold text-[var(--color-slate-text)]">
-        {total} total
+        <span className="numeric">{total}</span> total
       </span>
-      {entries.map(([label, value]) =>
-        value === undefined ? null : (
-          <span key={label} className="text-[var(--color-ash-gray)]">
-            {value} {label.toLowerCase()}
-          </span>
-        ),
-      )}
+      <span className="episode-count-breakdown">
+        {entries.map(([label, value]) =>
+          value === undefined ? null : (
+            <span key={label} className="text-[var(--color-ash-gray)]">
+              <span className="numeric">{value}</span> {label.toLowerCase()}
+            </span>
+          ),
+        )}
+      </span>
     </div>
   );
 }
@@ -89,14 +97,14 @@ function ExperimentRow({ experiment }: { experiment: ExperimentListItem }) {
           <p className="register-description">{experiment.description}</p>
         )}
       </th>
-      <td>
+      <td className="status-cell">
         <StatusBadge status={experiment.status} />
       </td>
       <td>
         <span>{experiment.policy.name}</span>
         <span className="cell-secondary">v{experiment.policy.version}</span>
       </td>
-      <td>
+      <td className="episode-count-cell">
         <EpisodeCounts experiment={experiment} />
       </td>
       <td>
@@ -119,6 +127,35 @@ export function ExperimentListPage({ api }: { api?: ProductApiClient } = {}) {
   const [page, setPage] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
   const [state, setState] = useState<ListState>({ kind: "loading" });
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("ALL");
+  const [sort, setSort] = useState<"created" | "name">("created");
+  const [ascending, setAscending] = useState(false);
+  const visibleItems = useMemo(
+    () =>
+      state.kind !== "ready"
+        ? []
+        : state.response.items
+            .filter(
+              (item) =>
+                (status === "ALL" || item.status === status) &&
+                `${item.name} ${item.description ?? ""} ${item.policy.name} ${ownerLabel(item)}`
+                  .toLowerCase()
+                  .includes(search.trim().toLowerCase()),
+            )
+            .sort(
+              (a, b) =>
+                (ascending ? 1 : -1) *
+                (sort === "name"
+                  ? a.name.localeCompare(b.name)
+                  : a.created_at.localeCompare(b.created_at)),
+            ),
+    [state, search, status, sort, ascending],
+  );
+  const changeSort = (key: "created" | "name") => {
+    setSort(key);
+    setAscending(sort === key ? !ascending : key === "name");
+  };
 
   const load = useCallback(() => setRequestKey((value) => value + 1), []);
 
@@ -233,25 +270,131 @@ export function ExperimentListPage({ api }: { api?: ProductApiClient } = {}) {
                   </p>
                 </div>
               </div>
-              <table className="dss-table experiment-register">
-                <thead>
-                  <tr>
-                    <th scope="col">Experiment</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Policy</th>
-                    <th scope="col">Episodes</th>
-                    <th scope="col">Owner / created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.response.items.map((experiment) => (
-                    <ExperimentRow
-                      key={experiment.id}
-                      experiment={experiment}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-toolbar">
+                <label className="table-search">
+                  <Search size={16} aria-hidden="true" />
+                  <span className="sr-only">
+                    Search experiments on this page
+                  </span>
+                  <input
+                    type="search"
+                    placeholder="Search this page"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </label>
+                <label className="table-filter">
+                  Status{" "}
+                  <select
+                    value={status}
+                    onChange={(event) => setStatus(event.target.value)}
+                  >
+                    <option value="ALL">All statuses</option>
+                    {Array.from(
+                      new Set([
+                        ...state.response.items.map((item) => item.status),
+                        ...(status === "ALL" ? [] : [status]),
+                      ]),
+                    )
+                      .sort()
+                      .map((value) => (
+                        <option key={value} value={value}>
+                          {value.charAt(0) +
+                            value.slice(1).toLowerCase().replaceAll("_", " ")}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                {(search || status !== "ALL") && (
+                  <button
+                    type="button"
+                    className="text-action"
+                    onClick={() => {
+                      setSearch("");
+                      setStatus("ALL");
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+                <span role="status">
+                  {visibleItems.length} of {state.response.items.length} on this
+                  page
+                </span>
+              </div>
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label="Experiment register data"
+              >
+                <table className="dss-table experiment-register">
+                  <thead>
+                    <tr>
+                      <th
+                        scope="col"
+                        aria-sort={
+                          sort === "name"
+                            ? ascending
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="table-sort"
+                          onClick={() => changeSort("name")}
+                        >
+                          Experiment{" "}
+                          <ArrowDownUp size={13} aria-hidden="true" />
+                        </button>
+                      </th>
+                      <th scope="col" className="status-cell">
+                        Status
+                      </th>
+                      <th scope="col">Policy</th>
+                      <th scope="col" className="numeric-cell">
+                        Episodes
+                      </th>
+                      <th
+                        scope="col"
+                        aria-sort={
+                          sort === "created"
+                            ? ascending
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
+                        <button
+                          type="button"
+                          className="table-sort"
+                          onClick={() => changeSort("created")}
+                        >
+                          Owner / created{" "}
+                          <ArrowDownUp size={13} aria-hidden="true" />
+                        </button>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleItems.map((experiment) => (
+                      <ExperimentRow
+                        key={experiment.id}
+                        experiment={experiment}
+                      />
+                    ))}
+                    {visibleItems.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="table-empty">
+                          No experiments on this page match these filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </section>
             <nav
               className="flex flex-col gap-3 pt-5 text-sm sm:flex-row sm:items-center sm:justify-between"

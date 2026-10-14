@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 
 import { AgentControlRoomPage } from "@/components/pages/agent-control-room-page";
 import { DashboardPage } from "@/components/pages/dashboard-page";
@@ -12,7 +12,62 @@ vi.mock("@/components/app-shell", () => ({
   AppShell: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+// jsdom does not implement scrolling; browser QA verifies actual drill-down positioning.
+const originalScroll = Element.prototype.scrollIntoView;
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+afterAll(() => {
+  Element.prototype.scrollIntoView = originalScroll;
+});
+
 describe("operations UI ports", () => {
+  it("filters and sorts the attention queue, then opens the matching source evidence", async () => {
+    const user = userEvent.setup();
+    render(<DashboardPage />);
+    const queue = screen.getByRole("table");
+    await user.click(screen.getByRole("button", { name: "Machine / case" }));
+    expect(within(queue).getAllByRole("row")[1]).toHaveTextContent("M02");
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search attention queue" }),
+      "M07",
+    );
+    expect(within(queue).getAllByRole("row")).toHaveLength(2);
+    await user.click(
+      screen.getByRole("button", { name: "Inspect evidence for M07" }),
+    );
+    const details = screen.getByLabelText("Selected machine details");
+    expect(details).toHaveTextContent("M07");
+    expect(details).toHaveTextContent(
+      "No health or load samples are available",
+    );
+    expect(details).not.toHaveTextContent("71% failure probability");
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Status" }),
+      "NEEDS_REVIEW",
+    );
+    expect(within(queue).getAllByRole("row")).toHaveLength(2);
+    expect(within(queue).getByText("M03")).toBeInTheDocument();
+  });
+
+  it("opens machine evidence from a trend and keeps sample values traceable", async () => {
+    const user = userEvent.setup();
+    render(<DashboardPage />);
+    expect(
+      screen.getByRole("img", { name: /M03 health from 88% to 62%/ }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Inspect trend evidence for M01" }),
+    );
+    expect(
+      within(screen.getByLabelText("Selected machine details")).getByRole(
+        "heading",
+        { name: "M01 · Milling cell" },
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("opens with an operational attention queue and links to review workflows", () => {
     render(<DashboardPage />);
 
@@ -25,7 +80,7 @@ describe("operations UI ports", () => {
     const queue = screen.getByRole("table");
     expect(within(queue).getByText("M03")).toBeInTheDocument();
     expect(
-      within(queue).getByText("71% failure probability"),
+      within(queue).getByTitle("71% failure probability"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Recorded sample data, not live telemetry/),

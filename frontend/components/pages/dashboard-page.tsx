@@ -7,9 +7,13 @@ import {
   ChevronRight,
   FlaskConical,
   Info,
+  Search,
+  ArrowDownUp,
 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 
 import { FactoryLiveView } from "@/components/operations/factory-live-view";
+import { MachineTrends } from "@/components/operations/machine-trends";
 import { AppShell } from "@/components/app-shell";
 import { operationsOverviewFixture } from "@/lib/operations-ui/fixtures";
 import type { AttentionItem } from "@/types/operations-ui";
@@ -28,6 +32,43 @@ const severityLabels: Record<AttentionItem["severity"], string> = {
 
 export function DashboardPage() {
   const overview = operationsOverviewFixture;
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("ALL");
+  const [sort, setSort] = useState<"priority" | "machine">("priority");
+  const [ascending, setAscending] = useState(true);
+  const [machine, setMachine] = useState("M03");
+  const evidenceRef = useRef<HTMLDivElement>(null);
+  const inspect = (id: string) => {
+    setMachine(id);
+    requestAnimationFrame(() => {
+      const inspector =
+        evidenceRef.current?.querySelector<HTMLElement>(".machine-inspector");
+      inspector?.focus({ preventScroll: true });
+      evidenceRef.current?.scrollIntoView({ block: "start" });
+    });
+  };
+  const cases = useMemo(() => {
+    const priority = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    return overview.attentionItems
+      .filter(
+        (item) =>
+          (status === "ALL" || item.status === status) &&
+          `${item.machineId} ${item.title} ${item.action}`
+            .toLowerCase()
+            .includes(search.trim().toLowerCase()),
+      )
+      .sort(
+        (a, b) =>
+          (ascending ? 1 : -1) *
+          (sort === "machine"
+            ? a.machineId.localeCompare(b.machineId)
+            : priority[a.severity] - priority[b.severity]),
+      );
+  }, [overview.attentionItems, search, status, sort, ascending]);
+  const changeSort = (key: "priority" | "machine") => {
+    setSort(key);
+    setAscending(sort === key ? !ascending : true);
+  };
   const needsReview = overview.attentionItems.filter(
     (item) => item.status === "NEEDS_REVIEW",
   ).length;
@@ -99,11 +140,15 @@ export function DashboardPage() {
               {overview.attentionItems[0].impact}.
             </p>
           </div>
-          <Link href="/decisions" className="text-action">
-            Open Decision Center <ChevronRight size={16} aria-hidden="true" />
-          </Link>
+          <button
+            type="button"
+            className="text-action"
+            onClick={() => inspect("M03")}
+          >
+            Inspect evidence <ChevronRight size={16} aria-hidden="true" />
+          </button>
         </div>
-        <FactoryLiveView />
+        <MachineTrends onInspect={inspect} />
 
         <section
           className="attention-section"
@@ -121,54 +166,171 @@ export function DashboardPage() {
               Open full queue <ChevronRight size={16} aria-hidden="true" />
             </Link>
           </div>
-          <table className="attention-table">
-            <thead>
-              <tr>
-                <th scope="col">Machine / case</th>
-                <th scope="col">Priority & status</th>
-                <th scope="col">Risk & impact</th>
-                <th scope="col">Recommended next step</th>
-                <th scope="col">
-                  <span className="sr-only">Review</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.attentionItems.map((item) => (
-                <tr key={item.id}>
-                  <th scope="row">
-                    <span className="queue-machine">{item.machineId}</span>
-                    <span className="queue-case">{item.title}</span>
+          <div className="table-toolbar">
+            <label className="table-search">
+              <Search size={16} aria-hidden="true" />
+              <span className="sr-only">Search attention queue</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search machine or case"
+              />
+            </label>
+            <label className="table-filter">
+              Status{" "}
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+              >
+                <option value="ALL">All statuses</option>
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(search || status !== "ALL") && (
+              <button
+                type="button"
+                className="text-action"
+                onClick={() => {
+                  setSearch("");
+                  setStatus("ALL");
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+            <span role="status">
+              {cases.length} of {overview.attentionItems.length} cases
+            </span>
+          </div>
+          <div
+            className="table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Attention queue data"
+          >
+            <table className="attention-table">
+              <thead>
+                <tr>
+                  <th
+                    scope="col"
+                    aria-sort={
+                      sort === "machine"
+                        ? ascending
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="table-sort"
+                      onClick={() => changeSort("machine")}
+                    >
+                      Machine / case{" "}
+                      <ArrowDownUp size={13} aria-hidden="true" />
+                    </button>
                   </th>
-                  <td>
-                    <span
-                      className={`severity severity-${item.severity.toLowerCase()}`}
+                  <th
+                    scope="col"
+                    className="status-cell"
+                    aria-sort={
+                      sort === "priority"
+                        ? ascending
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="table-sort"
+                      onClick={() => changeSort("priority")}
                     >
-                      {severityLabels[item.severity]}
-                    </span>
-                    <span className="cell-secondary">
-                      {statusLabels[item.status]}
-                    </span>
-                  </td>
-                  <td>
-                    <span>{item.risk}</span>
-                    <span className="cell-secondary">{item.impact}</span>
-                  </td>
-                  <td>{item.action}</td>
-                  <td>
-                    <Link
-                      href="/decisions"
-                      className="queue-open"
-                      aria-label={`Open review queue for ${item.machineId}`}
-                    >
-                      <ArrowRight size={17} aria-hidden="true" />
-                    </Link>
-                  </td>
+                      Priority & status{" "}
+                      <ArrowDownUp size={13} aria-hidden="true" />
+                    </button>
+                  </th>
+                  <th scope="col" className="numeric-cell">
+                    Reported risk
+                  </th>
+                  <th scope="col">Impact</th>
+                  <th scope="col">Recommended next step</th>
+                  <th scope="col">
+                    <span className="sr-only">Review</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {cases.map((item) => (
+                  <tr key={item.id}>
+                    <th scope="row">
+                      <span className="queue-machine">{item.machineId}</span>
+                      <span className="queue-case">{item.title}</span>
+                    </th>
+                    <td className="status-cell">
+                      <span
+                        className={`severity severity-${item.severity.toLowerCase()}`}
+                      >
+                        {severityLabels[item.severity]}
+                      </span>
+                      <span className="cell-secondary">
+                        {statusLabels[item.status]}
+                      </span>
+                    </td>
+                    <td
+                      className={
+                        /^\d/.test(item.risk) ? "numeric-cell" : undefined
+                      }
+                      title={item.risk}
+                    >
+                      {/^\d+% /.test(item.risk) ? (
+                        <>
+                          <span className="numeric">
+                            {item.risk.split(" ")[0]}
+                          </span>
+                          <span className="cell-secondary">
+                            {item.risk.split(" ").slice(1).join(" ")}
+                          </span>
+                        </>
+                      ) : (
+                        item.risk
+                      )}
+                    </td>
+                    <td>{item.impact}</td>
+                    <td>{item.action}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => inspect(item.machineId)}
+                        className="queue-open"
+                        aria-label={`Inspect evidence for ${item.machineId}`}
+                      >
+                        <ArrowRight size={17} aria-hidden="true" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {cases.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="table-empty">
+                      No cases match these filters. Clear the search or choose
+                      another status.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
+
+        <div ref={evidenceRef} className="overview-evidence-anchor">
+          <FactoryLiveView machineId={machine} onSelect={setMachine} />
+        </div>
 
         <section
           className="workspace-resources"

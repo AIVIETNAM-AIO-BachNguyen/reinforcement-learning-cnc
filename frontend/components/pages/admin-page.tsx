@@ -693,185 +693,194 @@ export function AdminPage() {
           </label>
           <span>{filtered.length} accounts shown</span>
         </div>
-        <table className="dss-table">
-          <thead>
-            <tr>
-              <th scope="col">User</th>
-              <th scope="col">Username</th>
-              <th scope="col">Role</th>
-              <th scope="col">Status</th>
-              <th scope="col">Last login</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="User directory data"
+        >
+          <table className="dss-table">
+            <thead>
               <tr>
-                <td colSpan={6}>
-                  <p className="directory-state" role="status">
-                    Loading users…
-                  </p>
-                </td>
+                <th scope="col">User</th>
+                <th scope="col">Username</th>
+                <th scope="col">Role</th>
+                <th scope="col" className="status-cell">
+                  Status
+                </th>
+                <th scope="col">Last login</th>
+                <th scope="col">Actions</th>
               </tr>
-            )}
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td colSpan={6}>
-                  <p className="directory-state">
-                    No users match the current filters.
-                  </p>
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              filtered.map((user) => (
-                <React.Fragment key={user.id}>
-                  <tr>
-                    <th scope="row">
-                      <span className="user-name">
-                        <Avatar name={user.name} />
-                        <span>
-                          <strong>{user.name}</strong>
-                          <span>{user.email || "No email provided"}</span>
-                        </span>
-                      </span>
-                    </th>
-                    <td>{user.username}</td>
-                    <td>
-                      <RolePill role={user.role} />
-                    </td>
-                    <td>
-                      <ActiveDot active={user.active} />
-                    </td>
-                    <td>
-                      <time title={user.lastLoginFull}>{user.lastLogin}</time>
-                    </td>
-                    <td>
-                      <div className="user-actions">
-                        <button
-                          type="button"
-                          disabled={savingId !== null}
-                          className="secondary-action"
-                          aria-label={`Edit ${user.name}`}
-                          onClick={() =>
-                            editingId === user.id
-                              ? cancelEdit()
-                              : openEdit(user)
-                          }
-                        >
-                          <Pencil size={15} aria-hidden="true" />
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          disabled={savingId !== null}
-                          className="secondary-action"
-                          aria-label={`${user.active ? "Deactivate" : "Activate"} ${user.name}`}
-                          onClick={() =>
-                            user.active
-                              ? setDeactivationUser(user)
-                              : void toggleActive(user)
-                          }
-                        >
-                          <Power size={15} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {editingId === user.id && editForm && (
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={6}>
+                    <p className="directory-state" role="status">
+                      Loading users…
+                    </p>
+                  </td>
+                </tr>
+              )}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6}>
+                    <p className="directory-state">
+                      No users match the current filters.
+                    </p>
+                  </td>
+                </tr>
+              )}
+              {!loading &&
+                filtered.map((user) => (
+                  <React.Fragment key={user.id}>
                     <tr>
-                      <td colSpan={6} className="user-edit-cell">
-                        <form
-                          onSubmit={(event) => {
-                            event.preventDefault();
-                            void saveEdit();
-                          }}
-                        >
-                          <h3>Edit {user.name}</h3>
-                          <div className="admin-form-grid">
-                            <FormField label="Full name">
-                              <FormInput
-                                value={editForm.name}
-                                onChange={(event) =>
-                                  setEditForm({
-                                    ...editForm,
-                                    name: event.target.value,
-                                  })
-                                }
-                              />
-                            </FormField>
-                            <FormField label="Email">
-                              <FormInput
-                                type="email"
-                                value={editForm.email}
-                                onChange={(event) =>
-                                  setEditForm({
-                                    ...editForm,
-                                    email: event.target.value,
-                                  })
-                                }
-                              />
-                            </FormField>
-                            <FormField label="Role">
-                              <FormSelect
-                                value={editForm.role}
-                                onChange={(value) =>
-                                  setEditForm({
-                                    ...editForm,
-                                    role: value as Role,
-                                  })
-                                }
-                                options={roles}
-                              />
-                            </FormField>
-                            <FormField
-                              label="New password"
-                              hint="Leave blank to keep current password"
-                            >
-                              <PasswordInput
-                                value={editForm.password}
-                                onChange={(event) =>
-                                  setEditForm({
-                                    ...editForm,
-                                    password: event.target.value,
-                                  })
-                                }
-                              />
-                            </FormField>
-                          </div>
-                          <div className="form-actions">
-                            <Switch
-                              on={editForm.active}
-                              onChange={(active) =>
-                                setEditForm({ ...editForm, active })
-                              }
-                              label="Account active"
-                            />
-                            <button
-                              type="submit"
-                              className="primary-action"
-                              disabled={savingId !== null}
-                            >
-                              <Check size={16} aria-hidden="true" />
-                              {savingId ? "Saving…" : "Save changes"}
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary-action"
-                              disabled={savingId !== null}
-                              onClick={cancelEdit}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
+                      <th scope="row">
+                        <span className="user-name">
+                          <Avatar name={user.name} />
+                          <span>
+                            <strong>{user.name}</strong>
+                            <span>{user.email || "No email provided"}</span>
+                          </span>
+                        </span>
+                      </th>
+                      <td>{user.username}</td>
+                      <td>
+                        <RolePill role={user.role} />
+                      </td>
+                      <td className="status-cell">
+                        <ActiveDot active={user.active} />
+                      </td>
+                      <td>
+                        <time title={user.lastLoginFull}>{user.lastLogin}</time>
+                      </td>
+                      <td>
+                        <div className="user-actions">
+                          <button
+                            type="button"
+                            disabled={savingId !== null}
+                            className="secondary-action"
+                            aria-label={`Edit ${user.name}`}
+                            onClick={() =>
+                              editingId === user.id
+                                ? cancelEdit()
+                                : openEdit(user)
+                            }
+                          >
+                            <Pencil size={15} aria-hidden="true" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingId !== null}
+                            className="secondary-action"
+                            aria-label={`${user.active ? "Deactivate" : "Activate"} ${user.name}`}
+                            onClick={() =>
+                              user.active
+                                ? setDeactivationUser(user)
+                                : void toggleActive(user)
+                            }
+                          >
+                            <Power size={15} aria-hidden="true" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
-          </tbody>
-        </table>
+                    {editingId === user.id && editForm && (
+                      <tr>
+                        <td colSpan={6} className="user-edit-cell">
+                          <form
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              void saveEdit();
+                            }}
+                          >
+                            <h3>Edit {user.name}</h3>
+                            <div className="admin-form-grid">
+                              <FormField label="Full name">
+                                <FormInput
+                                  value={editForm.name}
+                                  onChange={(event) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      name: event.target.value,
+                                    })
+                                  }
+                                />
+                              </FormField>
+                              <FormField label="Email">
+                                <FormInput
+                                  type="email"
+                                  value={editForm.email}
+                                  onChange={(event) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      email: event.target.value,
+                                    })
+                                  }
+                                />
+                              </FormField>
+                              <FormField label="Role">
+                                <FormSelect
+                                  value={editForm.role}
+                                  onChange={(value) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      role: value as Role,
+                                    })
+                                  }
+                                  options={roles}
+                                />
+                              </FormField>
+                              <FormField
+                                label="New password"
+                                hint="Leave blank to keep current password"
+                              >
+                                <PasswordInput
+                                  value={editForm.password}
+                                  onChange={(event) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      password: event.target.value,
+                                    })
+                                  }
+                                />
+                              </FormField>
+                            </div>
+                            <div className="form-actions">
+                              <Switch
+                                on={editForm.active}
+                                onChange={(active) =>
+                                  setEditForm({ ...editForm, active })
+                                }
+                                label="Account active"
+                              />
+                              <button
+                                type="submit"
+                                className="primary-action"
+                                disabled={savingId !== null}
+                              >
+                                <Check size={16} aria-hidden="true" />
+                                {savingId ? "Saving…" : "Save changes"}
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary-action"
+                                disabled={savingId !== null}
+                                onClick={cancelEdit}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+            </tbody>
+          </table>
+        </div>
       </section>
       <p className="page-footnote">
         Role and account changes are saved by the connected backend.
