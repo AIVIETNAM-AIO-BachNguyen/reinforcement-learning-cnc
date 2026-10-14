@@ -2686,130 +2686,181 @@ summary:focus-visible {
 .attention-table {
   min-width: 900px;
 }
-.machine-trends {
-  border: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
-  border-radius: 12px;
+/* Factory-level summary stays distinct from individual machine inspection. */
+.factory-overview {
   background: white;
+  border: 1px solid var(--color-stone-border);
+  border-radius: 12px; /* taste-skill-ignore: Dub structural border for the factory summary. */
 }
-.trend-section-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding: 14px 20px 0;
+.factory-overview .section-heading {
+  padding-bottom: 12px;
 }
-.trend-section-heading h2 {
-  font-size: 16px;
-}
-.trend-section-heading p,
-.trend-legend {
-  font-size: 13px;
-  color: var(--color-ash-gray);
-}
-.trend-legend {
-  margin-left: auto;
-  display: flex;
-  gap: 12px;
-  white-space: nowrap;
-}
-.trend-grid {
+.factory-overview-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 12px 0;
+  grid-template-columns: 0.95fr 1.35fr 1fr;
+  padding: 0 0 16px;
 }
-.trend-machine {
-  text-align: left;
+.factory-summary-block {
+  min-width: 0;
   padding: 0 20px;
-  color: var(--color-slate-text);
 }
-.trend-machine + .trend-machine {
-  border-left: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
+.factory-summary-block + .factory-summary-block {
+  border-left: 1px solid var(--color-stone-border); /* taste-skill-ignore: separates different factory-level data dimensions. */
 }
-.trend-machine:hover {
-  background: #fafafa;
-}
-.trend-machine-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-.trend-machine-heading strong {
+.factory-summary-block h3 {
   font-size: 14px;
   font-weight: 600;
 }
-.trend-machine-heading strong > span {
-  color: var(--color-ash-gray);
-  font-weight: 400;
-  margin-left: 8px;
+.factory-state-bar {
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  margin: 12px 0;
+  background: var(--color-hover-stone);
 }
-.trend-machine-heading > svg {
-  color: var(--color-chartwell-blue);
+.factory-state-operating {
+  background: var(--color-emerald);
 }
-.trend-machine-metric {
+.factory-state-risk,
+.factory-state-faulted {
+  background: var(--color-rose);
+}
+.factory-state-maintenance {
+  background: var(--color-chartwell-blue);
+}
+.factory-state-unreported {
+  background: var(--color-platinum-outline);
+}
+.factory-status-list {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+.factory-status-list > div,
+.factory-workload dl > div {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-top: 6px;
+  justify-content: space-between;
+  gap: 12px;
 }
-.trend-machine-metric > strong {
-  font-family: var(--font-numeric);
-  font-size: 22px;
-  font-weight: 500;
-}
-.trend-machine-metric > span {
-  font-size: 13px;
+.factory-status-list dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--color-ash-gray);
 }
-.trend-chart {
+.factory-status-list dd,
+.factory-workload dd {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-slate-text);
+  font-weight: 500;
+}
+.factory-load-heading {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
-.trend-chart > svg {
-  display: block;
-  width: 100%;
-  height: 64px;
-  overflow: visible;
+.factory-load-heading > span {
+  color: var(--color-ash-gray);
+  font-size: 13px;
 }
-.trend-y-axis {
+.factory-load-value {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 6px;
+}
+.factory-load-value > strong {
+  font-family: var(--font-numeric);
+  font-size: 26px;
+  font-weight: 500;
+}
+.factory-load-value > span {
+  font-family: var(--font-numeric);
+  font-size: 13px;
+}
+.factory-load-value > span > span {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-ash-gray);
+}
+.factory-load-chart {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.factory-load-y-axis {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   min-width: 36px;
-  padding-block: 2px;
+  padding-block: 4px;
   font-size: 13px;
   color: var(--color-ash-gray);
 }
-.trend-x-axis {
-  display: flex;
-  justify-content: space-between;
-  margin-left: 44px;
-  font-size: 13px;
-  color: var(--color-ash-gray);
+.factory-load-chart > svg {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 78px;
+  overflow: visible;
 }
-.trend-guide {
+.factory-load-guide {
   fill: none;
   stroke: var(--color-stone-border);
   stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
-.trend-health-line {
-  stroke: var(--color-ghost-ink);
-}
-.trend-at-risk .trend-health-line {
-  stroke: var(--color-rose);
-}
-.trend-at-risk .trend-machine-metric > strong {
-  color: var(--color-rose);
-}
-.trend-load-line {
-  stroke: #737373;
-  stroke-dasharray: 4 4;
-}
-.trend-health-line,
-.trend-load-line {
+.factory-load-line {
   fill: none;
-  stroke-width: 2;
+  stroke: var(--color-ghost-ink);
+  stroke-width: 2.5;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.factory-load-point {
+  fill: var(--color-ghost-ink);
+}
+.factory-load-times {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 46px;
+  font-size: 13px;
+  color: var(--color-ash-gray);
+}
+.factory-summary-scope {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-ash-gray);
+}
+.factory-load-unavailable {
+  display: flex;
+  align-items: center;
+  min-height: 120px;
+  font-size: 14px;
+  color: var(--color-ash-gray);
+}
+.factory-workload > p {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-ash-gray);
+}
+.factory-workload dl {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--color-ash-gray);
+}
+.factory-workload > a {
+  margin-top: 16px;
+  font-size: 13px;
+}
+#attention-queue {
+  scroll-margin-top: 20px;
 }
 .overview-evidence-anchor {
   scroll-margin-top: 20px;

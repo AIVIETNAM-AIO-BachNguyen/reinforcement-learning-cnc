@@ -13,7 +13,7 @@ import {
 import { useMemo, useRef, useState } from "react";
 
 import { FactoryLiveView } from "@/components/operations/factory-live-view";
-import { MachineTrends } from "@/components/operations/machine-trends";
+import { FactoryOverview } from "@/components/operations/factory-overview";
 import { AppShell } from "@/components/app-shell";
 import { operationsOverviewFixture } from "@/lib/operations-ui/fixtures";
 import type { AttentionItem } from "@/types/operations-ui";
@@ -38,14 +38,17 @@ export function DashboardPage() {
   const [ascending, setAscending] = useState(true);
   const [machine, setMachine] = useState("M03");
   const evidenceRef = useRef<HTMLDivElement>(null);
-  const inspect = (id: string) => {
-    setMachine(id);
+  const openMachineEvidence = () => {
     requestAnimationFrame(() => {
       const inspector =
         evidenceRef.current?.querySelector<HTMLElement>(".machine-inspector");
       inspector?.focus({ preventScroll: true });
       evidenceRef.current?.scrollIntoView({ block: "start" });
     });
+  };
+  const inspect = (id: string) => {
+    setMachine(id);
+    openMachineEvidence();
   };
   const cases = useMemo(() => {
     const priority = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
@@ -131,6 +134,7 @@ export function DashboardPage() {
           </div>
         </dl>
 
+        <FactoryOverview onInspectMachines={openMachineEvidence} />
         <div className="priority-brief">
           <span className="priority-marker" aria-hidden="true" />
           <div>
@@ -148,9 +152,9 @@ export function DashboardPage() {
             Inspect evidence <ChevronRight size={16} aria-hidden="true" />
           </button>
         </div>
-        <MachineTrends onInspect={inspect} />
 
         <section
+          id="attention-queue"
           className="attention-section"
           aria-labelledby="attention-heading"
         >

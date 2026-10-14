@@ -28,9 +28,13 @@ This is one adapted Dub direction. Steep's serif/peach treatment and Ventriloc's
 
 ## Decision-oriented overview
 
-The first screen leads with snapshot metrics and the priority maintenance case. The next layer contains health/load trends for the three machines with recorded samples. Axes, sample duration and comparison with the first sample provide context; the change in percentage points is derived only from those recorded values.
+The first screen leads with snapshot metrics and a factory-level overview, followed by the priority maintenance case. The overview shows the distribution of reported machine states, one aggregate load trend and the decision workload. It does not repeat individual machine names or per-machine charts from the inspection workspace below.
 
-The attention table follows immediately and provides machine/case search, status filtering and sorting by machine or priority. Inspecting a row or a trend opens the matching evidence and moves keyboard focus to it. M07 has a case record but no health/load sample series; its detail explicitly reports that absence instead of substituting M03's samples. Operational fixture machine IDs are not presented as direct links into unrelated research recommendation IDs.
+The snapshot inventory contains 12 machines, while only three have recorded operating state and comparable load series. Nine remain explicitly **Not reported**; no operating, faulted or maintenance states are inferred for them. The load trend is labelled **Mean reported load** and **3/12 machines with load history**. It is the simple mean of available source readings, with a change in percentage points from the first recorded sample. It is not presented as measured utilization for the entire factory, and no chart is drawn when suitable series are absent.
+
+The attention table provides machine/case search, status filtering and sorting by machine or priority. Inspecting a row opens the matching evidence and moves keyboard focus to it. The factory overview links to the attention queue and the machine-inspection workspace. Changing the selected machine leaves factory aggregates unchanged. M07 has a case record but no health/load sample series; its detail explicitly reports that absence instead of substituting M03's samples. Operational fixture machine IDs are not presented as direct links into unrelated research recommendation IDs.
+
+The factory overview refinement passed 59 tests across 13 files, TypeScript, lint and the production build. Chrome checks cover aggregate scope, the full inventory denominator, navigation and layout at five desktop widths. See [factory-overview-verification.json](factory-overview-verification.json) and [factory overview](previews/factory-overview.jpg).
 
 Machine evidence and the labelled dispatch replay now sit below the investigation table. The replay retains explicit play, step and reset controls. It does not claim maintenance has completed or fabricate an improvement in health.
 
@@ -48,7 +52,7 @@ The shared design applies to Decision Center, review dialogs, agents, scenario c
 
 The research and backend limitations documented in [dss-research.md](dss-research.md) still apply. Overview/agents are recorded demo data. What-if presets display recorded simulator outcomes; this redesign does not provide a new server-side parameterized simulation endpoint or invented slider calculations.
 
-Validation includes the production build, TypeScript, lint, 54 tests and Chrome review at 1280, 1440, 1920, 2560 and 3840px. The browser uses mock product records and intercepted GET-only authentication/user fixtures. It does not submit production reviews, mutate accounts or operate machines. Browser checks cover density persistence, search, status filters, matching evidence, keyboard focus, column alignment, sticky table structure and sidebar collapse.
+Validation includes the production build, TypeScript, lint, 59 tests and Chrome review at 1280, 1440, 1920, 2560 and 3840px. The browser uses mock product records and intercepted GET-only authentication/user fixtures. It does not submit production reviews, mutate accounts or operate machines. Browser checks cover density persistence, search, status filters, matching evidence, keyboard focus, column alignment, sticky table structure, sidebar collapse and factory-level aggregate scope.
 
 Taste Skill's inspector was used as an auxiliary browser check. Landing-page rules for photographs, oversized focal points, animation, boxed app panels and dense text are explicitly outside this application brief. Numeric monospace is required by the user and the chosen reference. The remaining mixed-font metric and caution-text contrast warnings are design judgments to review, not hidden failures or a claim of standards certification.
 

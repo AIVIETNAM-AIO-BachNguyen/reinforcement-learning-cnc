@@ -8,6 +8,7 @@ import { DashboardPage } from "@/components/pages/dashboard-page";
 import { FactoryLiveView } from "@/components/operations/factory-live-view";
 import { WhatIfWorkspacePage } from "@/components/pages/what-if-workspace-page";
 import { factoryReplayMachines } from "@/lib/operations-ui/factory-replay";
+import { FactoryOverview } from "@/components/operations/factory-overview";
 
 vi.mock("@/components/app-shell", () => ({
   AppShell: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -141,20 +142,44 @@ describe("operations UI ports", () => {
     expect(within(queue).getByText("M03")).toBeInTheDocument();
   });
 
-  it("opens machine evidence from a trend and keeps sample values traceable", async () => {
+  it("shows factory-level aggregates above the separate machine evidence", async () => {
     const user = userEvent.setup();
     render(<DashboardPage />);
+    const factory = screen.getByRole("region", { name: "Factory overview" });
     expect(
-      screen.getByRole("img", { name: /M03 health from 88% to 62%/ }),
+      within(factory).getByRole("img", {
+        name: /12 machines: 2 operating, 1 at risk, 0 faulted, 0 under maintenance, 9 without reported state/,
+      }),
     ).toBeInTheDocument();
+    expect(within(factory).getByText("74.7%")).toBeInTheDocument();
+    expect(
+      within(factory).getByRole("img", {
+        name: /Mean reported load for 3 of 12 machines/,
+      }),
+    ).toBeInTheDocument();
+    expect(within(factory).queryByText("M03")).not.toBeInTheDocument();
+    expect(within(factory).queryByText("M01")).not.toBeInTheDocument();
     await user.click(
-      screen.getByRole("button", { name: "Inspect trend evidence for M01" }),
+      within(factory).getByRole("button", { name: "Inspect machines" }),
     );
     expect(
       within(screen.getByLabelText("Selected machine details")).getByRole(
         "heading",
-        { name: "M01 · Milling cell" },
+        { name: "M03 · Spindle cell" },
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("does not draw a factory load chart without source series", () => {
+    render(<FactoryOverview machines={[]} onInspectMachines={vi.fn()} />);
+    expect(
+      screen.getByText("No comparable load series available."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /Mean reported load/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /12 without reported state/ }),
     ).toBeInTheDocument();
   });
 
