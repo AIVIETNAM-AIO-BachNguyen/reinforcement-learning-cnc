@@ -2,146 +2,184 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ClipboardCheck, FlaskConical, LogOut, Users } from "lucide-react";
+import {
+  Activity,
+  Bot,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  FlaskConical,
+  LayoutDashboard,
+  LogOut,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { ErrorBoundary } from "@/components/error-boundary";
 import { getUserFromToken, logout, type TokenUser } from "@/lib/auth";
 
-type AppShellProps = {
-  children: ReactNode;
-  title?: string;
-};
+const navigation = [
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
+  { href: "/decisions", label: "Decision Center", icon: ClipboardCheck },
+  { href: "/agents", label: "Agent Control Room", icon: Bot },
+  { href: "/what-if", label: "What-if Workspace", icon: SlidersHorizontal },
+];
 
 function NavItem({
   href,
   label,
   icon: Icon,
+  collapsed,
 }: {
   href: string;
   label: string;
-  icon: typeof FlaskConical;
+  icon: typeof Activity;
+  collapsed: boolean;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
-
+  const active = pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className="flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors"
-      style={{
-        background: active ? "var(--color-sky-tint)" : "transparent",
-        color: active ? "var(--color-slate-text)" : "var(--color-ash-gray)",
-      }}
+      title={collapsed ? label : undefined}
+      className={`workspace-nav-link ${active ? "is-active" : ""}`}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>{label}</span>
+      <Icon size={19} aria-hidden="true" />
+      <span className={collapsed ? "sr-only" : undefined}>{label}</span>
     </Link>
   );
 }
 
-export function AppShell({ children, title = "Research overview" }: AppShellProps) {
+export function AppShell({
+  children,
+  title = "Operations overview",
+}: {
+  children: ReactNode;
+  title?: string;
+}) {
   const router = useRouter();
   const [user, setUser] = useState<TokenUser | null>(null);
-  const [ready, setReady] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     void getUserFromToken().then((currentUser) => {
       if (cancelled) return;
-      if (!currentUser) {
-        router.replace("/login");
-        return;
-      }
-      setUser(currentUser);
-      setReady(true);
+      if (!currentUser) router.replace("/login");
+      else setUser(currentUser);
     });
     return () => {
       cancelled = true;
     };
   }, [router]);
 
-  if (!ready || !user) {
+  if (!user)
     return (
-      <div className="grid min-h-screen place-items-center bg-[var(--color-canvas-fog)] px-4">
-        <div role="status" className="flex items-center gap-3 text-sm text-[var(--color-ash-gray)]">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-stone-border)] border-t-[var(--color-chartwell-blue)]" />
-          Opening the research workspace…
-        </div>
+      <div className="workspace-loading" role="status">
+        <Activity size={24} aria-hidden="true" />
+        <p>Opening your workspace…</p>
       </div>
     );
-  }
-
   const displayName = user.fullName || user.username || user.role;
 
   return (
-    <div className="min-h-screen bg-[var(--color-canvas-fog)] lg:flex">
-      <aside
-        className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-white lg:flex"
-        style={{ borderColor: "var(--color-stone-border)" }}
-      >
-        <Link href="/" className="flex h-16 items-center gap-3 px-5">
-          <span className="grid h-8 w-8 place-items-center rounded-md bg-[var(--color-slate-text)] text-white">
-            <FlaskConical className="h-4 w-4" aria-hidden="true" />
+    <div className={`workspace-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+      <a href="#workspace-content" className="skip-link">
+        Skip to content
+      </a>
+      <aside className="workspace-sidebar" aria-label="Workspace sidebar">
+        <Link
+          href="/overview"
+          className="workspace-brand"
+          title="Maintenance AI"
+        >
+          <span className="brand-symbol">
+            <Activity size={23} aria-hidden="true" />
           </span>
-          <span className="text-sm font-semibold text-[var(--color-slate-text)]">CNC Research Console</span>
+          <span className={collapsed ? "sr-only" : "brand-name"}>
+            Maintenance AI<span>Factory operations</span>
+          </span>
         </Link>
-
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-3" aria-label="Primary navigation">
-          <NavItem href="/experiments" label="Experiments" icon={FlaskConical} />
-          <NavItem href="/decisions" label="Decision Center" icon={ClipboardCheck} />
-          {user.role === "ADMIN" && <NavItem href="/admin" label="Users" icon={Users} />}
+        <nav aria-label="Primary navigation" className="workspace-navigation">
+          <p className={collapsed ? "sr-only" : "nav-group-label"}>
+            Operations
+          </p>
+          {navigation.map((item) => (
+            <NavItem key={item.href} {...item} collapsed={collapsed} />
+          ))}
+          <p
+            className={
+              collapsed ? "sr-only" : "nav-group-label nav-group-secondary"
+            }
+          >
+            Research & administration
+          </p>
+          <NavItem
+            href="/experiments"
+            label="Experiments"
+            icon={FlaskConical}
+            collapsed={collapsed}
+          />
+          {user.role === "ADMIN" && (
+            <NavItem
+              href="/admin"
+              label="Users"
+              icon={Users}
+              collapsed={collapsed}
+            />
+          )}
         </nav>
-
-        <div className="border-t px-4 py-4" style={{ borderColor: "var(--color-stone-border)" }}>
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-[var(--color-slate-text)]">{displayName}</p>
-              <p className="text-xs text-[var(--color-ash-gray)]">{user.role}</p>
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="workspace-nav-link sidebar-toggle"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight size={18} aria-hidden="true" />
+            ) : (
+              <ChevronLeft size={18} aria-hidden="true" />
+            )}
+            {!collapsed && <span>Collapse sidebar</span>}
+          </button>
+          <div className="workspace-account">
+            <span className="account-avatar" aria-hidden="true">
+              {displayName.slice(0, 1).toUpperCase()}
+            </span>
+            <div className={collapsed ? "sr-only" : "account-name"}>
+              <p>{displayName}</p>
+              <span>{user.role === "ADMIN" ? "Administrator" : user.role}</span>
             </div>
-            <button
-              type="button"
-              aria-label="Log out"
-              title="Log out"
-              onClick={() => void logout()}
-              className="grid h-9 w-9 place-items-center rounded-md border text-[var(--color-ash-gray)] transition-colors hover:bg-[var(--color-canvas-fog)]"
-              style={{ borderColor: "var(--color-stone-border)" }}
-            >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-            </button>
           </div>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="workspace-nav-link"
+            aria-label="Log out"
+            title="Log out"
+          >
+            <LogOut size={18} aria-hidden="true" />
+            <span className={collapsed ? "sr-only" : undefined}>Log out</span>
+          </button>
         </div>
       </aside>
-
-      <div className="min-w-0 flex-1">
-        <header
-          className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 sm:px-6 lg:px-8"
-          style={{ borderColor: "var(--color-stone-border)" }}
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <FlaskConical className="h-5 w-5 shrink-0 text-[var(--color-chartwell-blue)] lg:hidden" aria-hidden="true" />
-            <h1 className="truncate text-base font-semibold text-[var(--color-slate-text)]">{title}</h1>
+      <div className="workspace-body">
+        <header className="workspace-topbar">
+          <div className="workspace-breadcrumb">
+            <span>Workspace</span>
+            <ChevronRight size={15} aria-hidden="true" />
+            <p>{title}</p>
           </div>
-          <div className="flex items-center gap-1 lg:hidden">
-            <Link href="/experiments" aria-label="Experiments" title="Experiments" className="grid h-9 w-9 place-items-center rounded-md">
-              <FlaskConical className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            <Link href="/decisions" aria-label="Decision Center" title="Decision Center" className="grid h-9 w-9 place-items-center rounded-md">
-              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            {user.role === "ADMIN" && (
-              <Link href="/admin" aria-label="Users" title="Users" className="grid h-9 w-9 place-items-center rounded-md">
-                <Users className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            )}
-            <button type="button" aria-label="Log out" title="Log out" onClick={() => void logout()} className="grid h-9 w-9 place-items-center rounded-md">
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
+          <span className="workspace-context">CNC maintenance & planning</span>
         </header>
-
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <div id="workspace-content" tabIndex={-1}>
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </div>
       </div>
     </div>
   );

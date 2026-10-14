@@ -11,3 +11,6 @@ __pycache__/
 .mypy_cache/
 
 .DS_Store
+
+# Local design direction and browser inspection artifacts
+.taste-skill/

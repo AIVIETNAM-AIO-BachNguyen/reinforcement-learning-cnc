@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CNC Research Console",
-  description: "Risk-aware multi-agent CNC tool replacement research platform",
+  title: "Maintenance AI",
+  description:
+    "Industrial decision support for CNC maintenance, policy evidence and human review",
 };
 
 export default function RootLayout({

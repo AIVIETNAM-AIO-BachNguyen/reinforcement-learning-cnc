@@ -1,0 +1,605 @@
+{
+  "viewports": [
+    1280,
+    1440,
+    1920
+  ],
+  "screens_and_states": 42,
+  "mode": "Production preview with mock Product API and read-only intercepted auth/user responses",
+  "scope": "Desktop layout and readability checks; not a standards conformance audit or live backend integration test",
+  "taste_allowances": [
+    "few-pictures",
+    "focal-point",
+    "no-footage",
+    "still-page",
+    "card-rows",
+    "eyebrow",
+    "hairline",
+    "outlined-box",
+    "icon-cards"
+  ],
+  "results": [
+    {
+      "name": "overview",
+      "width": 1280,
+      "url": "http://localhost:3001/overview",
+      "headings": [
+        {
+          "text": "Operations overview",
+          "lines": 1
+        },
+        {
+          "text": "1 case needs a decision",
+          "lines": 1
+        },
+        {
+          "text": "12 in the factory snapshot",
+          "lines": 1
+        },
+        {
+          "text": "2 gathering evidence",
+          "lines": 1
+        },
+        {
+          "text": "4 upcoming in the snapshot",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "decisions",
+      "width": 1280,
+      "url": "http://localhost:3001/decisions",
+      "headings": [
+        {
+          "text": "Decision Center",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "decision-dialog",
+      "width": 1280,
+      "url": "http://localhost:3001/decisions",
+      "headings": [
+        {
+          "text": "Decision Center",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "agents",
+      "width": 1280,
+      "url": "http://localhost:3001/agents",
+      "headings": [
+        {
+          "text": "Agent Control Room",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "scenarios",
+      "width": 1280,
+      "url": "http://localhost:3001/what-if",
+      "headings": [
+        {
+          "text": "What-if Workspace",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "scenario-empty",
+      "width": 1280,
+      "url": "http://localhost:3001/what-if",
+      "headings": [
+        {
+          "text": "What-if Workspace",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "experiments",
+      "width": 1280,
+      "url": "http://localhost:3001/experiments",
+      "headings": [
+        {
+          "text": "Experiments",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "new-experiment",
+      "width": 1280,
+      "url": "http://localhost:3001/experiments/new",
+      "headings": [
+        {
+          "text": "Create experiment",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "experiment-detail",
+      "width": 1280,
+      "url": "http://localhost:3001/experiments/experiment-week1-001",
+      "headings": [
+        {
+          "text": "Risk-aware fleet demonstration",
+          "lines": 1
+        },
+        {
+          "text": "4",
+          "lines": 1
+        },
+        {
+          "text": "1",
+          "lines": 1
+        },
+        {
+          "text": "1",
+          "lines": 1
+        },
+        {
+          "text": "1",
+          "lines": 1
+        },
+        {
+          "text": "1",
+          "lines": 1
+        },
+        {
+          "text": "0",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "episode-detail",
+      "width": 1280,
+      "url": "http://localhost:3001/episodes/episode-week1-001",
+      "headings": [
+        {
+          "text": "week1.seed-4100",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "admin",
+      "width": 1280,
+      "url": "http://localhost:3001/admin",
+      "headings": [
+        {
+          "text": "User management",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "admin-edit",
+      "width": 1280,
+      "url": "http://localhost:3001/admin",
+      "headings": [
+        {
+          "text": "User management",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "login",
+      "width": 1280,
+      "url": "http://localhost:3001/login",
+      "headings": [
+        {
+          "text": "Sign in to your workspace",
+          "lines": 1
+        },
+        {
+          "text": "Clarity for every maintenance decision.",
+          "lines": 2
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "not-found",
+      "width": 1280,
+      "url": "http://localhost:3001/missing-page",
+      "headings": [
+        {
+          "text": "Page not found",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "overview",
+      "width": 1440,
+      "url": "http://localhost:3001/overview",
+      "headings": [
+        {
+          "text": "Operations overview",
+          "lines": 1
+        },
+        {
+          "text": "1 case needs a decision",
+          "lines": 1
+        },
+        {
+          "text": "12 in the factory snapshot",
+          "lines": 1
+        },
+        {
+          "text": "2 gathering evidence",
+          "lines": 1
+        },
+        {
+          "text": "4 upcoming in the snapshot",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "decisions",
+      "width": 1440,
+      "url": "http://localhost:3001/decisions",
+      "headings": [
+        {
+          "text": "Decision Center",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "decision-dialog",
+      "width": 1440,
+      "url": "http://localhost:3001/decisions",
+      "headings": [
+        {
+          "text": "Decision Center",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "agents",
+      "width": 1440,
+      "url": "http://localhost:3001/agents",
+      "headings": [
+        {
+          "text": "Agent Control Room",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "scenarios",
+      "width": 1440,
+      "url": "http://localhost:3001/what-if",
+      "headings": [
+        {
+          "text": "What-if Workspace",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "scenario-empty",
+      "width": 1440,
+      "url": "http://localhost:3001/what-if",
+      "headings": [
+        {
+          "text": "What-if Workspace",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "experiments",
+      "width": 1440,
+      "url": "http://localhost:3001/experiments",
+      "headings": [
+        {
+          "text": "Experiments",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "new-experiment",
+      "width": 1440,
+      "url": "http://localhost:3001/experiments/new",
+      "headings": [
+        {
+          "text": "Create experiment",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "experiment-detail",
+      "width": 1440,
+      "url": "http://localhost:3001/experiments/experiment-week1-001",
+      "headings": [
+        {
+          "text": "Risk-aware fleet demonstration",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "episode-detail",
+      "width": 1440,
+      "url": "http://localhost:3001/episodes/episode-week1-001",
+      "headings": [
+        {
+          "text": "week1.seed-4100",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "admin",
+      "width": 1440,
+      "url": "http://localhost:3001/admin",
+      "headings": [
+        {
+          "text": "User management",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "admin-edit",
+      "width": 1440,
+      "url": "http://localhost:3001/admin",
+      "headings": [
+        {
+          "text": "User management",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "login",
+      "width": 1440,
+      "url": "http://localhost:3001/login",
+      "headings": [
+        {
+          "text": "Clarity for every maintenance decision.",
+          "lines": 2
+        },
+        {
+          "text": "Sign in to your workspace",
+          "lines": 1
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "not-found",
+      "width": 1440,
+      "url": "http://localhost:3001/missing-page",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "overview",
+      "width": 1920,
+      "url": "http://localhost:3001/overview",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "decisions",
+      "width": 1920,
+      "url": "http://localhost:3001/decisions",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "decision-dialog",
+      "width": 1920,
+      "url": "http://localhost:3001/decisions",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "agents",
+      "width": 1920,
+      "url": "http://localhost:3001/agents",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "scenarios",
+      "width": 1920,
+      "url": "http://localhost:3001/what-if",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "scenario-empty",
+      "width": 1920,
+      "url": "http://localhost:3001/what-if",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "experiments",
+      "width": 1920,
+      "url": "http://localhost:3001/experiments",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "new-experiment",
+      "width": 1920,
+      "url": "http://localhost:3001/experiments/new",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "experiment-detail",
+      "width": 1920,
+      "url": "http://localhost:3001/experiments/experiment-week1-001",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "episode-detail",
+      "width": 1920,
+      "url": "http://localhost:3001/episodes/episode-week1-001",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "admin",
+      "width": 1920,
+      "url": "http://localhost:3001/admin",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "admin-edit",
+      "width": 1920,
+      "url": "http://localhost:3001/admin",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "login",
+      "width": 1920,
+      "url": "http://localhost:3001/login",
+      "headings": [
+        {
+          "text": "Clarity for every maintenance decision.",
+          "lines": 2
+        }
+      ],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    },
+    {
+      "name": "not-found",
+      "width": 1920,
+      "url": "http://localhost:3001/missing-page",
+      "headings": [],
+      "overflow": 0,
+      "findings": [],
+      "errors": []
+    }
+  ]
+}

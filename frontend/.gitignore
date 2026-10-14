@@ -6,3 +6,6 @@ dist
 *.tsbuildinfo
 .env*
 !.env.local.example
+
+# Isolated local design verification build
+.next-dss-review/

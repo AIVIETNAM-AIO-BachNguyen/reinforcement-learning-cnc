@@ -61,14 +61,17 @@ export function StatusBadge<Status extends string = ResearchStatus>({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1",
-        "text-xs font-semibold leading-none tracking-wide",
+        "inline-flex max-w-full items-center gap-1.5 rounded-md px-2.5 py-1",
+        "text-[13px] font-semibold leading-normal",
         tone.badge,
         className,
       )}
       title={status}
     >
-      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)} aria-hidden="true" />
+      <span
+        className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone.dot)}
+        aria-hidden="true"
+      />
       <span className="min-w-0 break-all">{status}</span>
     </span>
   );
