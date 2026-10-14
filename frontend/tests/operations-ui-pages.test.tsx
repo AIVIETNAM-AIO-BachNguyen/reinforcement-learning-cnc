@@ -7,6 +7,7 @@ import { AgentControlRoomPage } from "@/components/pages/agent-control-room-page
 import { DashboardPage } from "@/components/pages/dashboard-page";
 import { FactoryLiveView } from "@/components/operations/factory-live-view";
 import { WhatIfWorkspacePage } from "@/components/pages/what-if-workspace-page";
+import { factoryReplayMachines } from "@/lib/operations-ui/factory-replay";
 
 vi.mock("@/components/app-shell", () => ({
   AppShell: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -22,6 +23,95 @@ afterAll(() => {
 });
 
 describe("operations UI ports", () => {
+  it("groups machine choices by reported status and supports search, Escape and selection", async () => {
+    const user = userEvent.setup();
+    render(<FactoryLiveView />);
+    const trigger = screen.getByRole("button", { name: "Select machine" });
+    expect(
+      screen.queryByRole("dialog", { name: "Machine directory" }),
+    ).not.toBeInTheDocument();
+    await user.click(trigger);
+    expect(
+      screen.getByRole("searchbox", { name: "Search machines" }),
+    ).toHaveFocus();
+    expect(
+      within(screen.getByRole("region", { name: "At risk" })).getByRole(
+        "button",
+        { name: "Inspect M03 Spindle cell" },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("region", { name: "Operating normally" }),
+      ).getAllByRole("button"),
+    ).toHaveLength(2);
+    expect(
+      within(screen.getByRole("region", { name: "Faulted" })).getByText(
+        "No recorded machines",
+      ),
+    ).toBeInTheDocument();
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search machines" }),
+      "does-not-exist",
+    );
+    expect(
+      screen.getByText("No machines match this search."),
+    ).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(trigger).toHaveFocus();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(trigger);
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search machines" }),
+      "m02",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Inspect M02 Turning cell" }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Selected machine details")).getByRole(
+        "heading",
+        { name: "M02 · Turning cell" },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Demo health and load samples for M02" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a faulted machine only when its source reports that status", async () => {
+    const user = userEvent.setup();
+    render(
+      <FactoryLiveView
+        machines={[
+          ...factoryReplayMachines,
+          {
+            ...factoryReplayMachines[2],
+            id: "M04",
+            name: "Grinding cell",
+            status: "FAULTED",
+          },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Select machine" }));
+    await user.click(
+      within(screen.getByRole("region", { name: "Faulted" })).getByRole(
+        "button",
+        { name: "Inspect M04 Grinding cell" },
+      ),
+    );
+    expect(
+      within(screen.getByLabelText("Selected machine details")).getByText(
+        "Faulted",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Demo health and load samples for M04" }),
+    ).toBeInTheDocument();
+  });
+
   it("filters and sorts the attention queue, then opens the matching source evidence", async () => {
     const user = userEvent.setup();
     render(<DashboardPage />);
@@ -97,6 +187,7 @@ describe("operations UI ports", () => {
     expect(within(details).getByText("risk-M03-t120")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "00:00" }));
     expect(within(details).getByText("88%")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Select machine" }));
     await user.click(
       screen.getByRole("button", { name: "Inspect M01 Milling cell" }),
     );
@@ -115,6 +206,7 @@ describe("operations UI ports", () => {
   it("steps and resets demo dispatch without claiming maintenance completed or changing health", async () => {
     const user = userEvent.setup();
     render(<FactoryLiveView />);
+    await user.click(screen.getByText("Maintenance replay"));
     expect(
       screen.getByRole("button", { name: "Play simulation" }),
     ).toBeInTheDocument();
@@ -146,6 +238,7 @@ describe("operations UI ports", () => {
     vi.useFakeTimers();
     try {
       const view = render(<FactoryLiveView />);
+      fireEvent.click(screen.getByText("Maintenance replay"));
       fireEvent.click(screen.getByRole("button", { name: "Play simulation" }));
       act(() => {
         vi.advanceTimersByTime(2800);

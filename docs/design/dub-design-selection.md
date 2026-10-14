@@ -34,6 +34,14 @@ The attention table follows immediately and provides machine/case search, status
 
 Machine evidence and the labelled dispatch replay now sit below the investigation table. The replay retains explicit play, step and reset controls. It does not claim maintenance has completed or fabricate an improvement in health.
 
+### Machine inspection refinement
+
+The machine-evidence workspace now uses one **Select machine** control instead of repeated machine cards and a schematic technician bay. Its searchable directory groups machines as at risk, faulted, operating normally, under maintenance and status not reported. Counts come from recorded entries. The current demo has no faulted machine; that group remains explicitly empty rather than fabricating a failure. M07 remains selectable with case evidence and a clearly unavailable history.
+
+The selected machine's context sits on the left; a large health/load chart takes the remaining width. The chart is 260–300px high, has an explicit 0–100% axis, and positions samples at their actual elapsed times. Clickable points and keyboard-accessible time buttons reveal exact health/load values and change in percentage points relative to the first sample. No additional predictions or thresholds are inferred. The optional M03 replay is collapsed by default and pauses when closed.
+
+The selector supports search, Escape, outside-click dismissal and normal keyboard navigation. Selecting a machine moves focus to its evidence. The refinement passed 56 tests, TypeScript, lint and the production build. Chrome verified selection, empty/search states, missing histories, replay grouping and large chart layouts at five desktop widths with no captured runtime exceptions. See [machine-inspection-verification.json](machine-inspection-verification.json), [machine evidence](previews/machine-evidence.jpg) and [the selector](previews/machine-picker.jpg).
+
 The shared design applies to Decision Center, review dialogs, agents, scenario comparisons, experiment creation/results, episode evidence, user administration, sign-in and system states. Existing authentication, review confirmation, execution, cancellation and retry behavior remain intact.
 
 ## Boundaries and validation

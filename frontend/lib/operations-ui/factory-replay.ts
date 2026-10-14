@@ -1,4 +1,19 @@
 /** UI-only replay data. These samples do not represent backend telemetry or policy output. */
+export type FactoryMachineStatus =
+  | "OPERATING"
+  | "RISK"
+  | "FAULTED"
+  | "MAINTENANCE";
+export type FactoryReplayMachine = {
+  id: string;
+  name: string;
+  status: FactoryMachineStatus;
+  load: number;
+  health: number;
+  healthSamples: readonly number[];
+  loadSamples: readonly number[];
+};
+
 export const factoryReplayMachines = [
   {
     id: "M01",
@@ -27,7 +42,7 @@ export const factoryReplayMachines = [
     healthSamples: [88, 85, 81, 74, 67, 62],
     loadSamples: [62, 66, 70, 77, 84, 89],
   },
-] as const;
+] as const satisfies readonly FactoryReplayMachine[];
 
 export const factoryReplayStages = [
   {
