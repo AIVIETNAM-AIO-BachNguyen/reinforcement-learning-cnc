@@ -1,0 +1,26 @@
+const router = require('express').Router();
+const db = require('../../config/prisma');
+const { requireAuth } = require('../../middlewares/auth.middleware');
+const { createDecisionCase, getDecisionCase,
+  getDecisionCaseEvents } = require('../../services/decision-case.service');
+const { getDecisionRecommendation } = require('../../services/decision-planning.service');
+const { listDecisionCases } = require('../../services/decision-case-list.service');
+router.use(requireAuth);
+router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+router.get('/', async (req, res) => res.json(await listDecisionCases(db, req.user, req.query)));
+router.post('/', async (req, res) => {
+  const result = await createDecisionCase(db, req.user, req.body, req.get('Idempotency-Key'));
+  res.status(202).set('Location', result.location);
+  if (result.replayed) res.set('Idempotency-Replayed', 'true');
+  res.json(result.body);
+});
+router.get('/:id', async (req, res) => res.json(await getDecisionCase(db, req.user, req.params.id)));
+router.post('/:id/decision', async (req, res) => {
+  const { executeDecisionCommand } = require('../../services/decision-command.service');
+  const result = await executeDecisionCommand(db, req.user, req.params.id, req.body, req.get('Idempotency-Key'));
+  if (result.replayed) res.set('Idempotency-Replayed', 'true');
+  res.status(200).json(result.body);
+});
+router.get('/:id/recommendation', async (req, res) => res.json(await getDecisionRecommendation(db, req.user, req.params.id)));
+router.get('/:id/events', async (req, res) => res.json(await getDecisionCaseEvents(db, req.user, req.params.id, req.query)));
+module.exports = router;

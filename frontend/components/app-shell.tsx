@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   FlaskConical,
+  Factory,
   LayoutDashboard,
   LogOut,
   SlidersHorizontal,
@@ -20,6 +21,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { getUserFromToken, logout, type TokenUser } from "@/lib/auth";
 
 const navigation = [
+  { href: "/operations", label: "Factory operations", icon: Factory },
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/decisions", label: "Decision Center", icon: ClipboardCheck },
   { href: "/agents", label: "Agent Control Room", icon: Bot },

@@ -8,6 +8,7 @@ Next.js frontend for the authenticated AI-assisted maintenance workflow. The UI 
 - experiment detail with idempotent run, mixed episode states, and polling;
 - episode detail with Retry for `FAILED`, Cancel for `PENDING`, current-attempt metadata, historical-attempt switching, partial-result handling, and a direct RUL-distribution visualization;
 - Decision Center with a recommendation queue, experiment/machine/severity/status filters, observation and policy context, audit history, and approve/reject/override review modals;
+- an Operations contract v3 fixture preview spanning overview, integrated scheduling, recommendation comparison, agent trace inspection, and isolated what-if scenarios;
 - a typed real Product API adapter and an in-memory mock adapter using the same TypeScript models.
 
 The default route is `/overview`. Research experiments remain available under `/experiments`; operational review is organized around `/decisions`, `/agents`, and `/what-if`. The current Operations Overview uses the typed fixture in `lib/operations-ui/fixtures.ts` until the Operations API exposes live case, machine, and agent-run resources.
@@ -103,6 +104,18 @@ Manual workflow:
 9. Repeat at desktop and mobile widths; tables and RUL plots should scroll within their own containers rather than overlap the page.
 
 The example configuration enables the mock Product API and development-only authentication bypass for local UI work. To verify the connected backend, set `NEXT_PUBLIC_PRODUCT_API_MODE=real` and `NEXT_PUBLIC_SKIP_AUTH=false`. Authentication bypass is ignored in production.
+
+## Operations contract v3
+
+Open `/operations` for the API-backed overview. It loads both `getOperationsSnapshot()` and `getCurrentSchedule()` through `OperationsApiClient`. Mock mode is the default and reads the shared canonical 6-machine/12-job/3-technician fixture; real mode calls the authenticated backend read endpoints:
+
+```dotenv
+NEXT_PUBLIC_OPERATIONS_API_MODE=real
+NEXT_PUBLIC_OPERATIONS_FACTORY_ID=factory-demo-01
+NEXT_PUBLIC_OPERATIONS_DECISION_CASE_ID=case-demo-M03-001
+```
+
+`/operations/schedule` uses the same synchronized snapshot/current-schedule reads. `/operations/recommendations` keeps its canonical candidate comparison in mock mode; in real mode it accepts `?caseId=...` (or `NEXT_PUBLIC_OPERATIONS_DECISION_CASE_ID`), polls the authoritative case while planning is active, then reads `getDecisionCaseRecommendation()`. The live package is rendered only with the immutable basis snapshot returned by that artifact endpoint. Identifier mismatches fail closed, `RECOMMENDATION_NOT_READY` remains pending, and live approval/modify/reject controls stay disabled. There is no fixture fallback in real mode. `/operations/agents` and `/operations/what-if` remain fixture-rendered in this slice. These pages preserve the v3 boundary: authoritative KPI, health, risk, RUL, cost and feasibility values are never derived by page components. See `../docs/frontend-operations-ia.md` for the information architecture and contract map.
 
 ## Decision Center contract and limitations
 

@@ -2,9 +2,168 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model FactorySnapshot {
+  factoryId String @map("factory_id")
+  snapshotId String @map("snapshot_id")
+  sourceId String? @map("source_id")
+  schemaVersion String @map("schema_version")
+  contentHash String @map("content_hash") @db.Char(64)
+  payloadJson Json @map("payload_json") @db.JsonB
+  capturedAt DateTime @map("captured_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  schedules OperationSchedule[]
+  heads OperationsHead[]
+
+  decisionCases DecisionCase[]
+
+  @@id([factoryId, snapshotId])
+  @@map("factory_snapshots")
+}
+
+model OperationSchedule {
+  factoryId String @map("factory_id")
+  scheduleId String @map("schedule_id")
+  revision Int
+  snapshotId String @map("snapshot_id")
+  schemaVersion String @map("schema_version")
+  contentHash String @map("content_hash") @db.Char(64)
+  payloadJson Json @map("payload_json") @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  snapshot FactorySnapshot @relation(fields: [factoryId, snapshotId], references: [factoryId, snapshotId], onDelete: Restrict)
+  heads OperationsHead[]
+  commit DecisionCommit?
+
+  @@id([factoryId, scheduleId, revision])
+  @@unique([factoryId, snapshotId, scheduleId, revision], map: "operation_schedules_snapshot_schedule_key")
+  @@map("operation_schedules")
+}
+
+model OperationsHead {
+  factoryId String @id @map("factory_id")
+  snapshotId String @map("snapshot_id")
+  scheduleId String? @map("schedule_id")
+  scheduleRevision Int? @map("schedule_revision")
+  planVersion Int @default(0) @map("plan_version")
+  revision Int @default(1)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  snapshot FactorySnapshot @relation(fields: [factoryId, snapshotId], references: [factoryId, snapshotId], onDelete: Restrict)
+  schedule OperationSchedule? @relation(fields: [factoryId, scheduleId, scheduleRevision], references: [factoryId, scheduleId, revision], onDelete: Restrict, map: "operations_heads_schedule_fkey")
+
+  @@map("operations_heads")
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model DecisionCase {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  factoryId String @map("factory_id")
+  snapshotId String @map("snapshot_id")
+  basePlanVersion Int @map("base_plan_version")
+  mode String
+  status String @default("CREATED")
+  revision Int @default(1)
+  requestJson Json @map("request_json") @db.JsonB
+  requestHash String @map("request_hash") @db.Char(64)
+  actorId String @map("actor_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  processingStatus String @default("PENDING") @map("processing_status")
+  processingAttempt Int @default(0) @map("processing_attempt")
+  processingErrorCode String? @map("processing_error_code")
+  leaseToken String? @map("lease_token") @db.Uuid
+  leaseOwnerId String? @map("lease_owner_id") @db.Uuid
+  leaseExpiresAt DateTime? @map("lease_expires_at") @db.Timestamptz(6)
+  recommendation DecisionRecommendationArtifact?
+  humanDecision DecisionHumanRecord?
+  commit DecisionCommit?
+  snapshot FactorySnapshot @relation(fields: [factoryId, snapshotId], references: [factoryId, snapshotId], onDelete: Restrict, onUpdate: Restrict)
+  events DecisionCaseEvent[]
+  receipts DecisionCaseIdempotencyReceipt[]
+  @@index([factoryId, createdAt])
+  @@index([factoryId, createdAt(sort: Desc), id(sort: Desc)], map: "decision_cases_factory_created_id_desc_idx")
+  @@unique([id, snapshotId])
+  @@map("decision_cases")
+}
+
+model DecisionHumanRecord {
+  caseId String @id @map("case_id") @db.Uuid
+  decision String
+  recommendationId String @map("recommendation_id")
+  candidateId String? @map("candidate_id")
+  candidateVersion Int? @map("candidate_version")
+  candidateHash String? @map("candidate_hash") @db.Char(64)
+  scheduleHash String? @map("schedule_hash") @db.Char(64)
+  note String?
+  actorId String @map("actor_id") @db.Uuid
+  decidedAt DateTime @default(now()) @map("decided_at") @db.Timestamptz(6)
+  case DecisionCase @relation(fields: [caseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  recommendation DecisionRecommendationArtifact @relation(fields: [recommendationId], references: [recommendationId], onDelete: NoAction, onUpdate: NoAction)
+  @@map("decision_human_records")
+}
+
+model DecisionCommit {
+  caseId String @id @map("case_id") @db.Uuid
+  factoryId String @map("factory_id")
+  snapshotId String @map("snapshot_id")
+  scheduleId String @map("schedule_id")
+  scheduleRevision Int @map("schedule_revision")
+  scheduleHash String @map("schedule_hash") @db.Char(64)
+  planVersion Int @map("plan_version")
+  actorId String @map("actor_id") @db.Uuid
+  committedAt DateTime @default(now()) @map("committed_at") @db.Timestamptz(6)
+  case DecisionCase @relation(fields: [caseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  schedule OperationSchedule @relation(fields: [factoryId, snapshotId, scheduleId, scheduleRevision], references: [factoryId, snapshotId, scheduleId, revision], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([factoryId, scheduleId, scheduleRevision])
+  @@unique([factoryId, snapshotId, scheduleId, scheduleRevision])
+  @@unique([factoryId, planVersion])
+  @@map("decision_commits")
+}
+
+model DecisionCaseEvent {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId String @map("case_id") @db.Uuid
+  sequence Int
+  type String
+  actorId String @map("actor_id") @db.Uuid
+  actorKind String @default("HUMAN") @map("actor_kind")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  payloadJson Json @map("payload_json") @db.JsonB
+  case DecisionCase @relation(fields: [caseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([caseId, sequence])
+  @@map("decision_case_events")
+}
+
+model DecisionRecommendationArtifact {
+  decisions DecisionHumanRecord[]
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId String @unique @map("case_id") @db.Uuid
+  recommendationId String @unique @map("recommendation_id")
+  snapshotId String @map("snapshot_id")
+  schemaVersion String @map("schema_version")
+  contentHash String @map("content_hash") @db.Char(64)
+  payloadJson Json @map("payload_json") @db.JsonB
+  generatedAt DateTime @map("generated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  case DecisionCase @relation(fields: [caseId, snapshotId], references: [id, snapshotId], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([caseId, snapshotId])
+  @@map("decision_recommendation_artifacts")
+}
+
+model DecisionCaseIdempotencyReceipt {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  factoryId String @map("factory_id")
+  actorId String @map("actor_id") @db.Uuid
+  key String
+  requestHash String @map("request_hash") @db.Char(64)
+  caseId String @map("case_id") @db.Uuid
+  responseJson Json @map("response_json") @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  case DecisionCase @relation(fields: [caseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([factoryId, actorId, key])
+  @@map("decision_case_idempotency_receipts")
 }
 
 model Experiment {
