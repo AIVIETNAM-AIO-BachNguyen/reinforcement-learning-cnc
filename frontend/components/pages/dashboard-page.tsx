@@ -118,7 +118,7 @@ export function DashboardPage() {
               <span>in the factory snapshot</span>
             </dd>
           </div>
-          <div>
+          <div className="metric-analysis">
             <dt>Active AI runs</dt>
             <dd>
               {overview.activeAgentRuns}

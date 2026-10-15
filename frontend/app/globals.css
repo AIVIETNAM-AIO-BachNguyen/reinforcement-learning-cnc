@@ -4,35 +4,35 @@
 
 :root {
   --color-cloud-white: #ffffff;
-  --color-canvas-fog: #fafafa;
-  --color-slate-text: #171717;
-  --color-ash-gray: #525252;
-  --color-stone-border: #e5e5e5;
-  --color-platinum-outline: #d4d4d4;
-  --color-steel-gray: #737373;
-  --color-hover-stone: #f5f5f5;
-  --color-ghost-ink: #262626;
-  --color-chartwell-blue: #2563eb;
-  --color-sky-tint: #eff6ff;
+  --color-canvas-fog: #f3f6fa;
+  --color-slate-text: #1b2b43;
+  --color-ash-gray: #526279;
+  --color-stone-border: #dfe6ee;
+  --color-platinum-outline: #c8d3e1;
+  --color-steel-gray: #63738a;
+  --color-hover-stone: #edf2f8;
+  --color-ghost-ink: #253b57;
+  --color-chartwell-blue: #3159c9;
+  --color-sky-tint: #edf3ff;
   --color-emerald: #087b58;
   --color-emerald-tint: #e6f4ed;
   --color-amber: #986211;
   --color-amber-tint: #fff3db;
   --color-rose: #be3048;
   --color-rose-tint: #fff0f1;
-  --color-blue-tint: #eff6ff;
-  --sidebar-ground: #fafafa;
-  --sidebar-ink: #262626;
-  --sidebar-muted: #525252;
-  --sidebar-active: #eff6ff;
-  --map-ground: #fafafa;
-  --trend-health: #262626;
-  --trend-load: #737373;
+  --color-blue-tint: #edf3ff;
+  --sidebar-ground: #172940;
+  --sidebar-ink: #e1e9f4;
+  --sidebar-muted: #a5b5cb;
+  --sidebar-active: #29456c;
+  --map-ground: #f3f6fa;
+  --trend-health: #087b58;
+  --trend-load: #3159c9;
   --shadow-md: none;
-  --shadow-sm: none;
-  --shadow-subtle: none;
-  --border: 0 0% 90%;
-  --input: 0 0% 83%;
+  --shadow-sm: 0 1px 3px rgb(27 43 67 / 5%);
+  --shadow-subtle: 0 1px 2px rgb(27 43 67 / 4%);
+  --border: 212 31% 90%;
+  --input: 214 29% 83%;
   --ring: 219 81% 48%;
   --radius-panel: 12px;
   --radius-control: 8px;
@@ -134,7 +134,7 @@ summary:focus-visible {
   color: var(--sidebar-ink);
 
   padding: 24px 16px 18px;
-  border-right: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
+  border-right: 1px solid #172940; /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
 }
 .workspace-brand {
   display: flex;
@@ -149,7 +149,7 @@ summary:focus-visible {
   height: 36px;
   flex-shrink: 0;
 
-  background: var(--color-slate-text);
+  background: #4269d5;
   color: white;
   border-radius: 8px;
 }
@@ -159,7 +159,7 @@ summary:focus-visible {
   font-weight: 600;
   letter-spacing: -0.025em;
 
-  color: var(--color-slate-text);
+  color: #f4f7fc;
   white-space: nowrap;
 }
 .brand-name > span {
@@ -203,20 +203,26 @@ summary:focus-visible {
   color: var(--sidebar-muted);
 }
 .workspace-nav-link:hover {
-  background: #f0f0f0;
+  background: #223952;
 
-  color: var(--color-slate-text);
+  color: #ffffff;
 }
 .workspace-nav-link.is-active {
   background: var(--sidebar-active);
 
-  color: #1e40af;
+  color: #ffffff;
+  box-shadow: inset 3px 0 #83a7ff;
 }
 .workspace-nav-link.is-active svg {
-  color: #2563eb;
+  color: #aac4ff;
+}
+.workspace-sidebar :is(a, button):focus-visible {
+  outline-color: #a9c5ff;
 }
 .sidebar-footer {
   margin-top: 36px;
+  border-top: 1px solid #30445e;
+  padding-top: 16px;
 }
 .sidebar-toggle {
   width: 100%;
@@ -236,9 +242,9 @@ summary:focus-visible {
   flex-shrink: 0;
   border-radius: 50%;
 
-  background: #e5e5e5;
+  background: #30496a;
 
-  color: var(--color-slate-text);
+  color: #d9e6ff;
   font-weight: 600;
 }
 .account-name {
@@ -249,7 +255,7 @@ summary:focus-visible {
   white-space: nowrap;
   text-overflow: ellipsis;
 
-  color: var(--color-slate-text);
+  color: #f4f7fc;
   font-size: 14px;
 }
 .account-name span {
@@ -258,7 +264,7 @@ summary:focus-visible {
 }
 .sidebar-collapsed .workspace-sidebar {
   padding-inline: 12px;
-  border-right: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
+  border-right: 1px solid #172940; /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
   padding: 24px 16px 18px;
 }
 .sidebar-collapsed .workspace-brand {
@@ -357,14 +363,15 @@ summary:focus-visible {
   border-radius: var(--radius-control);
   color: white;
 
-  background: #171717;
+  background: var(--color-chartwell-blue);
+  box-shadow: 0 1px 2px rgb(22 47 111 / 12%);
 
   font-weight: 500;
   white-space: nowrap;
   transition: background-color 150ms;
 }
 .primary-action:hover {
-  background: #404040;
+  background: #2447ae;
 }
 .snapshot-notice {
   display: flex;
@@ -391,13 +398,17 @@ summary:focus-visible {
   background: white;
   border-radius: var(--radius-panel);
   overflow: hidden;
+  box-shadow: var(--shadow-subtle);
   border: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
 }
 .overview-metrics > div {
   padding: 16px 20px;
 }
 .overview-metrics .metric-review {
-  background: white;
+  background: #fff5f5;
+}
+.metric-analysis dd {
+  color: var(--color-chartwell-blue);
 }
 .overview-metrics dt {
   color: var(--color-ash-gray);
@@ -686,7 +697,7 @@ summary:focus-visible {
   font-size: 13px;
   color: var(--color-ash-gray);
 
-  background: #fafafa;
+  background: #f0f4f9;
 }
 .attention-table thead th {
   font-weight: 500;
@@ -699,7 +710,7 @@ summary:focus-visible {
   font-weight: 500;
 }
 .attention-table tbody tr:hover {
-  background: #fafafa;
+  background: #f3f7fd;
 }
 .queue-machine {
   display: block;
@@ -2257,10 +2268,10 @@ summary:focus-visible {
   gap: 14px;
 
   padding: 12px 20px;
-  background: white;
+  background: #fff5f5;
 
   border-radius: var(--radius-panel);
-  border: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
+  border: 1px solid #edcdd3; /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
 }
 .priority-marker {
   height: 34px;
@@ -2642,7 +2653,7 @@ summary:focus-visible {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: #fafafa;
+  background: #f0f4f9;
   border-bottom: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
 }
 .table-scroll tbody th:first-child,
@@ -2657,7 +2668,7 @@ summary:focus-visible {
   z-index: 4;
 }
 .table-scroll tbody tr:hover > :first-child {
-  background: #fafafa;
+  background: #f3f7fd;
 }
 .table-scroll:focus-visible {
   outline: 2px solid var(--color-chartwell-blue);
@@ -2689,6 +2700,7 @@ summary:focus-visible {
 /* Factory-level summary stays distinct from individual machine inspection. */
 .factory-overview {
   background: white;
+  box-shadow: var(--shadow-subtle);
   border: 1px solid var(--color-stone-border);
   border-radius: 12px; /* taste-skill-ignore: Dub structural border for the factory summary. */
 }
@@ -2777,6 +2789,7 @@ summary:focus-visible {
   font-family: var(--font-numeric);
   font-size: 26px;
   font-weight: 500;
+  color: var(--color-chartwell-blue);
 }
 .factory-load-value > span {
   font-family: var(--font-numeric);
@@ -2813,15 +2826,19 @@ summary:focus-visible {
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
+.factory-load-area {
+  fill: var(--color-chartwell-blue);
+  fill-opacity: 0.09;
+}
 .factory-load-line {
   fill: none;
-  stroke: var(--color-ghost-ink);
+  stroke: var(--trend-load);
   stroke-width: 2.5;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 .factory-load-point {
-  fill: var(--color-ghost-ink);
+  fill: var(--trend-load);
 }
 .factory-load-times {
   display: flex;
@@ -3086,10 +3103,10 @@ summary:focus-visible {
 .machine-history-legend i {
   width: 18px;
   height: 0;
-  border-top: 2px solid var(--color-ghost-ink);
+  border-top: 2px solid var(--trend-health);
 }
 .machine-history-legend > span:last-child i {
-  border-color: var(--color-steel-gray);
+  border-color: var(--trend-load);
   border-top-style: dashed;
 }
 .history-at-risk .machine-history-legend > span:first-child i {
@@ -3153,17 +3170,17 @@ summary:focus-visible {
   vector-effect: non-scaling-stroke;
 }
 .history-health-line {
-  stroke: var(--color-ghost-ink);
+  stroke: var(--trend-health);
 }
 .history-load-line {
-  stroke: var(--color-steel-gray);
+  stroke: var(--trend-load);
   stroke-dasharray: 6 5;
 }
 .history-health-point {
-  fill: var(--color-ghost-ink);
+  fill: var(--trend-health);
 }
 .history-load-point {
-  fill: var(--color-steel-gray);
+  fill: var(--trend-load);
 }
 .history-at-risk .history-health-line {
   stroke: var(--color-rose);

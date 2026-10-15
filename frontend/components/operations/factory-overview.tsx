@@ -142,6 +142,12 @@ export function FactoryOverview({
                     d="M10 10H490M10 55H490M10 100H490"
                     className="factory-load-guide"
                   />
+                  <polygon
+                    points={`10,100 ${summary.loadSamples
+                      .map((value, index) => `${x(index)},${y(value)}`)
+                      .join(" ")} 490,100`}
+                    className="factory-load-area"
+                  />
                   <polyline
                     points={summary.loadSamples
                       .map((value, index) => `${x(index)},${y(value)}`)

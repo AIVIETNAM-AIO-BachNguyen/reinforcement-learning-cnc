@@ -57,3 +57,30 @@ Validation includes the production build, TypeScript, lint, 59 tests and Chrome 
 Taste Skill's inspector was used as an auxiliary browser check. Landing-page rules for photographs, oversized focal points, animation, boxed app panels and dense text are explicitly outside this application brief. Numeric monospace is required by the user and the chosen reference. The remaining mixed-font metric and caution-text contrast warnings are design judgments to review, not hidden failures or a claim of standards certification.
 
 See [desktop-verification.json](desktop-verification.json), [desktop-interactions.json](desktop-interactions.json) and the updated [overview preview](previews/overview.jpg).
+
+## Color refinement — 15 October 2026
+
+The user found the initial monochrome treatment too plain. The updated direction
+keeps the same information hierarchy, desktop density and white data surfaces,
+with a navy navigation sidebar (`#172940`), cool gray-blue canvas (`#f3f6fa`),
+and blue primary actions/selection/analytical series (`#3159c9`). Sidebar labels
+use dedicated light tokens so the darker surface does not reduce legibility.
+
+The review metric and urgent maintenance brief use a restrained rose background
+to bring pending decisions forward. Ordinary metrics stay neutral; active AI
+runs use the action accent. Health history is green for normal machines and rose
+for machines needing attention; load is blue and dashed. Text, legends, symbols
+and dash patterns continue to distinguish meanings without relying on color.
+The aggregate load area follows the existing source samples and 0–100% scale;
+no measurement, threshold or operational state was added.
+
+This section supersedes the earlier light-sidebar, near-black-action and
+monochrome-chart decisions. No gradients, new dashboard widgets or mobile work
+are introduced. The shared tokens apply to the newly merged Operations screens
+as well as the redesigned workspace.
+
+Validation: all 199 frontend tests, TypeScript and production build passed.
+Browser checks covered 1280/1440/1920px desktops, normal/at-risk machine selection,
+sidebar collapse and the merged Operations overview. No horizontal page overflow
+was observed. See [verification](color-refinement-verification.json) and the
+[updated overview preview](previews/overview-color-refinement.jpg).
