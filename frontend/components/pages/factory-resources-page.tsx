@@ -30,7 +30,7 @@ function ResourceCount({ count, label, field }: { count: number; label: string; 
   );
 }
 
-function OperationsOverviewContent({ data }: { data: OperationsContextData }) {
+function FactoryResourcesContent({ data }: { data: OperationsContextData }) {
   const snapshot = data.snapshotResponse.snapshot;
   const schedule = data.scheduleResponse.schedule;
   const machines = snapshot.machines;
@@ -86,7 +86,7 @@ function OperationsOverviewContent({ data }: { data: OperationsContextData }) {
   );
 }
 
-export function OperationsOverviewPage({ api, factoryId, apiMode }: {
+export function FactoryResourcesPage({ api, factoryId, apiMode }: {
   api?: OperationsApiClient;
   factoryId?: string;
   apiMode?: OperationsApiMode;
@@ -102,8 +102,8 @@ export function OperationsOverviewPage({ api, factoryId, apiMode }: {
 
   return (
     <OperationsShell
-      title="Operations Overview"
-      description="Factory resources, health observations and the current schedule loaded through OperationsApiClient."
+      title="Factory resources"
+      description="Inspect machines, production jobs, technicians and maintenance work for the current factory snapshot."
       dataSource={selectedMode === "real" ? "live" : "fixture"}
       actions={<button type="button" onClick={retry} disabled={state.kind === "loading"} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--color-stone-border)] bg-white px-4 text-sm font-medium disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${state.kind === "loading" ? "animate-spin" : ""}`} />Refresh</button>}
     >
@@ -112,7 +112,7 @@ export function OperationsOverviewPage({ api, factoryId, apiMode }: {
       {state.kind === "unauthorized" ? <AsyncState kind="error" title="Operations access required" description={state.message} action={<Link href="/login" className="inline-flex min-h-10 items-center rounded-md border border-[var(--color-stone-border)] bg-white px-4 text-sm font-medium">Sign in</Link>} /> : null}
       {state.kind === "unavailable" ? <AsyncState kind="empty" title="Operations snapshot unavailable" description={state.message} onRetry={retry} retryLabel="Retry snapshot" /> : null}
       {state.kind === "error" || state.kind === "network-error" || state.kind === "mismatch" ? <AsyncState kind="error" title="Operations data could not be loaded" description={state.message} onRetry={retry} /> : null}
-      {state.kind === "ready" && !hasNoResources ? <><CreateDecisionCase api={client} data={state.data} mode={selectedMode} onRefresh={retry} /><OperationsOverviewContent data={state.data} /></> : null}
+      {state.kind === "ready" && !hasNoResources ? <><CreateDecisionCase api={client} data={state.data} mode={selectedMode} onRefresh={retry} /><FactoryResourcesContent data={state.data} /></> : null}
     </OperationsShell>
   );
 }

@@ -56,7 +56,7 @@ describe("Decision Cases discovery", () => {
     const api = createMockOperationsApiClient();
     render(<DecisionCasesPage api={api} apiMode="mock" initialQuery={{ factory_id: "factory-demo-01" }} />);
     expect(await screen.findByText("No matching cases")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a case from Overview" })).toHaveAttribute("href", "/operations");
+    expect(screen.getByRole("link", { name: "Create a case" })).toHaveAttribute("href", "/operations");
   });
   it("renders mock-created canonical cases through the same typed list component without changing status", async () => {
     const api = createMockOperationsApiClient();

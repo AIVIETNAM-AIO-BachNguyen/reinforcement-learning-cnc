@@ -84,3 +84,25 @@ Browser checks covered 1280/1440/1920px desktops, normal/at-risk machine selecti
 sidebar collapse and the merged Operations overview. No horizontal page overflow
 was observed. See [verification](color-refinement-verification.json) and the
 [updated overview preview](previews/overview-color-refinement.jpg).
+
+## One Overview entry — 15 October 2026
+
+After merging main, the sidebar exposed both the redesigned Overview and a second
+Factory operations overview. The duplicate primary entry is removed. `/overview`
+remains the single dashboard; its **Factory resources** action opens the existing
+API-backed `/operations` detail page. That page is now explicitly a resource and
+planning-context drill-down, retaining machines/jobs/technicians, source metadata,
+case creation, refresh and all live error/authentication behavior. The Operations
+subnavigation links back to `/overview` and labels `/operations` as Resources.
+Existing schedule, case, recommendation, agent and what-if URLs remain reachable.
+The resource route stays unchanged to preserve bookmarks and workflow links.
+
+This is a navigation consolidation, not a claim that the recorded dashboard data
+and canonical Operations API data have already been integrated. Their distinct
+demo/live labels and source scopes remain explicit.
+
+Validation: 199 frontend tests and the production build (including TypeScript and
+lint) passed. Browser review confirmed one primary Overview entry, the resource
+action's destination, retained planning/resource content and the corrected
+subnavigation back to `/overview`. See the
+[consolidated navigation preview](previews/overview-single-entry.jpg).

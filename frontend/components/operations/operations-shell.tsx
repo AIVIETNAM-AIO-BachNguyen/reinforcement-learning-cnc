@@ -1,6 +1,6 @@
 "use client";
 
-import { Beaker, Bot, CalendarRange, Factory, GitCompareArrows, ListChecks } from "lucide-react";
+import { Beaker, Bot, CalendarRange, Factory, LayoutDashboard, GitCompareArrows, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,7 +10,8 @@ import { PageHeader } from "@/components/research/page-header";
 import { cn } from "@/lib/utils";
 
 const screens = [
-  { href: "/operations", label: "Overview", icon: Factory },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
+  { href: "/operations", label: "Resources", icon: Factory },
   { href: "/operations/schedule", label: "Integrated Schedule", icon: CalendarRange },
   { href: "/operations/recommendations", label: "Recommendations", icon: GitCompareArrows },
   { href: "/operations/cases", label: "Decision Cases", icon: ListChecks },

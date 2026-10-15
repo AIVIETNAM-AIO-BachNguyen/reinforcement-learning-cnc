@@ -9,7 +9,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   FlaskConical,
-  Factory,
   LayoutDashboard,
   LogOut,
   SlidersHorizontal,
@@ -21,8 +20,12 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { getUserFromToken, logout, type TokenUser } from "@/lib/auth";
 
 const navigation = [
-  { href: "/operations", label: "Factory operations", icon: Factory },
-  { href: "/overview", label: "Overview", icon: LayoutDashboard },
+  {
+    href: "/overview",
+    label: "Overview",
+    icon: LayoutDashboard,
+    activePaths: ["/operations"],
+  },
   { href: "/decisions", label: "Decision Center", icon: ClipboardCheck },
   { href: "/agents", label: "Agent Control Room", icon: Bot },
   { href: "/what-if", label: "What-if Workspace", icon: SlidersHorizontal },
@@ -33,14 +36,19 @@ function NavItem({
   label,
   icon: Icon,
   collapsed,
+  activePaths = [],
 }: {
   href: string;
   label: string;
   icon: typeof Activity;
   collapsed: boolean;
+  activePaths?: string[];
 }) {
   const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(`${href}/`);
+  const active =
+    pathname === href ||
+    pathname.startsWith(`${href}/`) ||
+    activePaths.includes(pathname);
   return (
     <Link
       href={href}
@@ -125,7 +133,7 @@ export function AppShell({
             <Activity size={23} aria-hidden="true" />
           </span>
           <span className={collapsed ? "sr-only" : "brand-name"}>
-            Maintenance AI<span>Factory operations</span>
+            Maintenance AI<span>Decision support</span>
           </span>
         </Link>
         <nav aria-label="Primary navigation" className="workspace-navigation">

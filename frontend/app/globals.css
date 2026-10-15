@@ -338,6 +338,13 @@ summary:focus-visible {
   align-items: center;
   gap: 24px;
 }
+.overview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .overview-heading h1 {
   font-size: 30px;
   line-height: 1.2;

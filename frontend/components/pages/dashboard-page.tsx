@@ -89,9 +89,14 @@ export function DashboardPage() {
             <h1>Operations overview</h1>
             <p>Machine health, maintenance priorities and the next decision.</p>
           </div>
-          <Link href="/decisions" className="primary-action">
-            Review recommendations <ArrowRight size={17} aria-hidden="true" />
-          </Link>
+          <div className="overview-actions">
+            <Link href="/operations" className="secondary-action">
+              Factory resources
+            </Link>
+            <Link href="/decisions" className="primary-action">
+              Review recommendations <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          </div>
         </header>
 
         <div className="snapshot-notice">

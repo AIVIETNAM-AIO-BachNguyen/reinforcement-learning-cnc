@@ -85,7 +85,7 @@ export function DecisionCasesPage({ api, apiMode, initialQuery }: {
         <p role="status" className="text-sm text-[var(--color-ash-gray)]">{state.items.length} {state.items.length === 1 ? "case" : "cases"} loaded{failed ? " · previous pages; the latest read failed" : state.busy ? " · loading the next page" : ""}</p>
         {state.items.map(item => <DecisionCaseRow key={item.decision_case_id} item={item} />)}
       </section> : null}
-      {state.kind === "ready" && !state.items.length ? <AsyncState kind="empty" title="No matching cases" description="No cases match these factory, status and mode filters." action={<Link href="/operations" className={buttonClass}>Create a case from Overview</Link>} /> : null}
+      {state.kind === "ready" && !state.items.length ? <AsyncState kind="empty" title="No matching cases" description="No cases match these factory, status and mode filters." action={<Link href="/operations" className={buttonClass}>Create a case</Link>} /> : null}
       {state.kind === "ready" && state.meta?.has_more ? <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[var(--color-ash-gray)]">More cases are available. Cursor supplied by the backend.</p><button type="button" className={buttonClass} disabled={state.busy} onClick={loadMore}>{state.busy ? "Loading more cases…" : "Load more cases"}</button></div> : null}
       {state.kind === "ready" && state.items.length && !state.meta?.has_more ? <p className="text-xs text-[var(--color-ash-gray)]">End of results. Refresh to discover new cases or changed statuses.</p> : null}
     </OperationsShell>

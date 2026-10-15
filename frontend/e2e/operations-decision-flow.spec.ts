@@ -305,7 +305,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(page).toHaveURL(/\/$/);
 
   await page.goto("/operations");
-  await expect(page.getByRole("main").getByRole("heading", { name: "Operations Overview" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("heading", { name: "Factory resources" })).toBeVisible();
   await expect(page.getByText("CNC M06").first()).toBeVisible();
   await expect(page.getByRole("note").first()).toContainText("Live Operations API mode");
   const contextBefore = await currentContext(page.request);

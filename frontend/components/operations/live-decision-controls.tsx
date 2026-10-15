@@ -67,7 +67,7 @@ export function PublishedDecisionSchedule({ api, commit }: { api: OperationsApiC
         {state.kind !== "loading" && state.kind !== "ready" ? <AsyncState kind="error" title="Published schedule could not be refreshed" description={state.message} onRetry={retry} /> : null}
         {publishedMismatch ? <AsyncState kind="error" title="Published schedule context mismatch" description="The read does not match this publication. Refresh to verify the current authoritative schedule." onRetry={retry} /> : null}
         {state.kind === "ready" && !publishedMismatch ? <CurrentSchedule data={state.data} /> : null}
-        <div className="flex flex-wrap gap-3 text-sm"><Link className="underline" href="/operations">Open refreshed Overview</Link><Link className="underline" href="/operations/schedule">Open current Gantt</Link></div>
+        <div className="flex flex-wrap gap-3 text-sm"><Link className="underline" href="/operations">Open refreshed factory resources</Link><Link className="underline" href="/operations/schedule">Open current Gantt</Link></div>
       </div>
     </OperationsPanel>
   );

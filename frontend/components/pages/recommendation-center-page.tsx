@@ -67,7 +67,7 @@ function PreviewRecommendation({ data }: { data: RecommendationCenterPreviewData
       ) : null}
 
       {preview ? (
-        <OperationsPanel title="Fixture payload preview" description="This comparison fixture does not submit requests. Create a case from Overview to use the complete mock or live workflow.">
+        <OperationsPanel title="Fixture payload preview" description="This comparison fixture does not submit requests. Create a case from Factory resources to use the complete mock or live workflow.">
           <div className="p-4 sm:p-5">
             <p role="status" className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-700"><FileJson2 className="h-4 w-4" />{preview.decision} request ready for adapter integration</p>
             <pre className="max-h-96 overflow-auto rounded-md bg-stone-950 p-4 text-xs text-stone-100">{JSON.stringify(preview, null, 2)}</pre>
@@ -157,7 +157,7 @@ function RealRecommendation({
         </div>
       </OperationsPanel>
 
-      {data.caseMeta?.stale && decisionCase.status !== "COMMITTED" ? <AsyncState kind="error" compact title="Case basis is stale" description="The factory context has changed. This case cannot approve or publish against the new basis. Create a new case from the latest Overview context." action={<Link href="/operations" className="min-h-10 rounded-md border bg-white px-4 py-2 text-sm font-semibold">Create a new case</Link>} /> : null}
+      {data.caseMeta?.stale && decisionCase.status !== "COMMITTED" ? <AsyncState kind="error" compact title="Case basis is stale" description="The factory context has changed. This case cannot approve or publish against the new basis. Create a new case from the latest factory context." action={<Link href="/operations" className="min-h-10 rounded-md border bg-white px-4 py-2 text-sm font-semibold">Create a new case</Link>} /> : null}
 
       {polling ? (
         <AsyncState

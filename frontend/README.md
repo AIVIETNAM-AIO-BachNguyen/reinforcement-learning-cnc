@@ -11,7 +11,7 @@ Next.js frontend for the authenticated AI-assisted maintenance workflow. The UI 
 - an Operations contract v3 fixture preview spanning overview, integrated scheduling, recommendation comparison, agent trace inspection, and isolated what-if scenarios;
 - a typed real Product API adapter and an in-memory mock adapter using the same TypeScript models.
 
-The default route is `/overview`. Research experiments remain available under `/experiments`; operational review is organized around `/decisions`, `/agents`, and `/what-if`. The current Operations Overview uses the typed fixture in `lib/operations-ui/fixtures.ts` until the Operations API exposes live case, machine, and agent-run resources.
+The default route is `/overview`. Research experiments remain available under `/experiments`; operational review is organized around `/decisions`, `/agents`, and `/what-if`. The current `/overview` dashboard uses the typed fixture in `lib/operations-ui/fixtures.ts` until the Operations API exposes live case, machine, and agent-run resources.
 
 The frontend only presents returned research data. It does not predict RUL, derive a point estimate, calculate cost/risk/CVaR/failure probability, choose replacement actions, or reconstruct missing engine output.
 
@@ -107,7 +107,10 @@ The example configuration enables the mock Product API and development-only auth
 
 ## Operations contract v3
 
-Open `/operations` for the API-backed overview. It loads both `getOperationsSnapshot()` and `getCurrentSchedule()` through `OperationsApiClient`. Mock mode is the default and reads the shared canonical 6-machine/12-job/3-technician fixture; real mode calls the authenticated backend read endpoints:
+`/overview` is the single dashboard entry in the sidebar. Open **Factory resources**
+from its page actions to inspect detailed source data and create a Decision Case.
+The resource page keeps `/operations` as its existing URL, preserving bookmarks and
+workflow links. It is not a second overview. It loads both `getOperationsSnapshot()` and `getCurrentSchedule()` through `OperationsApiClient`. Mock mode is the default and reads the shared canonical 6-machine/12-job/3-technician fixture; real mode calls the authenticated backend read endpoints:
 
 ```dotenv
 NEXT_PUBLIC_OPERATIONS_API_MODE=real
