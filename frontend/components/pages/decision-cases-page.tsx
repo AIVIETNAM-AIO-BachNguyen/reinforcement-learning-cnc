@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { OperationsPanel, OperationsShell, OperationsStatus } from "@/components/operations/operations-shell";
 import { AsyncState } from "@/components/research/async-state";
 import { getOperationsApiClient, getOperationsApiMode, getOperationsFactoryId, type OperationsApiClient, type OperationsApiMode } from "@/lib/operations-api";
@@ -46,7 +46,10 @@ export function DecisionCasesPage({ api, apiMode, initialQuery }: {
   const router = useRouter();
   const client = useMemo(() => api ?? getOperationsApiClient(), [api]);
   const mode = apiMode ?? getOperationsApiMode();
-  const [query, setQuery] = useState<Omit<DecisionCaseListQuery, "cursor">>(initialQuery ?? { factory_id: getOperationsFactoryId(), limit: 25 });
+  // The keyed route remounts this page after searchParams commit. Keep reads
+  // on that committed scope; a local query can race router.replace and reload.
+  const query = initialQuery ?? { factory_id: getOperationsFactoryId(), limit: 25 };
+  const [navigationPending, startNavigation] = useTransition();
   const [factory, setFactory] = useState(query.factory_id);
   const [status, setStatus] = useState(query.status ?? "");
   const [caseMode, setCaseMode] = useState(query.mode ?? "");
@@ -59,9 +62,11 @@ export function DecisionCasesPage({ api, apiMode, initialQuery }: {
     const params = new URLSearchParams({ factory_id: next.factory_id });
     if (next.status) params.set("status", next.status);
     if (next.mode) params.set("mode", next.mode);
-    router.replace(`/operations/cases?${params}`, { scroll: false });
-    if (JSON.stringify(next) === JSON.stringify(query)) refresh();
-    else setQuery(next);
+    if (next.factory_id === query.factory_id && next.status === query.status && next.mode === query.mode) {
+      refresh();
+      return;
+    }
+    startNavigation(() => router.replace(`/operations/cases?${params}`, { scroll: false }));
   }
   const failed = !["loading", "ready", "missing-factory"].includes(state.kind);
   return (
@@ -74,7 +79,7 @@ export function DecisionCasesPage({ api, apiMode, initialQuery }: {
           <label className="min-w-0 text-xs font-medium">Factory ID<input required maxLength={128} className={inputClass} value={factory} onChange={event => setFactory(event.target.value)} /></label>
           <label className="min-w-0 text-xs font-medium">Status<select className={inputClass} value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option>{DECISION_CASE_STATUSES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
           <label className="min-w-0 text-xs font-medium">Case mode<select className={inputClass} value={caseMode} onChange={event => setCaseMode(event.target.value)}><option value="">All modes</option><option value="LIVE">LIVE</option><option value="SIMULATION_ONLY">SIMULATION_ONLY</option></select></label>
-          <button className={buttonClass} type="submit">Apply filters</button>
+          <button className={buttonClass} type="submit" disabled={navigationPending}>{navigationPending ? "Applying filters…" : "Apply filters"}</button>
         </form>
       </OperationsPanel>
       {state.kind === "loading" ? <AsyncState kind="loading" title="Loading decision cases" description={`Reading cases for ${query.factory_id}.`} /> : null}

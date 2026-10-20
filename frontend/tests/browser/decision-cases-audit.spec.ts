@@ -167,3 +167,49 @@ test("browser Back restores applied case filters and performs no commands", asyn
   expect(lastListRead.searchParams.get("mode")).toBe("LIVE");
   expect(harness.writes).toEqual([]);
 });
+
+
+test("changed filters wait for the route before results and survive immediate reload", async ({ page }) => {
+  const harness = await readContractHarness(page);
+  await page.goto("/operations/cases");
+  await expect(page.getByText("25 cases loaded", { exact: true })).toBeVisible();
+
+  let releaseNavigation: () => void = () => {};
+  const navigationGate = new Promise<void>(resolve => { releaseNavigation = resolve; });
+  let navigationHeld = false;
+  // Delay the RSC navigation, independently of the fast case-list API. This
+  // makes the former local-query/URL race deterministic without a timed sleep.
+  const navigationPattern = "**/operations/cases?**";
+  await page.route(navigationPattern, async route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("status") === "COMMITTED" && route.request().headers().rsc === "1") {
+      navigationHeld = true;
+      await navigationGate;
+    }
+    await route.continue();
+  });
+  try {
+    await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("COMMITTED");
+    await page.getByRole("combobox", { name: "Case mode", exact: true }).selectOption("LIVE");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect.poll(() => navigationHeld).toBe(true);
+    expect(new URL(page.url()).searchParams.get("status")).toBeNull();
+    await expect(page.getByRole("button", { name: "Applying filters…", exact: true })).toBeDisabled();
+    expect(harness.reads.some(url => url.pathname.endsWith("/decision-cases") && url.searchParams.has("status"))).toBe(false);
+
+    releaseNavigation();
+    await expect(page).toHaveURL(/status=COMMITTED&mode=LIVE/);
+    await expect(page.getByText("1 case loaded", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
+    await expect(page.getByRole("combobox", { name: "Case mode", exact: true })).toHaveValue("LIVE");
+    await expect(page.getByRole("article")).toHaveCount(1);
+    const lastRead = harness.reads.filter(url => url.pathname.endsWith("/decision-cases")).at(-1)!;
+    expect(lastRead.searchParams.get("status")).toBe("COMMITTED");
+    expect(lastRead.searchParams.get("mode")).toBe("LIVE");
+    expect(harness.writes).toEqual([]);
+  } finally {
+    releaseNavigation();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+  }
+});
