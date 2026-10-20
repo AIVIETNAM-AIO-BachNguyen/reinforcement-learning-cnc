@@ -29,10 +29,11 @@ does not rename existing 3.0 fields or change their meaning.
 
 ## Public HTTP boundary
 
-Base path: `/api/v1`. Seven paths, eight operations:
+Base path: `/api/v1`. Eight paths, nine operations:
 
 | Method and path | Success | Data and required context |
 | --- | --- | --- |
+| GET `/operations/overview?factory_id=…` | 200 | Consistent factory context, machine counts, case counts by mode, bounded review preview; additive HTTP summary |
 | GET `/operations/snapshot?factory_id=…` | 200 | Current FactorySnapshot, head snapshot ID and published plan version |
 | GET `/schedules/current?factory_id=…` | 200 | Published Schedule or null, immutable basis_snapshot, publication metadata |
 | GET `/decision-cases?factory_id=…` | 200 | Scoped case summary page and opaque next cursor |
@@ -48,7 +49,7 @@ status. See the extracted OpenAPI for exact required fields and nullability.
 Snapshot and schedule reads are individually consistent; separate GETs can observe
 different heads. Never combine different head tokens into one authoritative view.
 
-**Errors currently have two deployed formats.** Snapshot/current-schedule route
+**Errors currently have two deployed formats.** Overview/snapshot/current-schedule route
 errors use top-level canonical ErrorResponse (`schema_version,error_id,code,
 message,correlation_id,retryable,details`). Decision-case routes use the product
 API envelope `{success:false,error:{code,message,details?},requestId}`.
@@ -245,3 +246,10 @@ The historical drafts under backend/docs/operations-context remain historical
 and are superseded for this baseline. Deferred extensions: MODIFY/revalidation,
 public cancellation, streaming transport, sensor history, persisted membership
 policy and physical execution acknowledgement.
+
+## Additive overview HTTP extension (2026-10-21)
+
+GET `/operations/overview` adds no domain enum or schema version. Exact DTO and examples
+are in the extracted OpenAPI. See [overview runbook](../../backend/docs/operations-overview.md)
+for counts, coverage, unavailable behavior and real API verification. This contract
+does not claim the frontend is connected.
