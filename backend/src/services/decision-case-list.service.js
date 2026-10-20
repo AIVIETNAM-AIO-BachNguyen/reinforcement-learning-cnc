@@ -98,4 +98,4 @@ async function listDecisionCases(db, user, rawQuery) {
         next_cursor: hasMore ? encodeCursor(page.at(-1), query, user) : null } };
   }, { isolationLevel: 'RepeatableRead' });
 }
-module.exports = { listDecisionCases, listQuery };
+module.exports = { listDecisionCases, listQuery, summarySelect, summary };

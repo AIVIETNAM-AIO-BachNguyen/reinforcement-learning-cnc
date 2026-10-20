@@ -1,4 +1,4 @@
-﻿# Operations overview
+# Operations overview
 
 Contract-first additive HTTP extension on main 64dc391. Domain schema remains 3.0.
 Source: `backend/openapi.yaml`; examples: `backend/examples/operations-overview.json`.
@@ -48,8 +48,7 @@ those immutable rows. read_at records acquisition of the database read snapshot,
 not telemetry freshness or a concurrency token. Head revision does not fence
 worker/case changes. Snapshot captured_at/observed_at is observation time.
 Machine coverage is covered/population machines from that snapshot, not coverage
-of every physical machine in the factory or health measurements. Both are zero
-for an empty canonical machine population. Cases cover all stored factory cases.
+of every physical machine in the factory or health measurements. The canonical snapshot requires at least one machine. Cases cover all stored factory cases.
 
 No health aggregate, risk, utilization, agent count or history is supplied.
 Missing health is unknown and causes no invented zero/healthy value. The

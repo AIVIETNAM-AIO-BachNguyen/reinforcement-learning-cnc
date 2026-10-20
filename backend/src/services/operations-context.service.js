@@ -53,6 +53,11 @@ async function readOperations(db, user, factoryId, { signal } = {}) {
   signal?.throwIfAborted();
   authorizeFactory(user, factoryId);
   const head = await db.$transaction((tx) => tx.operationsHead.findUnique({ where: { factoryId }, include: { snapshot: true, schedule: { include: { snapshot: true, commit: true } } } }), { isolationLevel: 'RepeatableRead' });
+  return projectOperationsHead(head, factoryId, { signal });
+}
+
+// Validate immutable selected rows without rereading the mutable head.
+async function projectOperationsHead(head, factoryId, { signal } = {}) {
   if (!head) throw notFound();
   signal?.throwIfAborted();
   const { snapshot, schedule } = head;
@@ -103,4 +108,4 @@ async function readOperations(db, user, factoryId, { signal } = {}) {
     },
   };
 }
-module.exports = { seedOperations, readOperations, authorizeFactory };
+module.exports = { seedOperations, readOperations, authorizeFactory, projectOperationsHead };
