@@ -59,7 +59,8 @@ No GET rebases or writes cases, heads, schedules, audit events or receipts.
 
 ## Verification
 
-Implementation and executed test evidence will be added to this draft PR after
-the contract-first commit. Existing factory/created_at/id index supports preview;
+[Executed verification at implementation SHA 9e172fe](evidence/operations-overview-9e172fe.md)
+includes real authenticated curl, PostgreSQL concurrency and regression evidence.
+Existing factory/created_at/id index supports preview;
 no migration is proposed. Aggregation is scoped in PostgreSQL and loads only
 bounded status/processing groups, not case artifacts.
