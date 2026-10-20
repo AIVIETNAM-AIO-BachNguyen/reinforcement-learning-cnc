@@ -1,5 +1,7 @@
 # Backend — P0: nguồn dữ liệu thống nhất cho Overview
 
+> Bản lịch sử. Dùng [brief Backend ngày 20/10/2026](2026-10-20-backend-overview-api.md) thay cho bản này; PR #44 đã merge vào main.
+
 Ngày giao: 18/10/2026. Bản giao việc để người dùng chuyển cho nhóm Backend.
 
 ## Baseline và phạm vi

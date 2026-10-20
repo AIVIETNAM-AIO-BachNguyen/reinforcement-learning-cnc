@@ -1,5 +1,7 @@
 # Flex — P0: contract/client và nghiệm thu luồng Overview → quyết định
 
+> Bản lịch sử. Dùng [brief Flex ngày 20/10/2026](2026-10-20-flex-overview-integration.md) thay cho bản này. F0 sửa PR #44 bên dưới đã hoàn tất; không giao lại.
+
 Ngày giao: 18/10/2026. Bản giao việc để người dùng chuyển cho nhóm Flex/integration.
 
 ## Baseline và ownership

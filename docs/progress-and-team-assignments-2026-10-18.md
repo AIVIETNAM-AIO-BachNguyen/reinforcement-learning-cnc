@@ -1,5 +1,7 @@
 # Phân việc P0 — 18/10/2026
 
+> Bản lịch sử, đã được thay bởi [phân việc ngày 20/10/2026](progress-and-team-assignments-2026-10-20.md). PR #44 đã merge; trạng thái PR/CI và task sửa #44 bên dưới không còn là công việc hiện tại.
+
 Trạng thái: nội dung handoff đã chuẩn bị để người dùng chuyển cho Backend và Flex, theo cách phân việc trước đây. Không tạo issue/assign hoặc gửi chat ngoài project.
 
 ## Baseline đã kiểm tra
