@@ -19,6 +19,7 @@ FastAPI planning. No development database reset or service interruption.
 | Factory HTTP/concurrency/import tests after follow-up fixes | 16 passed |
 | Backend unit tests after follow-up fixes | 256 passed, 4 existing skips |
 | Real FastAPI planning and Decision Case worker after CLI fixture fix | 37 passed |
+| Cross-stack snapshot flow with explicit registry bootstrap | 7 passed |
 | Exact-base migration history | Existing migration files unchanged |
 | Fresh migration and base-to-head upgrade | Passed; owned schemas removed |
 | Populated exact-base upgrade | Passed; snapshots, schedules, S2/P1 basis S1, human record, publication, events and receipts unchanged |

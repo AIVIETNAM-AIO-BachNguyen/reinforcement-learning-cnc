@@ -102,6 +102,8 @@ const main = () => {
     }
 
     if (process.argv.includes('--operations-flow')) {
+      const bootstrapStatus = run(process.execPath, ['tests/helpers/seed-flow-registry.js'], { env: testEnv });
+      if (bootstrapStatus !== 0) throw new Error('Snapshot-flow registry bootstrap failed');
       const frontendRoot = path.resolve(backendRoot, '../frontend');
       testStatus = run(process.execPath, [path.join(frontendRoot, 'node_modules/vitest/vitest.mjs'),
         'run', '--config', 'vitest.operations.config.ts'], { env: testEnv, cwd: frontendRoot });
