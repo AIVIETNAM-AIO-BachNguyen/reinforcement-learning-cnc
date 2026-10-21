@@ -29,7 +29,7 @@ does not rename existing 3.0 fields or change their meaning.
 
 ## Public HTTP boundary
 
-Base path: `/api/v1`. Eight paths, nine operations:
+Base path: `/api/v1`. Twelve paths, sixteen operations (including seven additive factory-access operations):
 
 | Method and path | Success | Data and required context |
 | --- | --- | --- |
@@ -253,3 +253,10 @@ GET `/operations/overview` adds no domain enum or schema version. Exact DTO and 
 are in the extracted OpenAPI. See [overview runbook](../../backend/docs/operations-overview.md)
 for counts, coverage, unavailable behavior and real API verification. This contract
 does not claim the frontend is connected.
+
+## Factory registry / access extension
+
+See [factory access ERD, role matrix and rollout](../../backend/docs/factory-access.md).
+Registry/membership APIs are an additive product HTTP extension; domain 3.0 is unchanged.
+FACTORY_ACCESS_SOURCE selects environment (compatibility default) or database, never both.
+The earlier environment-grant policy is superseded by this explicit source selector.

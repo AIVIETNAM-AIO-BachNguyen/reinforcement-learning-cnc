@@ -2181,6 +2181,350 @@
         ],
         "type": "object"
       },
+      "FactoryApiError": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "success": {
+            "const": false
+          }
+        },
+        "required": [
+          "success",
+          "error",
+          "requestId"
+        ],
+        "type": "object"
+      },
+      "FactoryCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Trimmed; must not be blank. Unicode display name, no identity semantics.",
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "factory_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "FactoryDto": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "has_snapshot": {
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Trimmed; must not be blank. Unicode display name, no identity semantics.",
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "factory_id",
+          "name",
+          "created_at",
+          "updated_at",
+          "has_snapshot"
+        ],
+        "type": "object"
+      },
+      "FactoryListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FactoryDto"
+            },
+            "maxItems": 100,
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/FactoryPageMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "FactoryMemberChangeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "changed": {
+                "type": "boolean"
+              },
+              "membership": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FactoryMemberDto"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "membership",
+              "changed"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "type": "object"
+      },
+      "FactoryMemberDto": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "grant_source": {
+            "type": "string"
+          },
+          "granted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "granted_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "membership_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user": {
+            "additionalProperties": false,
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "user_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "user_id",
+              "username",
+              "active"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "membership_id",
+          "factory_id",
+          "user",
+          "active",
+          "granted_by",
+          "granted_at",
+          "grant_source",
+          "revoked_by",
+          "revoked_at",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "FactoryMembersResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FactoryMemberDto"
+            },
+            "maxItems": 100,
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/FactoryPageMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "FactoryPageMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "access_source": {
+            "enum": [
+              "environment",
+              "database"
+            ],
+            "type": "string"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "limit",
+          "has_more",
+          "next_cursor",
+          "access_source"
+        ],
+        "type": "object"
+      },
+      "FactoryRenameRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Trimmed; must not be blank. Unicode display name, no identity semantics.",
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "FactoryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FactoryDto"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "type": "object"
+      },
       "OperationsAssignmentStatus": {
         "enum": [
           "PROPOSED",
@@ -4923,6 +5267,1568 @@
           }
         },
         "summary": "Read immutable recommendation and its pinned snapshot"
+      }
+    },
+    "/factories": {
+      "get": {
+        "description": "Active ADMIN sees every registry row; others see active membership in database mode or explicit environment grants filtered through registry. Registry without head is visible with has_snapshot=false. factory_id ASC, limit default25/max100; HMAC opaque cursor binds actor/source/filter/route. No cross-request snapshot or search. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "listFactories",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "maxLength": 2048,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "created_at": "2026-10-21T00:00:00Z",
+                      "factory_id": "factory-A",
+                      "has_snapshot": false,
+                      "name": "Factory A",
+                      "updated_at": "2026-10-21T00:00:00Z"
+                    }
+                  ],
+                  "meta": {
+                    "access_source": "database",
+                    "has_more": false,
+                    "limit": 25,
+                    "next_cursor": null
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryListResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
+      },
+      "post": {
+        "description": "ADMIN creates independent registry; no snapshot/head/membership. Duplicate ID409. Name trimmed, ID immutable. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "createFactory",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactoryCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "created_at": "2026-10-21T00:00:00Z",
+                    "factory_id": "factory-A",
+                    "has_snapshot": false,
+                    "name": "Factory A",
+                    "updated_at": "2026-10-21T00:00:00Z"
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
+      }
+    },
+    "/factories/{factory_id}": {
+      "get": {
+        "description": "Scoped registry detail. Missing/inaccessible same404; no telemetry required. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "getFactory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "created_at": "2026-10-21T00:00:00Z",
+                    "factory_id": "factory-A",
+                    "has_snapshot": false,
+                    "name": "Factory A",
+                    "updated_at": "2026-10-21T00:00:00Z"
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
+      },
+      "patch": {
+        "description": "ADMIN changes only name; same name no-op without audit/timestamp change. Canonical JSON and basis/version untouched. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "renameFactory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactoryRenameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "created_at": "2026-10-21T00:00:00Z",
+                    "factory_id": "factory-A",
+                    "has_snapshot": false,
+                    "name": "Factory A",
+                    "updated_at": "2026-10-21T00:00:00Z"
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
+      }
+    },
+    "/factories/{factory_id}/members": {
+      "get": {
+        "description": "ADMIN, database mode only. user_id ASC. state=all(default)|active|revoked. Cursor bound to actor/factory/state/source. Minimal user summary, historical provenance; active membership does not override inactive user. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "listFactoryMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "maxLength": 2048,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "active",
+                "revoked"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "active": true,
+                      "created_at": "2026-10-21T00:00:00Z",
+                      "factory_id": "factory-A",
+                      "grant_source": "http",
+                      "granted_at": "2026-10-21T00:00:00Z",
+                      "granted_by": "56565656-5656-4656-8656-565656565656",
+                      "membership_id": "12121212-1212-4212-8212-121212121212",
+                      "revoked_at": null,
+                      "revoked_by": null,
+                      "updated_at": "2026-10-21T00:00:00Z",
+                      "user": {
+                        "active": true,
+                        "user_id": "34343434-3434-4434-8434-343434343434",
+                        "username": "operator-a"
+                      }
+                    }
+                  ],
+                  "meta": {
+                    "access_source": "database",
+                    "has_more": false,
+                    "limit": 25,
+                    "next_cursor": null
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryMembersResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
+      }
+    },
+    "/factories/{factory_id}/members/{user_id}": {
+      "delete": {
+        "description": "ADMIN, database mode. Empty body or {} only. Target factory/user must exist. Inactive target allowed. Absent membership => membership=null,changed=false; already revoked returns stored row unchanged. No-op never changes timestamps/audit. New requests and receipt replay after serialized revoke are denied. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "revokeFactoryAccess",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "required": [],
+                "type": "object"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "changed": false,
+                    "membership": null
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryMemberChangeResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
+      },
+      "put": {
+        "description": "ADMIN, database mode. Empty body or {} only. Grant/regrant active user; inactive target409 even for duplicate grant. Existing active membership no-op changed=false. Regrant preserves membership_id; resets revoked fields, updates latest grant provenance. Audit/state atomic, serialized with factory writes. Only documented parameters/body fields are accepted. Product success/error envelope; no-store on errors as well. Client actor, role, grants and timestamps are never accepted.",
+        "operationId": "grantFactoryAccess",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "required": [],
+                "type": "object"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "changed": true,
+                    "membership": {
+                      "active": true,
+                      "created_at": "2026-10-21T00:00:00Z",
+                      "factory_id": "factory-A",
+                      "grant_source": "http",
+                      "granted_at": "2026-10-21T00:00:00Z",
+                      "granted_by": "56565656-5656-4656-8656-565656565656",
+                      "membership_id": "12121212-1212-4212-8212-121212121212",
+                      "revoked_at": null,
+                      "revoked_by": null,
+                      "updated_at": "2026-10-21T00:00:00Z",
+                      "user": {
+                        "active": true,
+                        "user_id": "34343434-3434-4434-8434-343434343434",
+                        "username": "operator-a"
+                      }
+                    }
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryMemberChangeResponse"
+                }
+              }
+            },
+            "description": "Server-owned state; Cache-Control no-store. X-Request-Id is generated or accepts a valid bounded client correlation ID.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; strict query/body, repeated/extra fields rejected. INVALID_JSON for malformed JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED; invalid token, missing/inactive database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FORBIDDEN; ADMIN required before any object lookup on administration routes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_NOT_FOUND",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND (missing/inaccessible) or USER_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ALREADY_EXISTS",
+                    "message": "Request could not be completed"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ALREADY_EXISTS or TARGET_USER_INACTIVE on grant/regrant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": {
+                    "code": "FACTORY_ACCESS_MODE_MISMATCH",
+                    "message": "Membership administration requires database mode"
+                  },
+                  "requestId": "factory-access-example",
+                  "success": false
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FactoryApiError"
+                }
+              }
+            },
+            "description": "FACTORY_ACCESS_MODE_MISMATCH, FACTORY_ACCESS_UNAVAILABLE, DB_UNAVAILABLE, CURSOR_SIGNING_UNAVAILABLE. No fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Factories"
+        ]
       }
     },
     "/operations/overview": {
