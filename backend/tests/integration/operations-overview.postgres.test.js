@@ -1,11 +1,12 @@
 const { randomUUID } = require('node:crypto');
+const { bootstrapFactory } = require('../../src/services/factory-registry.service');
 const jwt = require('jsonwebtoken');
 const fs = require('node:fs');
 const { PrismaClient } = require('@prisma/client');
 const db = require('../../src/config/prisma');
 const app = require('../../src/app');
 const { contentHash, validatePayload, loadCanonicalSeedPlan } = require('../../src/services/operations-contract.service');
-const { ingestFactorySnapshot } = require('../../src/services/operations-snapshot.service');
+const { ingestFactorySnapshot } = require('../helpers/factory-fixtures');
 const { claimDecisionCase, persistDecisionRecommendation, recordDecisionPlanningFailure } = require('../../src/services/decision-planning.service');
 const domain = require('../../../contracts/v3/operations-domain.schema.json').$defs;
 const example = require('../../../contracts/v3/examples/demo-scenario.json');
@@ -203,6 +204,7 @@ describe('authoritative overview: real authenticated HTTP and PostgreSQL', () =>
     for (const kind of ['hash', 'schema']) {
       const s = structuredClone(seed); s.factory_id = `corrupt-${randomUUID()}`; s.current_schedule = null;
       if (kind === 'schema') s.machines[0].status = 'NOT_CANONICAL';
+      await bootstrapFactory(db, s.factory_id, 'corruption-test');
       await db.factorySnapshot.create({ data: { factoryId: s.factory_id, snapshotId: s.snapshot_id, schemaVersion: '3.0',
         payloadJson: s, contentHash: kind === 'hash' ? '0'.repeat(64) : contentHash(s), capturedAt: new Date(s.captured_at) } });
       await db.operationsHead.create({ data: { factoryId: s.factory_id, snapshotId: s.snapshot_id } });

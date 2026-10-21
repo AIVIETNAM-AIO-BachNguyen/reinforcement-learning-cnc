@@ -2250,6 +2250,7 @@
             "type": "string"
           },
           "has_snapshot": {
+            "description": "True when a current Operations head exists; registry-only or historical factories without a head return false.",
             "type": "boolean"
           },
           "name": {
@@ -7282,7 +7283,7 @@
     },
     "/operations/snapshot": {
       "get": {
-        "description": "Authenticated database read. ADMIN can read all factories; other roles need their database user UUID in OPERATIONS_FACTORY_ACCESS. Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and SHA-256 content hashes. Cache-Control: no-store. Schedule is null if none exists. Schedule has no embedded schema_version per the canonical contract; meta supplies version 3.0.",
+        "description": "Authenticated database read. Active ADMIN can read all factories; other roles need access from the configured FACTORY_ACCESS_SOURCE (active database membership or OPERATIONS_FACTORY_ACCESS environment grants). Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and SHA-256 content hashes. Cache-Control: no-store. Schedule is null if none exists. Schedule has no embedded schema_version per the canonical contract; meta supplies version 3.0.",
         "operationId": "getOperationsSnapshot",
         "parameters": [
           {
@@ -7422,7 +7423,7 @@
     },
     "/schedules/current": {
       "get": {
-        "description": "Authenticated database read. ADMIN can read all factories; other roles need their database user UUID in OPERATIONS_FACTORY_ACCESS. Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and SHA-256 content hashes. Cache-Control: no-store. Schedule is null if none exists. Schedule has no embedded schema_version per the canonical contract; meta supplies version 3.0.",
+        "description": "Authenticated database read. Active ADMIN can read all factories; other roles need access from the configured FACTORY_ACCESS_SOURCE (active database membership or OPERATIONS_FACTORY_ACCESS environment grants). Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and SHA-256 content hashes. Cache-Control: no-store. Schedule is null if none exists. Schedule has no embedded schema_version per the canonical contract; meta supplies version 3.0.",
         "operationId": "getCurrentOperationSchedule",
         "parameters": [
           {

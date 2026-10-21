@@ -1,4 +1,4 @@
-﻿# Factory registry and access management
+# Factory registry and access management
 
 Base: main `4c7aae108942a363a4dc4ee40f4ccb81bdfd8a53`, which includes reviewed
 Overview #45 (`9404ecb`). Independent branch `feat/factory-access-management`.
@@ -71,7 +71,10 @@ and composite case FKs. Snapshot hashes/JSON, schedule basis, plan versions,
 receipts/events remain unchanged. Include historical factories with no head.
 Indexes: registry PK for factory_id ASC; unique(factory_id,user_id) for members;
 (user_id,active,factory_id) for user discovery; (factory_id,active,user_id) for
-member state filter. Bounded relation projection, no per-item queries.
+member state filter. Prisma also requires unique(case_id,factory_id) on the
+one-to-one publication side; case_id remains its primary key. This is an ORM
+uniqueness declaration, not a second competing FK. Bounded relation projection,
+no per-item queries.
 
 ## Role matrix
 
@@ -173,3 +176,18 @@ route responses including parser/auth errors are no-store with X-Request-Id.
 No user secrets/email; member summary only user_id,username,active. Existing
 Operations canonical and product error branches stay compatible. Domain enums,
 worker lifecycle, overview DTO and frontend code remain out of scope.
+
+### Executable rollback export
+
+With administration frozen and an explicit DATABASE_URL, run
+`node backend/scripts/export-factory-access.js ./reviewed-factory-grants.json`.
+The tool refuses to overwrite a file and writes only active memberships (including
+currently inactive users, whose global active check still denies access). Review
+the export against access approvals; set OPERATIONS_FACTORY_ACCESS from that file
+using the deployment secret/config mechanism, then switch **all** instances together.
+No raw grants are printed by the exporter. On Windows also restrict the output
+file ACL to deployment operators. Do not use a historical environment value.
+
+The trusted planning-demo CLI now requires OPERATIONS_ACTOR_USER_ID identifying an
+active DB ADMIN; it does not invent a privileged actor. Canonical seed still
+bootstraps registry with a SYSTEM source and no fake administrator membership.

@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const routes = require('./routes');
 const requestLogger = require('./middlewares/request-logger.middleware');
 
+require('./services/factory-access.service').validateAccessConfiguration();
 const app = express();
 
 app.use(helmet());
@@ -37,6 +38,10 @@ app.use(cors(corsOptions));
 
 app.use(cookieParser());
 app.use(requestLogger);
+app.use((req, res, next) => {
+  if (/^\/api\/v1\/factories(?:\/|$)/.test(req.path)) res.set('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 

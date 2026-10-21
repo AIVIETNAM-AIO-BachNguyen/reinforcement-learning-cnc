@@ -2362,8 +2362,8 @@ paths:
       operationId: getOperationsSnapshot
       summary: Read current immutable FactorySnapshot
       description: >-
-        Authenticated database read. ADMIN can read all factories; other roles need their database user UUID in
-        OPERATIONS_FACTORY_ACCESS. Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and
+        Authenticated database read. Active ADMIN can read all factories; other roles need access from the configured
+        FACTORY_ACCESS_SOURCE (active database membership or OPERATIONS_FACTORY_ACCESS environment grants). Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and
         SHA-256 content hashes. Cache-Control: no-store. Schedule is null if none exists. Schedule has no embedded
         schema_version per the canonical contract; meta supplies version 3.0.
       parameters:
@@ -2459,8 +2459,8 @@ paths:
       operationId: getCurrentOperationSchedule
       summary: Read current immutable Schedule
       description: >-
-        Authenticated database read. ADMIN can read all factories; other roles need their database user UUID in
-        OPERATIONS_FACTORY_ACCESS. Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and
+        Authenticated database read. Active ADMIN can read all factories; other roles need access from the configured
+        FACTORY_ACCESS_SOURCE (active database membership or OPERATIONS_FACTORY_ACCESS environment grants). Unknown or inaccessible factories return 404. Validates canonical schema 3.0 and
         SHA-256 content hashes. Cache-Control: no-store. Schedule is null if none exists. Schedule has no embedded
         schema_version per the canonical contract; meta supplies version 3.0.
       parameters:
@@ -7655,6 +7655,7 @@ components:
           format: date-time
         has_snapshot:
           type: boolean
+          description: True when a current Operations head exists; registry-only or historical factories without a head return false.
     FactoryMemberDto:
       type: object
       additionalProperties: false

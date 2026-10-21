@@ -1,7 +1,7 @@
 const { randomUUID } = require('node:crypto');
 const { z } = require('zod');
 const { ApiError, fromZodError } = require('../lib/api-error');
-const { authorizeFactory } = require('./operations-context.service');
+const { authorizeFactory, authorizeFactoryWrite } = require('./factory-access.service');
 const { validatePayload, contentHash } = require('./operations-contract.service');
 const { commitMetadata, humanMetadata } = require('./decision-metadata');
 
@@ -34,7 +34,7 @@ async function accessible(tx, user, id) {
   if (!z.string().uuid().safeParse(id).success) throw notFound();
   const row = await tx.decisionCase.findUnique({ where: { id }, include: { recommendation: true, humanDecision: true, commit: true } });
   if (!row) throw notFound();
-  try { authorizeFactory(user, row.factoryId); }
+  try { await authorizeFactory(tx, user, row.factoryId); }
   catch (error) { if (error.statusCode === 404) throw notFound(); throw error; }
   return row;
 }
@@ -58,12 +58,13 @@ async function createDecisionCase(db, user, rawBody, rawKey) {
   if (!['OPERATOR', 'ENGINEER', 'ADMIN'].includes(user.role)) throw new ApiError(403, 'FORBIDDEN', 'This role cannot create decision cases');
   const body = parse(createSchema, rawBody);
   const key = parse(keySchema, rawKey);
-  authorizeFactory(user, body.factory_id);
+  await authorizeFactory(db, user, body.factory_id);
   body.request = await validatePayload(body.request, 'case-request');
   const hash = contentHash(body);
   return db.$transaction(async tx => {
     // Same lock namespace as ingestion/seed: head cannot change between fence and commit.
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${body.factory_id}, 0))::text`;
+    user = await authorizeFactoryWrite(tx, user, body.factory_id);
     const receipt = await tx.decisionCaseIdempotencyReceipt.findUnique({ where: {
       factoryId_actorId_key: { factoryId: body.factory_id, actorId: user.id, key },
     } });
