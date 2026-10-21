@@ -4,7 +4,7 @@ const yaml = require('js-yaml');
 
 const ROOT = path.resolve(__dirname, '../..');
 const PATHS = [
-  '/operations/snapshot', '/schedules/current', '/decision-cases',
+  '/operations/overview', '/operations/snapshot', '/schedules/current', '/decision-cases',
   '/decision-cases/{id}', '/decision-cases/{id}/recommendation',
   '/decision-cases/{id}/events', '/decision-cases/{id}/decision',
 ];

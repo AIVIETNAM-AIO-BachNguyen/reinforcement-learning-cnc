@@ -2853,6 +2853,492 @@
         "title": "OperationStatus",
         "type": "string"
       },
+      "OperationsOverview": {
+        "additionalProperties": false,
+        "description": "Additive HTTP summary, not a new domain model. All counts are case/machine counts, including zero buckets. LIVE and SIMULATION_ONLY are disjoint; lifecycle and processing dimensions overlap and must never be added. LIVE.by_status.AWAITING_APPROVAL is needs approval (including stale, not authorization to approve); LIVE.by_status.APPROVED is approved unpublished. Each mode by_processing.FAILED is processing errors; PENDING + RUNNING is in progress, including any terminal rows with those persisted processing states. All lifecycle buckets include stale and terminal cases; no stale-active metric. Machine coverage is every machine in the validated snapshot, not all physical machines or health coverage. No health/risk/utilization/history metric. read_at is the database read-snapshot acquisition time, not telemetry freshness or a concurrency token. Head revision does not fence case/worker changes. publication=null means no published schedule; published plan_version remains independent of current observation. Missing head returns 404, never an empty 200.",
+        "properties": {
+          "cases": {
+            "additionalProperties": false,
+            "properties": {
+              "LIVE": {
+                "additionalProperties": false,
+                "properties": {
+                  "by_processing": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "FAILED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "PENDING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "RUNNING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "SUCCEEDED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "PENDING",
+                      "RUNNING",
+                      "SUCCEEDED",
+                      "FAILED"
+                    ],
+                    "type": "object"
+                  },
+                  "by_status": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "ANALYZING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "APPROVED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "AWAITING_APPROVAL": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "CANCELLED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "COMMITTED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "CREATED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "EXPLAINING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "FAILED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "GENERATING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "MODIFIED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "REJECTED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "VALIDATING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "CREATED",
+                      "ANALYZING",
+                      "GENERATING",
+                      "VALIDATING",
+                      "EXPLAINING",
+                      "AWAITING_APPROVAL",
+                      "APPROVED",
+                      "MODIFIED",
+                      "REJECTED",
+                      "COMMITTED",
+                      "FAILED",
+                      "CANCELLED"
+                    ],
+                    "type": "object"
+                  },
+                  "total": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "total",
+                  "by_status",
+                  "by_processing"
+                ],
+                "type": "object"
+              },
+              "SIMULATION_ONLY": {
+                "additionalProperties": false,
+                "properties": {
+                  "by_processing": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "FAILED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "PENDING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "RUNNING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "SUCCEEDED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "PENDING",
+                      "RUNNING",
+                      "SUCCEEDED",
+                      "FAILED"
+                    ],
+                    "type": "object"
+                  },
+                  "by_status": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "ANALYZING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "APPROVED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "AWAITING_APPROVAL": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "CANCELLED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "COMMITTED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "CREATED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "EXPLAINING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "FAILED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "GENERATING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "MODIFIED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "REJECTED": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "VALIDATING": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "CREATED",
+                      "ANALYZING",
+                      "GENERATING",
+                      "VALIDATING",
+                      "EXPLAINING",
+                      "AWAITING_APPROVAL",
+                      "APPROVED",
+                      "MODIFIED",
+                      "REJECTED",
+                      "COMMITTED",
+                      "FAILED",
+                      "CANCELLED"
+                    ],
+                    "type": "object"
+                  },
+                  "total": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "total",
+                  "by_status",
+                  "by_processing"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "LIVE",
+              "SIMULATION_ONLY"
+            ],
+            "type": "object"
+          },
+          "context": {
+            "additionalProperties": false,
+            "properties": {
+              "captured_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "factory_id": {
+                "type": "string"
+              },
+              "head_revision": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "plan_version": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "publication": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "basis_snapshot_id": {
+                        "type": "string"
+                      },
+                      "schedule_id": {
+                        "type": "string"
+                      },
+                      "schedule_revision": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "schedule_id",
+                      "schedule_revision",
+                      "basis_snapshot_id"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "snapshot_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "factory_id",
+              "snapshot_id",
+              "plan_version",
+              "head_revision",
+              "captured_at",
+              "read_at",
+              "publication"
+            ],
+            "type": "object"
+          },
+          "machines": {
+            "additionalProperties": false,
+            "properties": {
+              "by_status": {
+                "additionalProperties": false,
+                "properties": {
+                  "FAILED": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "IDLE": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "MAINTENANCE": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "RUNNING": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "UNAVAILABLE": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "WARNING": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "IDLE",
+                  "RUNNING",
+                  "WARNING",
+                  "MAINTENANCE",
+                  "FAILED",
+                  "UNAVAILABLE"
+                ],
+                "type": "object"
+              },
+              "total": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total",
+              "by_status"
+            ],
+            "type": "object"
+          },
+          "provenance": {
+            "additionalProperties": false,
+            "properties": {
+              "cases": {
+                "additionalProperties": false,
+                "properties": {
+                  "read_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "const": "all_factory_cases_including_stale_and_terminal"
+                  },
+                  "source": {
+                    "const": "decision_cases"
+                  }
+                },
+                "required": [
+                  "source",
+                  "scope",
+                  "read_at"
+                ],
+                "type": "object"
+              },
+              "machines": {
+                "additionalProperties": false,
+                "properties": {
+                  "covered": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "observed_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "population": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "snapshot_id": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "const": "validated_current_snapshot"
+                  }
+                },
+                "required": [
+                  "source",
+                  "snapshot_id",
+                  "observed_at",
+                  "population",
+                  "covered"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "machines",
+              "cases"
+            ],
+            "type": "object"
+          },
+          "review_preview": {
+            "additionalProperties": false,
+            "properties": {
+              "filters": {
+                "additionalProperties": false,
+                "properties": {
+                  "factory_id": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "const": "LIVE"
+                  },
+                  "status": {
+                    "const": "AWAITING_APPROVAL"
+                  }
+                },
+                "required": [
+                  "factory_id",
+                  "mode",
+                  "status"
+                ],
+                "type": "object"
+              },
+              "has_more": {
+                "type": "boolean"
+              },
+              "items": {
+                "items": {
+                  "$ref": "#/components/schemas/DecisionCaseListItem"
+                },
+                "maxItems": 6,
+                "type": "array"
+              },
+              "limit": {
+                "const": 6
+              }
+            },
+            "required": [
+              "items",
+              "limit",
+              "has_more",
+              "filters"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "context",
+          "machines",
+          "cases",
+          "review_preview",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "OperationsOverviewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OperationsOverview"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "type": "object"
+      },
       "OperationsProductionJob": {
         "additionalProperties": false,
         "properties": {
@@ -4437,6 +4923,455 @@
           }
         },
         "summary": "Read immutable recommendation and its pinned snapshot"
+      }
+    },
+    "/operations/overview": {
+      "get": {
+        "description": "Authenticated active database user; ADMIN or explicit factory grant, including VIEWER. Only factory_id is accepted. Cache-Control: no-store on success/errors. Head, immutable observation/publication references, SQL aggregates and review preview share one PostgreSQL RepeatableRead snapshot. Immutable artifacts are validated after closing the transaction. Preview reuses the sanitized case-list projection, LIVE/AWAITING_APPROVAL including stale, ordered created_at DESC, UUID DESC, fixed limit 6. has_more reports additional matches in that read snapshot; filters open GET /decision-cases (independent later read). Never returns raw artifacts, requests or notes.",
+        "operationId": "getOperationsOverview",
+        "parameters": [
+          {
+            "example": "factory-demo-01",
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "populated": {
+                    "value": {
+                      "data": {
+                        "cases": {
+                          "LIVE": {
+                            "by_processing": {
+                              "FAILED": 0,
+                              "PENDING": 0,
+                              "RUNNING": 0,
+                              "SUCCEEDED": 1
+                            },
+                            "by_status": {
+                              "ANALYZING": 0,
+                              "APPROVED": 0,
+                              "AWAITING_APPROVAL": 1,
+                              "CANCELLED": 0,
+                              "COMMITTED": 0,
+                              "CREATED": 0,
+                              "EXPLAINING": 0,
+                              "FAILED": 0,
+                              "GENERATING": 0,
+                              "MODIFIED": 0,
+                              "REJECTED": 0,
+                              "VALIDATING": 0
+                            },
+                            "total": 1
+                          },
+                          "SIMULATION_ONLY": {
+                            "by_processing": {
+                              "FAILED": 0,
+                              "PENDING": 0,
+                              "RUNNING": 0,
+                              "SUCCEEDED": 0
+                            },
+                            "by_status": {
+                              "ANALYZING": 0,
+                              "APPROVED": 0,
+                              "AWAITING_APPROVAL": 0,
+                              "CANCELLED": 0,
+                              "COMMITTED": 0,
+                              "CREATED": 0,
+                              "EXPLAINING": 0,
+                              "FAILED": 0,
+                              "GENERATING": 0,
+                              "MODIFIED": 0,
+                              "REJECTED": 0,
+                              "VALIDATING": 0
+                            },
+                            "total": 0
+                          }
+                        },
+                        "context": {
+                          "captured_at": "2026-10-20T09:00:00Z",
+                          "factory_id": "factory-demo-01",
+                          "head_revision": 3,
+                          "plan_version": 1,
+                          "publication": {
+                            "basis_snapshot_id": "snapshot-S1",
+                            "schedule_id": "schedule-P1",
+                            "schedule_revision": 1
+                          },
+                          "read_at": "2026-10-20T09:05:00Z",
+                          "snapshot_id": "snapshot-S2"
+                        },
+                        "machines": {
+                          "by_status": {
+                            "FAILED": 1,
+                            "IDLE": 1,
+                            "MAINTENANCE": 1,
+                            "RUNNING": 1,
+                            "UNAVAILABLE": 1,
+                            "WARNING": 1
+                          },
+                          "total": 6
+                        },
+                        "provenance": {
+                          "cases": {
+                            "read_at": "2026-10-20T09:05:00Z",
+                            "scope": "all_factory_cases_including_stale_and_terminal",
+                            "source": "decision_cases"
+                          },
+                          "machines": {
+                            "covered": 6,
+                            "observed_at": "2026-10-20T09:00:00Z",
+                            "population": 6,
+                            "snapshot_id": "snapshot-S2",
+                            "source": "validated_current_snapshot"
+                          }
+                        },
+                        "review_preview": {
+                          "filters": {
+                            "factory_id": "factory-demo-01",
+                            "mode": "LIVE",
+                            "status": "AWAITING_APPROVAL"
+                          },
+                          "has_more": false,
+                          "items": [
+                            {
+                              "base_plan_version": 0,
+                              "case_revision": 6,
+                              "committed_schedule_id": null,
+                              "created_at": "2026-10-20T08:00:00Z",
+                              "current_context": {
+                                "plan_version": 1,
+                                "snapshot_id": "snapshot-S2"
+                              },
+                              "decision_case_id": "12121212-1212-4212-8212-121212121212",
+                              "error_code": null,
+                              "factory_id": "factory-demo-01",
+                              "human_decision": null,
+                              "mode": "LIVE",
+                              "publication": null,
+                              "recommendation_id": "recommendation-01",
+                              "schema_version": "3.0",
+                              "snapshot_id": "snapshot-S1",
+                              "stale": true,
+                              "status": "AWAITING_APPROVAL",
+                              "updated_at": "2026-10-20T08:01:00Z"
+                            }
+                          ],
+                          "limit": 6
+                        }
+                      },
+                      "success": true
+                    }
+                  },
+                  "unpublished_missing_health": {
+                    "value": {
+                      "data": {
+                        "cases": {
+                          "LIVE": {
+                            "by_processing": {
+                              "FAILED": 0,
+                              "PENDING": 0,
+                              "RUNNING": 0,
+                              "SUCCEEDED": 1
+                            },
+                            "by_status": {
+                              "ANALYZING": 0,
+                              "APPROVED": 0,
+                              "AWAITING_APPROVAL": 1,
+                              "CANCELLED": 0,
+                              "COMMITTED": 0,
+                              "CREATED": 0,
+                              "EXPLAINING": 0,
+                              "FAILED": 0,
+                              "GENERATING": 0,
+                              "MODIFIED": 0,
+                              "REJECTED": 0,
+                              "VALIDATING": 0
+                            },
+                            "total": 1
+                          },
+                          "SIMULATION_ONLY": {
+                            "by_processing": {
+                              "FAILED": 0,
+                              "PENDING": 0,
+                              "RUNNING": 0,
+                              "SUCCEEDED": 0
+                            },
+                            "by_status": {
+                              "ANALYZING": 0,
+                              "APPROVED": 0,
+                              "AWAITING_APPROVAL": 0,
+                              "CANCELLED": 0,
+                              "COMMITTED": 0,
+                              "CREATED": 0,
+                              "EXPLAINING": 0,
+                              "FAILED": 0,
+                              "GENERATING": 0,
+                              "MODIFIED": 0,
+                              "REJECTED": 0,
+                              "VALIDATING": 0
+                            },
+                            "total": 0
+                          }
+                        },
+                        "context": {
+                          "captured_at": "2026-10-20T09:00:00Z",
+                          "factory_id": "factory-demo-01",
+                          "head_revision": 3,
+                          "plan_version": 0,
+                          "publication": null,
+                          "read_at": "2026-10-20T09:05:00Z",
+                          "snapshot_id": "snapshot-S2"
+                        },
+                        "machines": {
+                          "by_status": {
+                            "FAILED": 1,
+                            "IDLE": 1,
+                            "MAINTENANCE": 1,
+                            "RUNNING": 1,
+                            "UNAVAILABLE": 1,
+                            "WARNING": 1
+                          },
+                          "total": 6
+                        },
+                        "provenance": {
+                          "cases": {
+                            "read_at": "2026-10-20T09:05:00Z",
+                            "scope": "all_factory_cases_including_stale_and_terminal",
+                            "source": "decision_cases"
+                          },
+                          "machines": {
+                            "covered": 6,
+                            "observed_at": "2026-10-20T09:00:00Z",
+                            "population": 6,
+                            "snapshot_id": "snapshot-S2",
+                            "source": "validated_current_snapshot"
+                          }
+                        },
+                        "review_preview": {
+                          "filters": {
+                            "factory_id": "factory-demo-01",
+                            "mode": "LIVE",
+                            "status": "AWAITING_APPROVAL"
+                          },
+                          "has_more": false,
+                          "items": [
+                            {
+                              "base_plan_version": 0,
+                              "case_revision": 6,
+                              "committed_schedule_id": null,
+                              "created_at": "2026-10-20T08:00:00Z",
+                              "current_context": {
+                                "plan_version": 0,
+                                "snapshot_id": "snapshot-S2"
+                              },
+                              "decision_case_id": "12121212-1212-4212-8212-121212121212",
+                              "error_code": null,
+                              "factory_id": "factory-demo-01",
+                              "human_decision": null,
+                              "mode": "LIVE",
+                              "publication": null,
+                              "recommendation_id": "recommendation-01",
+                              "schema_version": "3.0",
+                              "snapshot_id": "snapshot-S1",
+                              "stale": true,
+                              "status": "AWAITING_APPROVAL",
+                              "updated_at": "2026-10-20T08:01:00Z"
+                            }
+                          ],
+                          "limit": 6
+                        }
+                      },
+                      "success": true
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsOverviewResponse"
+                }
+              }
+            },
+            "description": "Consistent bounded overview. No health metric, including when all health measurements are missing.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "VALIDATION_ERROR",
+                  "correlation_id": "overview-example",
+                  "details": [],
+                  "error_id": "34343434-3434-4434-8434-343434343434",
+                  "message": "Request validation failed",
+                  "retryable": false,
+                  "schema_version": "3.0"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsErrorResponse"
+                }
+              }
+            },
+            "description": "Only one factory_id string is allowed; extra, repeated, missing or malformed query parameters are rejected.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "correlation_id": "overview-example",
+                  "details": [],
+                  "error_id": "34343434-3434-4434-8434-343434343434",
+                  "message": "Authentication or permission is required",
+                  "retryable": false,
+                  "schema_version": "3.0"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid, inactive or deleted database user.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "FORBIDDEN",
+                  "correlation_id": "overview-example",
+                  "details": [],
+                  "error_id": "34343434-3434-4434-8434-343434343434",
+                  "message": "Authentication or permission is required",
+                  "retryable": false,
+                  "schema_version": "3.0"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsErrorResponse"
+                }
+              }
+            },
+            "description": "Permission denied.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "FACTORY_NOT_FOUND",
+                  "correlation_id": "overview-example",
+                  "details": [],
+                  "error_id": "34343434-3434-4434-8434-343434343434",
+                  "message": "Factory was not found",
+                  "retryable": false,
+                  "schema_version": "3.0"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsErrorResponse"
+                }
+              }
+            },
+            "description": "Missing head or inaccessible factory; indistinguishable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "OPERATIONS_INTEGRITY_ERROR",
+                  "correlation_id": "overview-example",
+                  "details": [],
+                  "error_id": "34343434-3434-4434-8434-343434343434",
+                  "message": "Operations context is unavailable",
+                  "retryable": false,
+                  "schema_version": "3.0"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsErrorResponse"
+                }
+              }
+            },
+            "description": "Stored snapshot/schedule schema, hash or identity invalid; no partial success. INTERNAL_ERROR for unexpected failures.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "OPERATIONS_VALIDATOR_UNAVAILABLE",
+                  "correlation_id": "overview-example",
+                  "details": [],
+                  "error_id": "34343434-3434-4434-8434-343434343434",
+                  "message": "Operations context is unavailable",
+                  "retryable": true,
+                  "schema_version": "3.0"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsErrorResponse"
+                }
+              }
+            },
+            "description": "Validator, database (DB_UNAVAILABLE) or access configuration (FACTORY_ACCESS_UNAVAILABLE) unavailable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read authoritative factory overview",
+        "tags": [
+          "Operations"
+        ]
       }
     },
     "/operations/snapshot": {

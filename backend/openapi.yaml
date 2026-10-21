@@ -917,6 +917,359 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /operations/overview:
+    get:
+      tags:
+        - Operations
+      operationId: getOperationsOverview
+      summary: Read authoritative factory overview
+      description: >-
+        Authenticated active database user; ADMIN or explicit factory grant, including VIEWER. Only factory_id
+        is accepted. Cache-Control: no-store on success/errors. Head, immutable observation/publication
+        references, SQL aggregates and review preview share one PostgreSQL RepeatableRead snapshot. Immutable
+        artifacts are validated after closing the transaction. Preview reuses the sanitized case-list
+        projection, LIVE/AWAITING_APPROVAL including stale, ordered created_at DESC, UUID DESC, fixed limit 6.
+        has_more reports additional matches in that read snapshot; filters open GET /decision-cases (independent
+        later read). Never returns raw artifacts, requests or notes.
+      parameters:
+        - name: factory_id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+          example: factory-demo-01
+      responses:
+        '200':
+          description: 'Consistent bounded overview. No health metric, including when all health measurements are missing.'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsOverviewResponse'
+              examples:
+                populated:
+                  value:
+                    success: true
+                    data:
+                      context:
+                        factory_id: factory-demo-01
+                        snapshot_id: snapshot-S2
+                        plan_version: 1
+                        head_revision: 3
+                        captured_at: '2026-10-20T09:00:00Z'
+                        read_at: '2026-10-20T09:05:00Z'
+                        publication:
+                          schedule_id: schedule-P1
+                          schedule_revision: 1
+                          basis_snapshot_id: snapshot-S1
+                      machines:
+                        total: 6
+                        by_status:
+                          IDLE: 1
+                          RUNNING: 1
+                          WARNING: 1
+                          MAINTENANCE: 1
+                          FAILED: 1
+                          UNAVAILABLE: 1
+                      cases:
+                        LIVE:
+                          total: 1
+                          by_status:
+                            CREATED: 0
+                            ANALYZING: 0
+                            GENERATING: 0
+                            VALIDATING: 0
+                            EXPLAINING: 0
+                            AWAITING_APPROVAL: 1
+                            APPROVED: 0
+                            MODIFIED: 0
+                            REJECTED: 0
+                            COMMITTED: 0
+                            FAILED: 0
+                            CANCELLED: 0
+                          by_processing:
+                            PENDING: 0
+                            RUNNING: 0
+                            SUCCEEDED: 1
+                            FAILED: 0
+                        SIMULATION_ONLY:
+                          total: 0
+                          by_status:
+                            CREATED: 0
+                            ANALYZING: 0
+                            GENERATING: 0
+                            VALIDATING: 0
+                            EXPLAINING: 0
+                            AWAITING_APPROVAL: 0
+                            APPROVED: 0
+                            MODIFIED: 0
+                            REJECTED: 0
+                            COMMITTED: 0
+                            FAILED: 0
+                            CANCELLED: 0
+                          by_processing:
+                            PENDING: 0
+                            RUNNING: 0
+                            SUCCEEDED: 0
+                            FAILED: 0
+                      review_preview:
+                        items:
+                          - schema_version: '3.0'
+                            decision_case_id: 12121212-1212-4212-8212-121212121212
+                            factory_id: factory-demo-01
+                            mode: LIVE
+                            status: AWAITING_APPROVAL
+                            snapshot_id: snapshot-S1
+                            created_at: '2026-10-20T08:00:00Z'
+                            updated_at: '2026-10-20T08:01:00Z'
+                            recommendation_id: recommendation-01
+                            committed_schedule_id: null
+                            error_code: null
+                            base_plan_version: 0
+                            case_revision: 6
+                            current_context:
+                              snapshot_id: snapshot-S2
+                              plan_version: 1
+                            stale: true
+                            human_decision: null
+                            publication: null
+                        limit: 6
+                        has_more: false
+                        filters:
+                          factory_id: factory-demo-01
+                          mode: LIVE
+                          status: AWAITING_APPROVAL
+                      provenance:
+                        machines:
+                          source: validated_current_snapshot
+                          snapshot_id: snapshot-S2
+                          observed_at: '2026-10-20T09:00:00Z'
+                          population: 6
+                          covered: 6
+                        cases:
+                          source: decision_cases
+                          scope: all_factory_cases_including_stale_and_terminal
+                          read_at: '2026-10-20T09:05:00Z'
+                unpublished_missing_health:
+                  value:
+                    success: true
+                    data:
+                      context:
+                        factory_id: factory-demo-01
+                        snapshot_id: snapshot-S2
+                        plan_version: 0
+                        head_revision: 3
+                        captured_at: '2026-10-20T09:00:00Z'
+                        read_at: '2026-10-20T09:05:00Z'
+                        publication: null
+                      machines:
+                        total: 6
+                        by_status:
+                          IDLE: 1
+                          RUNNING: 1
+                          WARNING: 1
+                          MAINTENANCE: 1
+                          FAILED: 1
+                          UNAVAILABLE: 1
+                      cases:
+                        LIVE:
+                          total: 1
+                          by_status:
+                            CREATED: 0
+                            ANALYZING: 0
+                            GENERATING: 0
+                            VALIDATING: 0
+                            EXPLAINING: 0
+                            AWAITING_APPROVAL: 1
+                            APPROVED: 0
+                            MODIFIED: 0
+                            REJECTED: 0
+                            COMMITTED: 0
+                            FAILED: 0
+                            CANCELLED: 0
+                          by_processing:
+                            PENDING: 0
+                            RUNNING: 0
+                            SUCCEEDED: 1
+                            FAILED: 0
+                        SIMULATION_ONLY:
+                          total: 0
+                          by_status:
+                            CREATED: 0
+                            ANALYZING: 0
+                            GENERATING: 0
+                            VALIDATING: 0
+                            EXPLAINING: 0
+                            AWAITING_APPROVAL: 0
+                            APPROVED: 0
+                            MODIFIED: 0
+                            REJECTED: 0
+                            COMMITTED: 0
+                            FAILED: 0
+                            CANCELLED: 0
+                          by_processing:
+                            PENDING: 0
+                            RUNNING: 0
+                            SUCCEEDED: 0
+                            FAILED: 0
+                      review_preview:
+                        items:
+                          - schema_version: '3.0'
+                            decision_case_id: 12121212-1212-4212-8212-121212121212
+                            factory_id: factory-demo-01
+                            mode: LIVE
+                            status: AWAITING_APPROVAL
+                            snapshot_id: snapshot-S1
+                            created_at: '2026-10-20T08:00:00Z'
+                            updated_at: '2026-10-20T08:01:00Z'
+                            recommendation_id: recommendation-01
+                            committed_schedule_id: null
+                            error_code: null
+                            base_plan_version: 0
+                            case_revision: 6
+                            current_context:
+                              snapshot_id: snapshot-S2
+                              plan_version: 0
+                            stale: true
+                            human_decision: null
+                            publication: null
+                        limit: 6
+                        has_more: false
+                        filters:
+                          factory_id: factory-demo-01
+                          mode: LIVE
+                          status: AWAITING_APPROVAL
+                      provenance:
+                        machines:
+                          source: validated_current_snapshot
+                          snapshot_id: snapshot-S2
+                          observed_at: '2026-10-20T09:00:00Z'
+                          population: 6
+                          covered: 6
+                        cases:
+                          source: decision_cases
+                          scope: all_factory_cases_including_stale_and_terminal
+                          read_at: '2026-10-20T09:05:00Z'
+        '400':
+          description: >-
+            Only one factory_id string is allowed; extra, repeated, missing or malformed query parameters are
+            rejected.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsErrorResponse'
+              example:
+                schema_version: '3.0'
+                error_id: 34343434-3434-4434-8434-343434343434
+                code: VALIDATION_ERROR
+                message: Request validation failed
+                correlation_id: overview-example
+                retryable: false
+                details: []
+        '401':
+          description: 'Missing, invalid, inactive or deleted database user.'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsErrorResponse'
+              example:
+                schema_version: '3.0'
+                error_id: 34343434-3434-4434-8434-343434343434
+                code: UNAUTHORIZED
+                message: Authentication or permission is required
+                correlation_id: overview-example
+                retryable: false
+                details: []
+        '403':
+          description: Permission denied.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsErrorResponse'
+              example:
+                schema_version: '3.0'
+                error_id: 34343434-3434-4434-8434-343434343434
+                code: FORBIDDEN
+                message: Authentication or permission is required
+                correlation_id: overview-example
+                retryable: false
+                details: []
+        '404':
+          description: Missing head or inaccessible factory; indistinguishable.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsErrorResponse'
+              example:
+                schema_version: '3.0'
+                error_id: 34343434-3434-4434-8434-343434343434
+                code: FACTORY_NOT_FOUND
+                message: Factory was not found
+                correlation_id: overview-example
+                retryable: false
+                details: []
+        '500':
+          description: >-
+            Stored snapshot/schedule schema, hash or identity invalid; no partial success. INTERNAL_ERROR for
+            unexpected failures.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsErrorResponse'
+              example:
+                schema_version: '3.0'
+                error_id: 34343434-3434-4434-8434-343434343434
+                code: OPERATIONS_INTEGRITY_ERROR
+                message: Operations context is unavailable
+                correlation_id: overview-example
+                retryable: false
+                details: []
+        '503':
+          description: >-
+            Validator, database (DB_UNAVAILABLE) or access configuration (FACTORY_ACCESS_UNAVAILABLE)
+            unavailable.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsErrorResponse'
+              example:
+                schema_version: '3.0'
+                error_id: 34343434-3434-4434-8434-343434343434
+                code: OPERATIONS_VALIDATOR_UNAVAILABLE
+                message: Operations context is unavailable
+                correlation_id: overview-example
+                retryable: true
+                details: []
   /operations/snapshot:
     get:
       tags:
@@ -5816,3 +6169,375 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    OperationsOverviewResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+      properties:
+        success:
+          const: true
+        data:
+          $ref: '#/components/schemas/OperationsOverview'
+    OperationsOverview:
+      type: object
+      additionalProperties: false
+      required:
+        - context
+        - machines
+        - cases
+        - review_preview
+        - provenance
+      properties:
+        context:
+          type: object
+          additionalProperties: false
+          required:
+            - factory_id
+            - snapshot_id
+            - plan_version
+            - head_revision
+            - captured_at
+            - read_at
+            - publication
+          properties:
+            factory_id:
+              type: string
+            snapshot_id:
+              type: string
+            plan_version:
+              type: integer
+              minimum: 0
+            head_revision:
+              type: integer
+              minimum: 0
+            captured_at:
+              type: string
+              format: date-time
+            read_at:
+              type: string
+              format: date-time
+            publication:
+              anyOf:
+                - type: object
+                  additionalProperties: false
+                  required:
+                    - schedule_id
+                    - schedule_revision
+                    - basis_snapshot_id
+                  properties:
+                    schedule_id:
+                      type: string
+                    schedule_revision:
+                      type: integer
+                      minimum: 0
+                    basis_snapshot_id:
+                      type: string
+                - type: 'null'
+        machines:
+          type: object
+          additionalProperties: false
+          required:
+            - total
+            - by_status
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            by_status:
+              type: object
+              additionalProperties: false
+              required:
+                - IDLE
+                - RUNNING
+                - WARNING
+                - MAINTENANCE
+                - FAILED
+                - UNAVAILABLE
+              properties:
+                IDLE:
+                  type: integer
+                  minimum: 0
+                RUNNING:
+                  type: integer
+                  minimum: 0
+                WARNING:
+                  type: integer
+                  minimum: 0
+                MAINTENANCE:
+                  type: integer
+                  minimum: 0
+                FAILED:
+                  type: integer
+                  minimum: 0
+                UNAVAILABLE:
+                  type: integer
+                  minimum: 0
+        cases:
+          type: object
+          additionalProperties: false
+          required:
+            - LIVE
+            - SIMULATION_ONLY
+          properties:
+            LIVE:
+              type: object
+              additionalProperties: false
+              required:
+                - total
+                - by_status
+                - by_processing
+              properties:
+                total:
+                  type: integer
+                  minimum: 0
+                by_status:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - CREATED
+                    - ANALYZING
+                    - GENERATING
+                    - VALIDATING
+                    - EXPLAINING
+                    - AWAITING_APPROVAL
+                    - APPROVED
+                    - MODIFIED
+                    - REJECTED
+                    - COMMITTED
+                    - FAILED
+                    - CANCELLED
+                  properties:
+                    CREATED:
+                      type: integer
+                      minimum: 0
+                    ANALYZING:
+                      type: integer
+                      minimum: 0
+                    GENERATING:
+                      type: integer
+                      minimum: 0
+                    VALIDATING:
+                      type: integer
+                      minimum: 0
+                    EXPLAINING:
+                      type: integer
+                      minimum: 0
+                    AWAITING_APPROVAL:
+                      type: integer
+                      minimum: 0
+                    APPROVED:
+                      type: integer
+                      minimum: 0
+                    MODIFIED:
+                      type: integer
+                      minimum: 0
+                    REJECTED:
+                      type: integer
+                      minimum: 0
+                    COMMITTED:
+                      type: integer
+                      minimum: 0
+                    FAILED:
+                      type: integer
+                      minimum: 0
+                    CANCELLED:
+                      type: integer
+                      minimum: 0
+                by_processing:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - PENDING
+                    - RUNNING
+                    - SUCCEEDED
+                    - FAILED
+                  properties:
+                    PENDING:
+                      type: integer
+                      minimum: 0
+                    RUNNING:
+                      type: integer
+                      minimum: 0
+                    SUCCEEDED:
+                      type: integer
+                      minimum: 0
+                    FAILED:
+                      type: integer
+                      minimum: 0
+            SIMULATION_ONLY:
+              type: object
+              additionalProperties: false
+              required:
+                - total
+                - by_status
+                - by_processing
+              properties:
+                total:
+                  type: integer
+                  minimum: 0
+                by_status:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - CREATED
+                    - ANALYZING
+                    - GENERATING
+                    - VALIDATING
+                    - EXPLAINING
+                    - AWAITING_APPROVAL
+                    - APPROVED
+                    - MODIFIED
+                    - REJECTED
+                    - COMMITTED
+                    - FAILED
+                    - CANCELLED
+                  properties:
+                    CREATED:
+                      type: integer
+                      minimum: 0
+                    ANALYZING:
+                      type: integer
+                      minimum: 0
+                    GENERATING:
+                      type: integer
+                      minimum: 0
+                    VALIDATING:
+                      type: integer
+                      minimum: 0
+                    EXPLAINING:
+                      type: integer
+                      minimum: 0
+                    AWAITING_APPROVAL:
+                      type: integer
+                      minimum: 0
+                    APPROVED:
+                      type: integer
+                      minimum: 0
+                    MODIFIED:
+                      type: integer
+                      minimum: 0
+                    REJECTED:
+                      type: integer
+                      minimum: 0
+                    COMMITTED:
+                      type: integer
+                      minimum: 0
+                    FAILED:
+                      type: integer
+                      minimum: 0
+                    CANCELLED:
+                      type: integer
+                      minimum: 0
+                by_processing:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - PENDING
+                    - RUNNING
+                    - SUCCEEDED
+                    - FAILED
+                  properties:
+                    PENDING:
+                      type: integer
+                      minimum: 0
+                    RUNNING:
+                      type: integer
+                      minimum: 0
+                    SUCCEEDED:
+                      type: integer
+                      minimum: 0
+                    FAILED:
+                      type: integer
+                      minimum: 0
+        review_preview:
+          type: object
+          additionalProperties: false
+          required:
+            - items
+            - limit
+            - has_more
+            - filters
+          properties:
+            items:
+              type: array
+              maxItems: 6
+              items:
+                $ref: '#/components/schemas/DecisionCaseListItem'
+            limit:
+              const: 6
+            has_more:
+              type: boolean
+            filters:
+              type: object
+              additionalProperties: false
+              required:
+                - factory_id
+                - mode
+                - status
+              properties:
+                factory_id:
+                  type: string
+                mode:
+                  const: LIVE
+                status:
+                  const: AWAITING_APPROVAL
+        provenance:
+          type: object
+          additionalProperties: false
+          required:
+            - machines
+            - cases
+          properties:
+            machines:
+              type: object
+              additionalProperties: false
+              required:
+                - source
+                - snapshot_id
+                - observed_at
+                - population
+                - covered
+              properties:
+                source:
+                  const: validated_current_snapshot
+                snapshot_id:
+                  type: string
+                observed_at:
+                  type: string
+                  format: date-time
+                population:
+                  type: integer
+                  minimum: 0
+                covered:
+                  type: integer
+                  minimum: 0
+            cases:
+              type: object
+              additionalProperties: false
+              required:
+                - source
+                - scope
+                - read_at
+              properties:
+                source:
+                  const: decision_cases
+                scope:
+                  const: all_factory_cases_including_stale_and_terminal
+                read_at:
+                  type: string
+                  format: date-time
+      description: >-
+        Additive HTTP summary, not a new domain model. All counts are case/machine counts, including zero buckets.
+        LIVE and SIMULATION_ONLY are disjoint; lifecycle and processing dimensions overlap and must never be
+        added. LIVE.by_status.AWAITING_APPROVAL is needs approval (including stale, not authorization to approve);
+        LIVE.by_status.APPROVED is approved unpublished. Each mode by_processing.FAILED is processing errors;
+        PENDING + RUNNING is in progress, including any terminal rows with those persisted processing states. All
+        lifecycle buckets include stale and terminal cases; no stale-active metric. Machine coverage is every
+        machine in the validated snapshot, not all physical machines or health coverage. No
+        health/risk/utilization/history metric. read_at is the database read-snapshot acquisition time, not
+        telemetry freshness or a concurrency token. Head revision does not fence case/worker changes.
+        publication=null means no published schedule; published plan_version remains independent of current
+        observation. Missing head returns 404, never an empty 200.
