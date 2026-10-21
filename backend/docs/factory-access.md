@@ -113,6 +113,9 @@ not impersonate the creator or cancel accepted work when creator loses access.
 
 1. Back up and run fresh/populated upgrade/history gates. Deploy additive schema
    before enabling new code. No down migration or historical JSON rewrite.
+   Pause ingestion of new factory IDs until all ingest/seed processes run the
+   registry-aware code; existing registered factories remain valid. The new FK
+   intentionally rejects an old process trying to insert an unregistered ID.
 2. Deploy code with **FACTORY_ACCESS_SOURCE=environment** everywhere (compatibility
    default when unset). Explicit production setting recommended. Startup rejects
    invalid mode; environment mode validates the complete legacy map. DB mode

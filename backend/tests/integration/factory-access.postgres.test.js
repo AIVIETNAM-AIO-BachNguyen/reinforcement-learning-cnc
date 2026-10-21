@@ -286,7 +286,9 @@ test('two-factory scope and all polling/read endpoints, viewer writes and same-t
     `/decision-cases/${f.id}/events`,
     `/decision-cases/${f.id}/recommendation`,
   ];
+  const beforeReads = await effects(a.factory_id);
   for (const path of paths) expect((await http(path, { user: users.VIEWER })).status).toBe(200);
+  expect(await effects(a.factory_id)).toEqual(beforeReads);
   expect((await http(`/operations/overview?factory_id=${b.factory_id}`, { user: users.VIEWER })).status).toBe(
     404,
   );
@@ -614,6 +616,15 @@ test('environment rollout mode is exclusive; membership administration cannot re
   try {
     process.env.FACTORY_ACCESS_SOURCE = 'environment';
     process.env.OPERATIONS_FACTORY_ACCESS = JSON.stringify({ [id]: [users.OUTSIDER.id] });
+    expect(
+      (
+        await http('/factories', {
+          method: 'POST',
+          body: { factory_id: 'constructor', name: 'Opaque identifier' },
+        })
+      ).status,
+    ).toBe(201);
+    expect((await http('/factories/constructor', { user: users.OUTSIDER })).status).toBe(404);
     expect((await http(`/factories/${id}`, { user: users.OUTSIDER })).status).toBe(200);
     expect((await http(`/factories/${id}`, { user: users.VIEWER })).status).toBe(404);
     for (const method of ['GET', 'PUT', 'DELETE']) {

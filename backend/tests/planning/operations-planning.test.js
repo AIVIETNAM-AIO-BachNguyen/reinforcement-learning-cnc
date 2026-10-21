@@ -91,7 +91,8 @@ test('reads another persisted snapshot and never silently falls back to canonica
 
 test('development command calls the real planner and prints only canonical recommendation JSON', async () => {
   const child = spawn(process.execPath, ['scripts/plan-operations-demo.js', plan.factory_id, 'case-cli-planning'], {
-    cwd: root, env: { ...process.env, OPERATIONS_DEMO_DATABASE_URL: process.env.DATABASE_URL },
+    cwd: root, env: { ...process.env, OPERATIONS_DEMO_DATABASE_URL: process.env.DATABASE_URL,
+      OPERATIONS_ACTOR_USER_ID: user.id },
     windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '', error = '';

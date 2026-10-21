@@ -29,6 +29,7 @@ test('factory registry DTO and example keys are frozen and HTTP export includes 
 test.each([
   { FACTORY_ACCESS_SOURCE: 'invalid' },
   { FACTORY_ACCESS_SOURCE: 'environment', OPERATIONS_FACTORY_ACCESS: '[]' },
+  { FACTORY_ACCESS_SOURCE: 'environment', OPERATIONS_FACTORY_ACCESS: '' },
   { FACTORY_ACCESS_SOURCE: 'environment', OPERATIONS_FACTORY_ACCESS: '{"f":["not-uuid"]}' },
 ])('startup configuration fails closed %j', (env) => {
   const r = spawnSync(

@@ -12,7 +12,7 @@ function accessSource() {
   if (!['environment', 'database'].includes(value)) throw unavailable();
   return value;
 }
-function environmentGrants(raw = process.env.OPERATIONS_FACTORY_ACCESS || '{}') {
+function environmentGrants(raw = process.env.OPERATIONS_FACTORY_ACCESS ?? '{}') {
   let value;
   try {
     value = JSON.parse(raw);
@@ -31,7 +31,7 @@ function environmentGrants(raw = process.env.OPERATIONS_FACTORY_ACCESS || '{}') 
     )
     .safeParse(value);
   if (!result.success) throw unavailable();
-  return result.data;
+  return Object.assign(Object.create(null), result.data);
 }
 function validateAccessConfiguration() {
   if (accessSource() === 'environment') environmentGrants();
