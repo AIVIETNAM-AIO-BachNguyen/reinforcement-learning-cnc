@@ -387,6 +387,9 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
     if (cleanupErrors.length) {
       throw new AggregateError(cleanupErrors, cleanupErrors.map(error => error.message).join('\n'));
     }
+    fs.writeFileSync(path.join(runDir, 'cleanup-result.json'), `${JSON.stringify({
+      result: 'passed', schema_removed: true, owned_processes_stopped: true, owned_ports_closed: true,
+    }, null, 2)}\n`);
   }
 }
 
