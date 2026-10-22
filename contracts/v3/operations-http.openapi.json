@@ -4064,6 +4064,1337 @@
         ],
         "title": "TimeWindow",
         "type": "object"
+      },
+      "WorkOrderACCEPTCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "ACCEPT"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision"
+        ],
+        "type": "object"
+      },
+      "WorkOrderASSIGNCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee_user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "command": {
+            "enum": [
+              "ASSIGN"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "assignee_user_id"
+        ],
+        "type": "object"
+      },
+      "WorkOrderAssignee": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "active"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "WorkOrderBLOCKCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "BLOCK"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "WorkOrderCANCELCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "CANCEL"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "WorkOrderCLOSECommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "CLOSE"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/WorkOrderVerification"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "verification"
+        ],
+        "type": "object"
+      },
+      "WorkOrderCOMPLETECommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "COMPLETE"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "report": {
+            "$ref": "#/components/schemas/WorkOrderReport"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "report"
+        ],
+        "type": "object"
+      },
+      "WorkOrderCommandRequest": {
+        "discriminator": {
+          "propertyName": "command"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/WorkOrderASSIGNCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderACCEPTCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderSTARTCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderBLOCKCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderRESUMECommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderCOMPLETECommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderCLOSECommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderREQUEST_REWORKCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderCANCELCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderREASSIGNCommand"
+          }
+        ]
+      },
+      "WorkOrderCompletion": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "attempt": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "completed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/WorkOrderReport"
+          }
+        },
+        "required": [
+          "attempt",
+          "actor_id",
+          "completed_at",
+          "report"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "WorkOrderCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_head": {
+            "$ref": "#/components/schemas/WorkOrderExpectedHead"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "overlap_override_reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/WorkOrderSourceInput"
+          }
+        },
+        "required": [
+          "factory_id",
+          "source",
+          "expected_head"
+        ],
+        "type": "object"
+      },
+      "WorkOrderDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_completed_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actual_started_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignee": {
+            "$ref": "#/components/schemas/WorkOrderAssignee"
+          },
+          "attempt": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "available_commands": {
+            "items": {
+              "enum": [
+                "ASSIGN",
+                "ACCEPT",
+                "START",
+                "BLOCK",
+                "RESUME",
+                "COMPLETE",
+                "CLOSE",
+                "REQUEST_REWORK",
+                "CANCEL",
+                "REASSIGN"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "basis_snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "blocker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancel_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancelled_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "latest_completion": {
+            "$ref": "#/components/schemas/WorkOrderCompletion"
+          },
+          "machine_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "machine_in_current_snapshot": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "maintenance_request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "overdue": {
+            "type": "boolean"
+          },
+          "planned_end_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "planned_start_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "requirements": {
+            "$ref": "#/components/schemas/WorkOrderRequirements"
+          },
+          "revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/WorkOrderSource"
+          },
+          "source_is_current": {
+            "type": "boolean"
+          },
+          "source_technician_ids": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "UNASSIGNED",
+              "ASSIGNED",
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "BLOCKED",
+              "COMPLETED",
+              "CLOSED",
+              "CANCELLED"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "verification": {
+            "additionalProperties": false,
+            "properties": {
+              "actor_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "note": {
+                "description": "Trimmed, nonblank text.",
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              "result": {
+                "enum": [
+                  "VERIFIED",
+                  "VERIFIED_STOPPED"
+                ],
+                "type": "string"
+              },
+              "verified_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "actor_id",
+              "verified_at",
+              "result",
+              "note"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "waiting_verification": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "factory_id",
+          "machine_id",
+          "maintenance_request_id",
+          "basis_snapshot_id",
+          "source",
+          "status",
+          "revision",
+          "assignee",
+          "planned_start_at",
+          "planned_end_at",
+          "actual_started_at",
+          "actual_completed_at",
+          "created_at",
+          "updated_at",
+          "source_is_current",
+          "machine_in_current_snapshot",
+          "overdue",
+          "waiting_verification",
+          "source_technician_ids",
+          "requirements",
+          "attempt",
+          "blocker",
+          "latest_completion",
+          "verification",
+          "cancel_reason",
+          "cancelled_at",
+          "available_commands"
+        ],
+        "type": "object"
+      },
+      "WorkOrderError": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "success": {
+            "enum": [
+              false
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "error",
+          "requestId"
+        ],
+        "type": "object"
+      },
+      "WorkOrderEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "command": {
+            "enum": [
+              "CREATE",
+              "ASSIGN",
+              "ACCEPT",
+              "START",
+              "BLOCK",
+              "RESUME",
+              "COMPLETE",
+              "CLOSE",
+              "REQUEST_REWORK",
+              "CANCEL",
+              "REASSIGN"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/WorkOrderEventPayload"
+          },
+          "sequence": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "work_order_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "work_order_id",
+          "sequence",
+          "actor_id",
+          "occurred_at",
+          "command",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "WorkOrderEventPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee_user_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "attempt": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "from_status": {
+            "enum": [
+              "UNASSIGNED",
+              "ASSIGNED",
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "BLOCKED",
+              "COMPLETED",
+              "CLOSED",
+              "CANCELLED",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "overlap_override_reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "overlapping_work_order_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/WorkOrderReport"
+          },
+          "revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "to_status": {
+            "enum": [
+              "UNASSIGNED",
+              "ASSIGNED",
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "BLOCKED",
+              "COMPLETED",
+              "CLOSED",
+              "CANCELLED"
+            ],
+            "type": "string"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/WorkOrderVerification"
+          }
+        },
+        "required": [
+          "from_status",
+          "to_status",
+          "revision",
+          "attempt",
+          "assignee_user_id"
+        ],
+        "type": "object"
+      },
+      "WorkOrderEventsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderEvent"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "has_more": {
+                "type": "boolean"
+              },
+              "limit": {
+                "maximum": 200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "next_after_sequence": {
+                "minimum": 1,
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "timezone": {
+                "enum": [
+                  "UTC"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "read_at",
+              "timezone",
+              "limit",
+              "has_more",
+              "next_after_sequence"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "WorkOrderExpectedHead": {
+        "additionalProperties": false,
+        "properties": {
+          "plan_version": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "plan_version",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "WorkOrderListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderSummary"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "has_more": {
+                "type": "boolean"
+              },
+              "limit": {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "next_cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "timezone": {
+                "enum": [
+                  "UTC"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "read_at",
+              "timezone",
+              "limit",
+              "has_more",
+              "next_cursor"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "WorkOrderLookupResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderSummary"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WorkOrderReadMeta"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "WorkOrderREASSIGNCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee_user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "command": {
+            "enum": [
+              "REASSIGN"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "assignee_user_id",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "WorkOrderREQUEST_REWORKCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "REQUEST_REWORK"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "WorkOrderRESUMECommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "RESUME"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "WorkOrderReadMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "read_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "timezone": {
+            "enum": [
+              "UTC"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_at",
+          "timezone"
+        ],
+        "type": "object"
+      },
+      "WorkOrderReport": {
+        "additionalProperties": false,
+        "description": "STOPPED requires stop_reason. Server records completion time; caller timestamps are rejected.",
+        "properties": {
+          "outcome": {
+            "enum": [
+              "SUCCESS",
+              "PARTIAL",
+              "STOPPED"
+            ],
+            "type": "string"
+          },
+          "result": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "stop_reason": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "work_performed": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "work_performed",
+          "result"
+        ],
+        "type": "object"
+      },
+      "WorkOrderRequirements": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "expected_duration_minutes": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "maintenance_type": {
+            "type": "string"
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "minimum_skill_level": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "required_skill_ids": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "maintenance_type",
+          "action_type",
+          "priority",
+          "required_skill_ids",
+          "minimum_skill_level",
+          "mandatory",
+          "expected_duration_minutes"
+        ],
+        "type": "object"
+      },
+      "WorkOrderResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkOrderDetail"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WorkOrderReadMeta"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "WorkOrderSTARTCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "enum": [
+              "START"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision"
+        ],
+        "type": "object"
+      },
+      "WorkOrderSource": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "basis_snapshot_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "basis_snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "decision_case_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "published_plan_version": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "schedule_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "schedule_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "schedule_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "decision_case_id",
+          "schedule_id",
+          "schedule_revision",
+          "schedule_hash",
+          "assignment_id",
+          "published_plan_version",
+          "basis_snapshot_id",
+          "basis_snapshot_hash"
+        ],
+        "type": "object"
+      },
+      "WorkOrderSourceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "decision_case_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "schedule_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "schedule_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "schedule_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "decision_case_id",
+          "schedule_id",
+          "schedule_revision",
+          "schedule_hash",
+          "assignment_id"
+        ],
+        "type": "object"
+      },
+      "WorkOrderSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_completed_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actual_started_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignee": {
+            "$ref": "#/components/schemas/WorkOrderAssignee"
+          },
+          "basis_snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "machine_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "machine_in_current_snapshot": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "maintenance_request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+            "type": "string"
+          },
+          "overdue": {
+            "type": "boolean"
+          },
+          "planned_end_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "planned_start_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/WorkOrderSource"
+          },
+          "source_is_current": {
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "UNASSIGNED",
+              "ASSIGNED",
+              "ACCEPTED",
+              "IN_PROGRESS",
+              "BLOCKED",
+              "COMPLETED",
+              "CLOSED",
+              "CANCELLED"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "waiting_verification": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "factory_id",
+          "machine_id",
+          "maintenance_request_id",
+          "basis_snapshot_id",
+          "source",
+          "status",
+          "revision",
+          "assignee",
+          "planned_start_at",
+          "planned_end_at",
+          "actual_started_at",
+          "actual_completed_at",
+          "created_at",
+          "updated_at",
+          "source_is_current",
+          "machine_in_current_snapshot",
+          "overdue",
+          "waiting_verification"
+        ],
+        "type": "object"
+      },
+      "WorkOrderVerification": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "description": "Trimmed, nonblank text.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "VERIFIED",
+              "VERIFIED_STOPPED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "result",
+          "note"
+        ],
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -7572,6 +8903,1632 @@
         "summary": "Read current immutable Schedule",
         "tags": [
           "Operations"
+        ]
+      }
+    },
+    "/work-orders": {
+      "get": {
+        "description": "Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success and errors. Filters AND; created_at DESC,id DESC, microsecond cursor signed and actor/source/filter-bound. Cursor freezes overdue cutoff read_at. COMPLETED is overdue after planned_end_at but waiting_verification=true; not ongoing machine repair. Historical machine filters do not require current-snapshot presence.",
+        "operationId": "listWorkOrders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "UNASSIGNED",
+                "ASSIGNED",
+                "ACCEPTED",
+                "IN_PROGRESS",
+                "BLOCKED",
+                "COMPLETED",
+                "CLOSED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignee_user_id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "required": false,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "overdue",
+            "required": false,
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 4096,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "actual_completed_at": null,
+                      "actual_started_at": null,
+                      "assignee": null,
+                      "basis_snapshot_id": "snapshot-basis-S1",
+                      "created_at": "2026-10-22T00:00:00.000Z",
+                      "factory_id": "factory-A",
+                      "id": "a0000000-0000-4000-8000-000000000001",
+                      "machine_id": "M03",
+                      "machine_in_current_snapshot": true,
+                      "maintenance_request_id": "MR-M03",
+                      "overdue": false,
+                      "planned_end_at": "2026-10-22T02:00:00.000Z",
+                      "planned_start_at": "2026-10-22T01:00:00.000Z",
+                      "revision": 1,
+                      "source": {
+                        "assignment_id": "A-MAINT-M03",
+                        "basis_snapshot_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "basis_snapshot_id": "snapshot-basis-S1",
+                        "decision_case_id": "a0000000-0000-4000-8000-000000000001",
+                        "published_plan_version": 2,
+                        "schedule_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "schedule_id": "schedule-committed",
+                        "schedule_revision": 1
+                      },
+                      "source_is_current": true,
+                      "status": "UNASSIGNED",
+                      "updated_at": "2026-10-22T00:00:00.000Z",
+                      "waiting_verification": false
+                    }
+                  ],
+                  "meta": {
+                    "has_more": false,
+                    "limit": 25,
+                    "next_cursor": null,
+                    "read_at": "2026-10-22T00:00:00.000Z",
+                    "timezone": "UTC"
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderListResponse"
+                }
+              }
+            },
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED / INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS / WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List scoped maintenance work orders",
+        "tags": [
+          "Work Orders"
+        ]
+      },
+      "post": {
+        "description": "Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success and errors. ADMIN/ENGINEER. Lock factory, ordered users, then publication/head. Recheck expected head after waiting; only current DecisionCommit source is accepted. Origin unique forever; active factory+basis+request unique. Half-open same-machine planned-window overlap returns409; overlap_override_reason explicitly permits overlap and is audited. No publication/telemetry writes. Fresh access/role before historical receipt replay; replay returns original201 body.",
+        "operationId": "createWorkOrder",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[!-~]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "expected_head": {
+                  "plan_version": 2,
+                  "revision": 5,
+                  "snapshot_id": "snapshot-current-S2"
+                },
+                "factory_id": "factory-A",
+                "source": {
+                  "assignment_id": "A-MAINT-M03",
+                  "decision_case_id": "a0000000-0000-4000-8000-000000000001",
+                  "schedule_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "schedule_id": "schedule-committed",
+                  "schedule_revision": 1
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "actual_completed_at": null,
+                    "actual_started_at": null,
+                    "assignee": null,
+                    "attempt": 1,
+                    "available_commands": [
+                      "ASSIGN",
+                      "CANCEL"
+                    ],
+                    "basis_snapshot_id": "snapshot-basis-S1",
+                    "blocker": null,
+                    "cancel_reason": null,
+                    "cancelled_at": null,
+                    "created_at": "2026-10-22T00:00:00.000Z",
+                    "factory_id": "factory-A",
+                    "id": "a0000000-0000-4000-8000-000000000001",
+                    "latest_completion": null,
+                    "machine_id": "M03",
+                    "machine_in_current_snapshot": true,
+                    "maintenance_request_id": "MR-M03",
+                    "overdue": false,
+                    "planned_end_at": "2026-10-22T02:00:00.000Z",
+                    "planned_start_at": "2026-10-22T01:00:00.000Z",
+                    "requirements": {
+                      "action_type": "REPLACE",
+                      "expected_duration_minutes": 60,
+                      "maintenance_type": "CORRECTIVE",
+                      "mandatory": true,
+                      "minimum_skill_level": 1,
+                      "priority": "HIGH",
+                      "required_skill_ids": [
+                        "SKILL-MAINT"
+                      ]
+                    },
+                    "revision": 1,
+                    "source": {
+                      "assignment_id": "A-MAINT-M03",
+                      "basis_snapshot_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "basis_snapshot_id": "snapshot-basis-S1",
+                      "decision_case_id": "a0000000-0000-4000-8000-000000000001",
+                      "published_plan_version": 2,
+                      "schedule_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "schedule_id": "schedule-committed",
+                      "schedule_revision": 1
+                    },
+                    "source_is_current": true,
+                    "source_technician_ids": [
+                      "T01"
+                    ],
+                    "status": "UNASSIGNED",
+                    "updated_at": "2026-10-22T00:00:00.000Z",
+                    "verification": null,
+                    "waiting_verification": false
+                  },
+                  "meta": {
+                    "read_at": "2026-10-22T00:00:00.000Z",
+                    "timezone": "UTC"
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderResponse"
+                }
+              }
+            },
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "enum": [
+                    "true",
+                    "false"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED / INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS / WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create explicitly from current committed maintenance assignment",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/summaries": {
+      "get": {
+        "description": "Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success and errors. Read only. No reports, private notes or raw artifacts. UI owns href route mapping. Linking caller must separately authorize the incident and compare factory/machine in its transaction; this lookup never grants access.",
+        "operationId": "lookupWorkOrderSummaries",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated 1..50 unique UUIDs; input order preserved. Any missing/inaccessible ID returns scoped404 for the entire request.",
+              "maxLength": 1849,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "actual_completed_at": null,
+                      "actual_started_at": null,
+                      "assignee": null,
+                      "basis_snapshot_id": "snapshot-basis-S1",
+                      "created_at": "2026-10-22T00:00:00.000Z",
+                      "factory_id": "factory-A",
+                      "id": "a0000000-0000-4000-8000-000000000001",
+                      "machine_id": "M03",
+                      "machine_in_current_snapshot": true,
+                      "maintenance_request_id": "MR-M03",
+                      "overdue": false,
+                      "planned_end_at": "2026-10-22T02:00:00.000Z",
+                      "planned_start_at": "2026-10-22T01:00:00.000Z",
+                      "revision": 1,
+                      "source": {
+                        "assignment_id": "A-MAINT-M03",
+                        "basis_snapshot_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "basis_snapshot_id": "snapshot-basis-S1",
+                        "decision_case_id": "a0000000-0000-4000-8000-000000000001",
+                        "published_plan_version": 2,
+                        "schedule_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "schedule_id": "schedule-committed",
+                        "schedule_revision": 1
+                      },
+                      "source_is_current": true,
+                      "status": "UNASSIGNED",
+                      "updated_at": "2026-10-22T00:00:00.000Z",
+                      "waiting_verification": false
+                    }
+                  ],
+                  "meta": {
+                    "read_at": "2026-10-22T00:00:00.000Z",
+                    "timezone": "UTC"
+                  },
+                  "success": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderLookupResponse"
+                }
+              }
+            },
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED / INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS / WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Bounded scoped summaries for incident links",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/{id}": {
+      "get": {
+        "description": "Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success and errors. Scoped404 for missing/inaccessible ID. Available commands advisory; detail reports only within scope. Source_is_current compares publication, not telemetry basis. Server read_at UTC. No read mutation.",
+        "operationId": "getWorkOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderResponse"
+                }
+              }
+            },
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED / INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS / WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read execution and immutable source",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/{id}/commands": {
+      "post": {
+        "description": "Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success and errors. All commands require expected_revision. ASSIGN/REASSIGN/CANCEL/CLOSE/REQUEST_REWORK: ADMIN/ENGINEER. Execution: current eligible OPERATOR/ENGINEER assignee only. CLOSE/REWORK cannot self-verify. Rework retains prior attempt reports. START never resets actual_started_at. CANCEL forbidden after any start, including after reassignment. STOPPED requires stop_reason and CLOSE VERIFIED_STOPPED. Unknown commands reject400; no free status PATCH. Current authorization and assignee check precede receipt replay. Same key/different normalized body409. State/event/audit/receipt atomic.",
+        "operationId": "commandWorkOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[!-~]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "ACCEPT": {
+                  "value": {
+                    "command": "ACCEPT",
+                    "expected_revision": 2
+                  }
+                },
+                "ASSIGN": {
+                  "value": {
+                    "assignee_user_id": "b0000000-0000-4000-8000-000000000001",
+                    "command": "ASSIGN",
+                    "expected_revision": 1
+                  }
+                },
+                "BLOCK": {
+                  "value": {
+                    "command": "BLOCK",
+                    "expected_revision": 4,
+                    "reason": "Reviewed execution situation"
+                  }
+                },
+                "CANCEL": {
+                  "value": {
+                    "command": "CANCEL",
+                    "expected_revision": 9,
+                    "reason": "Reviewed execution situation"
+                  }
+                },
+                "CLOSE": {
+                  "value": {
+                    "command": "CLOSE",
+                    "expected_revision": 7,
+                    "verification": {
+                      "note": "Independent inspection passed",
+                      "result": "VERIFIED"
+                    }
+                  }
+                },
+                "COMPLETE": {
+                  "value": {
+                    "command": "COMPLETE",
+                    "expected_revision": 6,
+                    "report": {
+                      "outcome": "SUCCESS",
+                      "result": "Inspection passed",
+                      "work_performed": "Replaced tool and inspected machine"
+                    }
+                  }
+                },
+                "REASSIGN": {
+                  "value": {
+                    "assignee_user_id": "b0000000-0000-4000-8000-000000000001",
+                    "command": "REASSIGN",
+                    "expected_revision": 10,
+                    "reason": "Reviewed execution situation"
+                  }
+                },
+                "REQUEST_REWORK": {
+                  "value": {
+                    "command": "REQUEST_REWORK",
+                    "expected_revision": 8,
+                    "reason": "Reviewed execution situation"
+                  }
+                },
+                "RESUME": {
+                  "value": {
+                    "command": "RESUME",
+                    "expected_revision": 5,
+                    "reason": "Reviewed execution situation"
+                  }
+                },
+                "START": {
+                  "value": {
+                    "command": "START",
+                    "expected_revision": 3
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderResponse"
+                }
+              }
+            },
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "schema": {
+                  "enum": [
+                    "true",
+                    "false"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED / INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS / WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Execute guarded work order command",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/{id}/events": {
+      "get": {
+        "description": "Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success and errors. Per-order sequence ASC. Server actor/time and allowlisted payload; scoped reports preserve every completion/rework attempt. Poll after next_after_sequence. No fabricated worker/physical execution acknowledgements.",
+        "operationId": "listWorkOrderEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_sequence",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderEventsResponse"
+                }
+              }
+            },
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED / INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS / WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "enum": [
+                    "no-store"
+                  ],
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read append-only command history",
+        "tags": [
+          "Work Orders"
         ]
       }
     }
