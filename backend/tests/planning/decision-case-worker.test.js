@@ -38,6 +38,7 @@ beforeAll(async () => {
   if (!/^product_api_it_planning_\w+$/.test(new URL(process.env.DATABASE_URL).searchParams.get('schema'))) {
     throw new Error('Use npm run test:operations-planning to isolate PostgreSQL and start FastAPI');
   }
+  await db.user.create({ data: { ...actor, username: actor.id, passwordHash: 'test' } });
   plan = await loadCanonicalSeedPlan();
   factoryId = plan.factory_id;
   snapshotId = plan.run_request.factory_snapshot.snapshot_id;

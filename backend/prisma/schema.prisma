@@ -3,6 +3,7 @@ generator client {
 }
 
 model FactorySnapshot {
+  factory Factory @relation(fields: [factoryId], references: [factoryId], onDelete: Restrict, onUpdate: Restrict)
   factoryId String @map("factory_id")
   snapshotId String @map("snapshot_id")
   sourceId String? @map("source_id")
@@ -84,6 +85,7 @@ model DecisionCase {
   receipts DecisionCaseIdempotencyReceipt[]
   @@index([factoryId, createdAt])
   @@index([factoryId, createdAt(sort: Desc), id(sort: Desc)], map: "decision_cases_factory_created_id_desc_idx")
+  @@unique([id, factoryId], map: "decision_cases_id_factory_key")
   @@unique([id, snapshotId])
   @@map("decision_cases")
 }
@@ -114,10 +116,11 @@ model DecisionCommit {
   planVersion Int @map("plan_version")
   actorId String @map("actor_id") @db.Uuid
   committedAt DateTime @default(now()) @map("committed_at") @db.Timestamptz(6)
-  case DecisionCase @relation(fields: [caseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  case DecisionCase @relation(fields: [caseId, factoryId], references: [id, factoryId], onDelete: Restrict, onUpdate: Restrict, map: "decision_commits_case_factory_fkey")
   schedule OperationSchedule @relation(fields: [factoryId, snapshotId, scheduleId, scheduleRevision], references: [factoryId, snapshotId, scheduleId, revision], onDelete: Restrict, onUpdate: Restrict)
   @@unique([factoryId, scheduleId, scheduleRevision])
   @@unique([factoryId, snapshotId, scheduleId, scheduleRevision])
+  @@unique([caseId, factoryId], map: "decision_commits_case_factory_key")
   @@unique([factoryId, planVersion])
   @@map("decision_commits")
 }
@@ -161,7 +164,7 @@ model DecisionCaseIdempotencyReceipt {
   caseId String @map("case_id") @db.Uuid
   responseJson Json @map("response_json") @db.JsonB
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  case DecisionCase @relation(fields: [caseId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  case DecisionCase @relation(fields: [caseId, factoryId], references: [id, factoryId], onDelete: Restrict, onUpdate: Restrict, map: "decision_receipts_case_factory_fkey")
   @@unique([factoryId, actorId, key])
   @@map("decision_case_idempotency_receipts")
 }
@@ -311,6 +314,9 @@ model StepResult {
 }
 
 model User {
+  factoryMemberships FactoryMembership[] @relation("MemberUser")
+  factoryGrants FactoryMembership[] @relation("GrantActor")
+  factoryRevocations FactoryMembership[] @relation("RevokeActor")
   maintenanceActions MaintenanceDecisionAction[]
   id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   username     String       @unique
@@ -330,6 +336,8 @@ model User {
 }
 
 model AuditLog {
+  factoryId String? @map("factory_id")
+  factory Factory? @relation(fields: [factoryId], references: [factoryId], onDelete: Restrict, onUpdate: Restrict)
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   entityType  EntityType @map("entity_type")
   entityId    String     @map("entity_id")
@@ -339,6 +347,7 @@ model AuditLog {
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   actor       User?      @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
+  @@index([factoryId, createdAt], map: "audit_logs_factory_created_idx")
   @@index([entityType, entityId])
   @@index([createdAt(sort: Desc)])
   @@map("audit_logs")
@@ -410,4 +419,36 @@ model MaintenanceDecisionAction {
   actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@map("maintenance_decision_actions")
+}
+
+model Factory {
+ factoryId String @id @map("factory_id")
+ name String
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+ snapshots FactorySnapshot[]
+ memberships FactoryMembership[]
+ auditLogs AuditLog[]
+ @@map("factories")
+}
+model FactoryMembership {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ factoryId String @map("factory_id")
+ userId String @map("user_id") @db.Uuid
+ active Boolean @default(true)
+ grantedBy String? @map("granted_by") @db.Uuid
+ grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+ grantSource String @map("grant_source")
+ revokedBy String? @map("revoked_by") @db.Uuid
+ revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+ factory Factory @relation(fields: [factoryId], references: [factoryId], onDelete: Restrict, onUpdate: Restrict)
+ user User @relation("MemberUser", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+ grantActor User? @relation("GrantActor", fields: [grantedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+ revokeActor User? @relation("RevokeActor", fields: [revokedBy], references: [id], onDelete: Restrict, onUpdate: Restrict)
+ @@unique([factoryId,userId])
+ @@index([userId,active,factoryId], map: "factory_memberships_user_active_factory_idx")
+ @@index([factoryId,active,userId], map: "factory_memberships_factory_active_user_idx")
+ @@map("factory_memberships")
 }

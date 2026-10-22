@@ -8,10 +8,10 @@ const modeCounts = () => ({ total: 0, by_status: zero(domain.DecisionCaseStatus.
   by_processing: zero(['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED']) });
 
 async function readOperationsOverview(db, user, factoryId) {
-  authorizeFactory(user, factoryId);
   const selected = await db.$transaction(async tx => {
     // First SELECT acquires the MVCC snapshot. Record time, not a freshness token.
     const [clock] = await tx.$queryRaw`SELECT clock_timestamp() AS "readAt"`;
+    await authorizeFactory(tx, user, factoryId);
     const head = await tx.operationsHead.findUnique({ where: { factoryId },
       include: { snapshot: true, schedule: { include: { snapshot: true, commit: true } } } });
     if (!head) throw new ApiError(404, 'FACTORY_NOT_FOUND', 'Factory was not found');
