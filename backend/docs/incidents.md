@@ -207,4 +207,13 @@ Test plan (not evidence yet):
 - Three consecutive clean-schema runs at same combined SHA, desktop screenshots and
   cleanup logs. No passed marker for unavailable/skipped linked E2E.
 
-Implementation and all acceptance are pending at this contract-first checkpoint.
+Contract-first checkpoint was published before implementation. Initial independent
+implementation is now in `src/services/incident-policy.js`: strict discriminated
+request validators and pure transition guards/patches. It deliberately does not
+perform authorization lookup, transactions, receipt replay or source projection;
+the future transactional service must supply freshly authorized actor/owner/target
+data under #46 locks. Policy tests are not PostgreSQL or HTTP evidence.
+
+Remaining: freeze field-level evidence projection, incident persistence/migration,
+transactional API/auth/dedup/audit, desktop client/UI, real two-factory tests and
+combined Work Order integration. All end-to-end acceptance is still pending.
