@@ -4,6 +4,8 @@ import path from "node:path";
 import { createRequire } from "node:module";
 
 import { expect, test, type APIRequestContext, type APIResponse, type Browser, type BrowserContext } from "@playwright/test";
+import { createOperationsApiClient } from "../lib/operations-api/client";
+import { caseStatuses, processingStatuses, zeroBuckets } from "../lib/operations-api/overview";
 
 const apiBase = required("OPERATIONS_E2E_API_URL").replace(/\/+$/, "");
 const aiBase = required("OPERATIONS_E2E_AI_URL").replace(/\/+$/, "");
@@ -819,7 +821,49 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(reopened.getByRole("heading", { name: "Published schedule", exact: true })).toBeVisible();
   await expect(reopened.getByText(winner.id, { exact: true }).first()).toBeVisible();
 
+  // Exercise the shipped transport adapter against the real API, not a fixture server.
+  // This is adapter evidence, NOT acceptance of the redesigned /overview page.
+  await expect.poll(async () => {
+    const rows = array(await databaseQuery("SELECT count(*)::int AS count FROM decision_cases WHERE factory_id = $1 AND processing_status IN ('PENDING', 'RUNNING')", factoryId));
+    return record(rows[0]).count;
+  }, { timeout: 90_000 }).toBe(0);
+  const overviewClient = createOperationsApiClient({ baseUrl: `${apiBase}/api/v1`, fetcher: async (url, init) => {
+    expect(init?.method).toBe("GET");
+    const response = await adminContext.request.get(String(url));
+    return new Response(await response.text(), { status: response.status(), headers: response.headers() });
+  } });
+  const beforeOverview = await publicationState();
+  const overview = await overviewClient.getOperationsOverview(factoryId);
+  const groups = array(await databaseQuery("SELECT mode, status, processing_status, count(*)::int AS count FROM decision_cases WHERE factory_id = $1 GROUP BY mode, status, processing_status", factoryId));
+  for (const mode of ["LIVE", "SIMULATION_ONLY"] as const) {
+    const expected = { total: 0, by_status: zeroBuckets(caseStatuses), by_processing: zeroBuckets(processingStatuses) };
+    for (const row of groups.map(record).filter(row => row.mode === mode)) {
+      const count = number(row.count, "case count");
+      expected.total += count;
+      expected.by_status[row.status as keyof typeof expected.by_status] += count;
+      expected.by_processing[row.processing_status as keyof typeof expected.by_processing] += count;
+    }
+    expect(overview.cases[mode]).toEqual(expected);
+  }
+  const previewRows = array(await databaseQuery("SELECT id::text FROM decision_cases WHERE factory_id = $1 AND mode = 'LIVE' AND status = 'AWAITING_APPROVAL' ORDER BY created_at DESC, id DESC LIMIT 6", factoryId));
+  expect(overview.review_preview.items.map(item => item.decision_case_id)).toEqual(previewRows.map(row => record(row).id));
+  const heads = array(await databaseQuery("SELECT snapshot_id, plan_version, revision FROM operations_heads WHERE factory_id = $1", factoryId));
+  expect(overview.context).toMatchObject({ snapshot_id: record(heads[0]).snapshot_id, plan_version: record(heads[0]).plan_version, head_revision: record(heads[0]).revision });
+  const overviewSnapshot = await overviewClient.getOperationsSnapshot(factoryId);
+  expect(overview.machines.total).toBe(overviewSnapshot.snapshot.machines.length);
+  for (const [status, count] of Object.entries(overview.machines.by_status)) {
+    expect(count).toBe(overviewSnapshot.snapshot.machines.filter(machine => machine.status === status).length);
+  }
+  expect(await publicationState()).toEqual(beforeOverview);
+
   const evidence = {
+    overview_dependency: {
+      backend_pr: "https://github.com/AIVIETNAM-AIO-BachNguyen/reinforcement-learning-cnc/pull/45",
+      backend_sha: "9404ecb35810501d82f1428e9ccadcc77275bf35",
+      frontend_redesign_sha: null,
+      scope: "real Overview adapter; redesigned entrypoint not available",
+    },
+    runtime: { node: process.version, postgresql: await databaseQuery("SHOW server_version") },
     schema_version: "1.0",
     run: process.env.OPERATIONS_E2E_RUN || "1",
     git_sha: process.env.OPERATIONS_E2E_GIT_SHA || "unknown",
@@ -839,6 +883,8 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     case_discovery: { list_pages: listPages, audit_pages: auditPages, event_sequences: freshSequences,
       viewports: ["desktop", "mobile"], case_commands: completedDiscoveryWrites, read_interception: false },
     checks: {
+      overview_adapter_counts_preview_head_match_database: "passed",
+      redesigned_overview_entrypoint: "not_available",
       real_fastapi_recommendation: "passed",
       exact_same_request_replay: "passed",
       unauthorized_access: "passed",
