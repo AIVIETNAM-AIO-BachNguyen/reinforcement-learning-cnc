@@ -4276,6 +4276,12 @@
           },
           {
             "$ref": "#/components/schemas/WorkOrderREASSIGNCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderMANAGER_HOLDCommand"
+          },
+          {
+            "$ref": "#/components/schemas/WorkOrderREASSIGN_FOR_REWORKCommand"
           }
         ]
       },
@@ -4376,7 +4382,9 @@
                 "CLOSE",
                 "REQUEST_REWORK",
                 "CANCEL",
-                "REASSIGN"
+                "REASSIGN",
+                "MANAGER_HOLD",
+                "REASSIGN_FOR_REWORK"
               ],
               "type": "string"
             },
@@ -4620,7 +4628,9 @@
               "CLOSE",
               "REQUEST_REWORK",
               "CANCEL",
-              "REASSIGN"
+              "REASSIGN",
+              "MANAGER_HOLD",
+              "REASSIGN_FOR_REWORK"
             ],
             "type": "string"
           },
@@ -4915,6 +4925,35 @@
         ],
         "type": "object"
       },
+      "WorkOrderMANAGER_HOLDCommand": {
+        "additionalProperties": false,
+        "description": "ADMIN/ENGINEER explicitly puts IN_PROGRESS work on hold without impersonating its assignee. Preserves actual start and reports; records manager identity and reason. No access restoration required.",
+        "properties": {
+          "command": {
+            "enum": [
+              "MANAGER_HOLD"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "reason"
+        ],
+        "type": "object"
+      },
       "WorkOrderREASSIGNCommand": {
         "additionalProperties": false,
         "properties": {
@@ -4924,7 +4963,9 @@
           },
           "command": {
             "enum": [
-              "REASSIGN"
+              "REASSIGN",
+              "MANAGER_HOLD",
+              "REASSIGN_FOR_REWORK"
             ],
             "type": "string"
           },
@@ -4937,6 +4978,40 @@
             "description": "Trimmed, nonblank text.",
             "maxLength": 4000,
             "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision",
+          "assignee_user_id",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "WorkOrderREASSIGN_FOR_REWORKCommand": {
+        "additionalProperties": false,
+        "description": "Independent ADMIN/ENGINEER returns COMPLETED work to ASSIGNED with a different eligible assignee. Increments attempt, preserves old completion and actual start. New assignee must ACCEPT then START.",
+        "properties": {
+          "assignee_user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "command": {
+            "enum": [
+              "REASSIGN_FOR_REWORK"
+            ],
+            "type": "string"
+          },
+          "expected_revision": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
             "type": "string"
           }
         },

@@ -44,7 +44,7 @@ CREATE INDEX work_orders_factory_status_idx ON work_orders(factory_id,status,cre
 CREATE TABLE work_order_events (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(), work_order_id UUID NOT NULL, factory_id TEXT NOT NULL,
  sequence INTEGER NOT NULL CHECK(sequence>0), actor_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
- command TEXT NOT NULL CHECK(command IN ('CREATE','ASSIGN','REASSIGN','ACCEPT','START','BLOCK','RESUME','COMPLETE','CLOSE','REQUEST_REWORK','CANCEL')),
+ command TEXT NOT NULL CHECK(command IN ('CREATE','ASSIGN','REASSIGN','ACCEPT','START','BLOCK','RESUME','COMPLETE','CLOSE','REQUEST_REWORK','CANCEL','MANAGER_HOLD','REASSIGN_FOR_REWORK')),
  occurred_at TIMESTAMPTZ(6) NOT NULL DEFAULT clock_timestamp(), payload_json JSONB NOT NULL,
  FOREIGN KEY(work_order_id,factory_id) REFERENCES work_orders(id,factory_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
  UNIQUE(work_order_id,sequence)
@@ -100,13 +100,13 @@ BEGIN
  IS DISTINCT FROM (to_jsonb(OLD)-ARRAY['status','revision','attempt','assignee_user_id','blocker','actual_started_at','actual_completed_at','verification_json','cancel_reason','cancelled_at','updated_at'])
  OR NEW.revision<>OLD.revision+1 OR OLD.status IN ('CLOSED','CANCELLED')
  OR (OLD.actual_started_at IS NOT NULL AND NEW.actual_started_at IS DISTINCT FROM OLD.actual_started_at)
- OR NEW.attempt<>OLD.attempt+(CASE WHEN OLD.status='COMPLETED' AND NEW.status='IN_PROGRESS' THEN 1 ELSE 0 END)
+ OR NEW.attempt<>OLD.attempt+(CASE WHEN OLD.status='COMPLETED' AND NEW.status IN ('IN_PROGRESS','ASSIGNED') THEN 1 ELSE 0 END)
  OR NOT ((OLD.status='UNASSIGNED' AND NEW.status IN ('ASSIGNED','CANCELLED'))
  OR (OLD.status='ASSIGNED' AND NEW.status IN ('ASSIGNED','ACCEPTED','CANCELLED'))
  OR (OLD.status='ACCEPTED' AND NEW.status IN ('ASSIGNED','IN_PROGRESS','CANCELLED'))
  OR (OLD.status='IN_PROGRESS' AND NEW.status IN ('BLOCKED','COMPLETED'))
  OR (OLD.status='BLOCKED' AND NEW.status IN ('ASSIGNED','IN_PROGRESS'))
- OR (OLD.status='COMPLETED' AND NEW.status IN ('IN_PROGRESS','CLOSED')))
+ OR (OLD.status='COMPLETED' AND NEW.status IN ('IN_PROGRESS','ASSIGNED','CLOSED')))
  THEN RAISE EXCEPTION 'Work order immutable source, revision or transition violation'; END IF;
  RETURN NEW;
 END $$;

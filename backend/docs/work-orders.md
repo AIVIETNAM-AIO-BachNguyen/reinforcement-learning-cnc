@@ -1,8 +1,9 @@
 # Maintenance Work Orders — backend contract
 
-Base main: `f4b210265fd49e0459536fdcc642081d03e62cfb` (2026-10-22).
+Implementation base main: `f8d94837159ca5fdc1a0f159fc8c28f75e394f7f` (2026-10-24).
+Original contract base: `f4b210265fd49e0459536fdcc642081d03e62cfb`.
 Dependencies #46 (`20174df`) and #47 (`86ed39f`) are merged. Branch:
-`feat/maintenance-work-orders`. Draft only; no automatic merge or production deployment.
+`feat/maintenance-work-orders-api` (follow-up to merged contract PR #48). Draft only; no automatic merge or production deployment.
 Incident migration integration is pending an actual Flex branch/SHA; no mock result
 counts as integrated evidence. The coordination document assigns incident tables,
 links and incident UI to Flex; this PR owns Work Orders only.
@@ -56,10 +57,12 @@ stateDiagram-v2
   ASSIGNED --> ACCEPTED: ACCEPT
   ACCEPTED --> IN_PROGRESS: START
   IN_PROGRESS --> BLOCKED: BLOCK
+  IN_PROGRESS --> BLOCKED: MANAGER_HOLD (manager)
   BLOCKED --> IN_PROGRESS: RESUME
   IN_PROGRESS --> COMPLETED: COMPLETE
   COMPLETED --> CLOSED: CLOSE
   COMPLETED --> IN_PROGRESS: REQUEST_REWORK
+  COMPLETED --> ASSIGNED: REASSIGN_FOR_REWORK (independent manager)
   ASSIGNED --> ASSIGNED: REASSIGN
   ACCEPTED --> ASSIGNED: REASSIGN
   BLOCKED --> ASSIGNED: REASSIGN
@@ -76,14 +79,22 @@ ACCEPT/START/BLOCK/RESUME/COMPLETE require the current assignee with a fresh eli
 role/access check. VIEWER only reads. ADMIN cannot bypass state/assignee guards.
 CLOSE/REQUEST_REWORK must be performed by a different user from the latest completion
 reporter. Rework requires a still-eligible assignee; otherwise409 ASSIGNEE_UNAVAILABLE.
-Restore authorized eligibility before rework, or independently verify/close the
-completed report; REASSIGN is not supported from COMPLETED.
+If the previous assignee is unavailable, use REASSIGN_FOR_REWORK from COMPLETED:
+an independent ADMIN/ENGINEER supplies a different active scoped OPERATOR/ENGINEER
+and a nonblank reason. It increments attempt, retains immutable completion history
+and original actual_started_at, clears the current actual_completed_at, and enters
+ASSIGNED. The new assignee must ACCEPT then START; no false verification or access
+restoration is required. Independent verification still applies to each completion.
 
 CANCEL also requires actual_started_at=null, including after reassignment. START
 preserves the original actual_started_at when an already-started order is reassigned.
-An inactive/revoked assignee in IN_PROGRESS cannot report: a manager may not silently
-BLOCK on their behalf. This case is unsupported by this contract until the situation
-is reviewed and an authorized assignee can BLOCK; no emergency PATCH is provided.
+An inactive/revoked assignee in IN_PROGRESS cannot report. ADMIN/ENGINEER can use
+MANAGER_HOLD with a nonblank reason to enter BLOCKED, then REASSIGN to an eligible
+replacement. MANAGER_HOLD is a distinct audited managerial act, not a BLOCK attributed
+to the old assignee. Preserve actual_started_at and all reports; do not regrant access,
+reset execution or claim the machine physically stopped. The replacement must ACCEPT
+then START. These commands require fresh manager authorization, factory/user locks,
+expected_revision and receipt handling just like existing commands.
 REASSIGN from BLOCKED is supported and requires a reason and a new eligible assignee.
 
 BLOCK, RESUME, REASSIGN, CANCEL and REQUEST_REWORK require nonblank reasons.
@@ -171,4 +182,12 @@ Deploy additive migration before code; no backfill of work orders or automatic s
 Keep factory access mode consistent with #46. Roll back application routes only after
 quiescing Work Order writes; retain new history/tables and restrict FKs. Never drop
 orders/events or restore an old env grant map. Curl and two-factory smoke runbook will
-be supplied with implementation evidence. Full Work Order UI is a separate frontend task.
+available in [the runbook](work-orders-runbook.md). Full Work Order UI is a separate frontend task.
+
+## Recovery implementation
+
+The transactional service calls the merged pure recovery guards after fresh manager
+and target-user authorization under the shared locks. State, event, report history,
+audit and receipt use the same transaction. PostgreSQL tests cover revoked-assignee
+recovery, both revoke/write serialization orders, historical replay and injected
+audit rollback. See [runbook](work-orders-runbook.md) for executable demo setup.

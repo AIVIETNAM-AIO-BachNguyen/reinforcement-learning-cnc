@@ -5272,6 +5272,8 @@ components:
             - REQUEST_REWORK
             - CANCEL
             - REASSIGN
+            - MANAGER_HOLD
+            - REASSIGN_FOR_REWORK
         payload:
           $ref: '#/components/schemas/WorkOrderEventPayload'
     WorkOrderEventPayload:
@@ -5543,6 +5545,8 @@ components:
               - REQUEST_REWORK
               - CANCEL
               - REASSIGN
+              - MANAGER_HOLD
+              - REASSIGN_FOR_REWORK
     WorkOrderASSIGNCommand:
       type: object
       additionalProperties: false
@@ -5725,6 +5729,8 @@ components:
           type: string
           enum:
             - REASSIGN
+            - MANAGER_HOLD
+            - REASSIGN_FOR_REWORK
         expected_revision:
           type: integer
           minimum: 1
@@ -5737,6 +5743,25 @@ components:
           minLength: 1
           maxLength: 4000
           description: 'Trimmed, nonblank text.'
+    WorkOrderMANAGER_HOLDCommand:
+      type: object
+      additionalProperties: false
+      required: [command, expected_revision, reason]
+      properties:
+        command: {type: string, enum: [MANAGER_HOLD]}
+        expected_revision: {type: integer, minimum: 1, maximum: 2147483647}
+        reason: {type: string, minLength: 1, maxLength: 4000, pattern: '\S'}
+      description: ADMIN/ENGINEER explicitly puts IN_PROGRESS work on hold without impersonating its assignee. Preserves actual start and reports; records manager identity and reason. No access restoration required.
+    WorkOrderREASSIGN_FOR_REWORKCommand:
+      type: object
+      additionalProperties: false
+      required: [command, expected_revision, assignee_user_id, reason]
+      properties:
+        command: {type: string, enum: [REASSIGN_FOR_REWORK]}
+        expected_revision: {type: integer, minimum: 1, maximum: 2147483647}
+        assignee_user_id: {type: string, format: uuid}
+        reason: {type: string, minLength: 1, maxLength: 4000, pattern: '\S'}
+      description: Independent ADMIN/ENGINEER returns COMPLETED work to ASSIGNED with a different eligible assignee. Increments attempt, preserves old completion and actual start. New assignee must ACCEPT then START.
     WorkOrderCommandRequest:
       oneOf:
         - $ref: '#/components/schemas/WorkOrderASSIGNCommand'
@@ -5749,6 +5774,8 @@ components:
         - $ref: '#/components/schemas/WorkOrderREQUEST_REWORKCommand'
         - $ref: '#/components/schemas/WorkOrderCANCELCommand'
         - $ref: '#/components/schemas/WorkOrderREASSIGNCommand'
+        - $ref: '#/components/schemas/WorkOrderMANAGER_HOLDCommand'
+        - $ref: '#/components/schemas/WorkOrderREASSIGN_FOR_REWORKCommand'
       discriminator:
         propertyName: command
     WorkOrderResponse:

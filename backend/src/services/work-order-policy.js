@@ -54,6 +54,8 @@ const commands = {
   CLOSE: { verification: verificationSchema },
   REQUEST_REWORK: { reason },
   CANCEL: { reason },
+  MANAGER_HOLD: { reason },
+  REASSIGN_FOR_REWORK: { assignee_user_id: uuid, reason },
 };
 const commandSchema = z.discriminatedUnion(
   'command',
@@ -86,6 +88,8 @@ const transitions = {
   CLOSE: [['COMPLETED'], 'CLOSED'],
   REQUEST_REWORK: [['COMPLETED'], 'IN_PROGRESS'],
   CANCEL: [['UNASSIGNED', 'ASSIGNED', 'ACCEPTED'], 'CANCELLED'],
+  MANAGER_HOLD: [['IN_PROGRESS'], 'BLOCKED'],
+  REASSIGN_FOR_REWORK: [['COMPLETED'], 'ASSIGNED'],
 };
 function parse(schema, value) {
   const r = schema.safeParse(value);
@@ -107,7 +111,10 @@ function transition(row, user, body, at) {
   const [from, to] = transitions[body.command];
   if (!from.includes(row.status) || (body.command === 'CANCEL' && row.actualStartedAt))
     throw conflict('INVALID_WORK_ORDER_TRANSITION', 'Command is unavailable in the current execution state');
-  if (['CLOSE', 'REQUEST_REWORK'].includes(body.command) && row.completions[0]?.actorId === user.id)
+  if (
+    ['CLOSE', 'REQUEST_REWORK', 'REASSIGN_FOR_REWORK'].includes(body.command) &&
+    row.completions[0]?.actorId === user.id
+  )
     throw new ApiError(403, 'SELF_VERIFICATION', 'Completion requires independent verification');
   const data = { status: to, revision: { increment: 1 }, updatedAt: at };
   switch (body.command) {
@@ -152,7 +159,11 @@ function available(row, user) {
   return Object.entries(transitions)
     .filter(([c, [from]]) => {
       if (!from.includes(row.status) || (c === 'CANCEL' && row.actualStartedAt)) return false;
-      if (['CLOSE', 'REQUEST_REWORK'].includes(c) && row.completions?.[0]?.actorId === user.id) return false;
+      if (
+        ['CLOSE', 'REQUEST_REWORK', 'REASSIGN_FOR_REWORK'].includes(c) &&
+        row.completions?.[0]?.actorId === user.id
+      )
+        return false;
       return executionCommands.includes(c)
         ? executionRoles.includes(user.role) && row.assigneeUserId === user.id
         : managerRoles.includes(user.role);

@@ -24,7 +24,7 @@ test('WorkOrderSummary is a strict bounded-link projection without execution not
 test('commands are explicit discriminated requests with independent revision and no caller clock/actor', () => {
   const schemas = api.components.schemas;
   const variants = schemas.WorkOrderCommandRequest.oneOf.map((r) => schemas[r.$ref.split('/').at(-1)]);
-  expect(variants).toHaveLength(10);
+  expect(variants).toHaveLength(12);
   for (const s of variants) {
     expect(s.required).toEqual(expect.arrayContaining(['command', 'expected_revision']));
     expect(s.additionalProperties).toBe(false);
@@ -36,4 +36,13 @@ test('commands are explicit discriminated requests with independent revision and
   expect(schemas.WorkOrderREASSIGNCommand.required).toEqual(
     expect.arrayContaining(['assignee_user_id', 'reason']),
   );
+});
+
+test('recovery commands are available in request, detail and event contracts', () => {
+  for (const name of ['MANAGER_HOLD', 'REASSIGN_FOR_REWORK']) {
+    const s = api.components.schemas['WorkOrder' + name + 'Command'];
+    expect(s.required).toEqual(expect.arrayContaining(['command', 'expected_revision', 'reason']));
+    expect(api.components.schemas.WorkOrderDetail.properties.available_commands.items.enum).toContain(name);
+    expect(api.components.schemas.WorkOrderEvent.properties.command.enum).toContain(name);
+  }
 });

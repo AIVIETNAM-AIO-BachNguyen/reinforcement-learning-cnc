@@ -20,6 +20,94 @@ const ok = (r) => {
   expect(r.status).toBe(200);
   return r.body.data;
 };
+test('manager recovery preserves start and reports after access loss, with replay and rollback', async () => {
+  const p = await f.publish(await f.factory());
+  let row = await running(p);
+  const started = row.actual_started_at;
+  await f.member(p.body.factory_id, f.users.OPERATOR, 'DELETE');
+  expect((await f.command(row, 'BLOCK', { reason: 'Revoked' })).status).toBe(404);
+  const old = row,
+    key = randomUUID();
+  const before = await effects(p.body.factory_id);
+  const fail = jest.spyOn(db, '$transaction').mockImplementationOnce(async (callback) => {
+    const { PrismaClient } = require('@prisma/client');
+    const isolated = new PrismaClient();
+    try {
+      return await isolated.$transaction((tx) =>
+        callback(
+          new Proxy(tx, {
+            get(target, prop) {
+              if (prop === 'auditLog')
+                return {
+                  create: async () => {
+                    throw Error('injected recovery audit failure');
+                  },
+                };
+              return Reflect.get(target, prop);
+            },
+          }),
+        ),
+      );
+    } finally {
+      await isolated.$disconnect();
+    }
+  });
+  try {
+    expect(
+      (await f.command(row, 'MANAGER_HOLD', { reason: 'Safe recovery' }, f.users.MANAGER, key)).status,
+    ).toBe(500);
+  } finally {
+    fail.mockRestore();
+  }
+  expect(await effects(p.body.factory_id)).toEqual(before);
+  row = ok(await f.command(row, 'MANAGER_HOLD', { reason: 'Safe recovery' }, f.users.MANAGER, key));
+  expect(
+    (await f.command(old, 'MANAGER_HOLD', { reason: 'Safe recovery' }, f.users.MANAGER, key)).replay,
+  ).toBe('true');
+  row = ok(
+    await f.command(
+      row,
+      'REASSIGN',
+      { assignee_user_id: f.users.OTHER.id, reason: 'Replacement' },
+      f.users.MANAGER,
+    ),
+  );
+  row = ok(await f.command(row, 'ACCEPT', {}, f.users.OTHER));
+  row = ok(await f.command(row, 'START', {}, f.users.OTHER));
+  row = ok(await f.command(row, 'COMPLETE', { report }, f.users.OTHER));
+  await f.member(p.body.factory_id, f.users.OTHER, 'DELETE');
+  await f.member(p.body.factory_id, f.users.OPERATOR);
+  const reworkKey = randomUUID(),
+    completed = row,
+    input = { assignee_user_id: f.users.OPERATOR.id, reason: 'Independent rework' };
+  row = ok(await f.command(row, 'REASSIGN_FOR_REWORK', input, f.users.MANAGER, reworkKey));
+  expect(row).toMatchObject({
+    status: 'ASSIGNED',
+    attempt: 2,
+    actual_started_at: started,
+    actual_completed_at: null,
+  });
+  expect(row.latest_completion.attempt).toBe(1);
+  expect((await f.command(completed, 'REASSIGN_FOR_REWORK', input, f.users.MANAGER, reworkKey)).replay).toBe(
+    'true',
+  );
+  expect((await f.command(row, 'CANCEL', { reason: 'Cannot undo execution' }, f.users.MANAGER)).status).toBe(
+    409,
+  );
+  row = ok(await f.command(row, 'ACCEPT'));
+  row = ok(await f.command(row, 'START'));
+  row = ok(await f.command(row, 'COMPLETE', { report }));
+  row = ok(
+    await f.command(
+      row,
+      'CLOSE',
+      { verification: { result: 'VERIFIED', note: 'Independent' } },
+      f.users.MANAGER,
+    ),
+  );
+  expect(row.status).toBe('CLOSED');
+  expect(await db.workOrderCompletion.count({ where: { workOrderId: row.id } })).toBe(2);
+}, 60000);
 async function created(p) {
   const r = await f.create(p);
   expect(r.status).toBe(201);
@@ -210,12 +298,29 @@ test('strict inputs, assignment eligibility, scoped404, non-assignee and no-stor
 });
 test('only current committed maintenance sources; P2 does not rebase P1 and active request is unique', async () => {
   const s = await f.factory();
-  const { loadCanonicalSeedPlan } = require('../../src/services/operations-contract.service');
-  const plan = await loadCanonicalSeedPlan();
-  await require('../../src/services/operations-context.service').seedOperations(db, plan, {
-    factoryId: plan.factory_id,
+  // Seed-style publication in a unique factory, never pollute the canonical demo.
+  const plan = s;
+  const { contentHash } = require('../../src/services/operations-contract.service');
+  await db.operationSchedule.create({
+    data: {
+      factoryId: s.factory_id,
+      snapshotId: s.snapshot_id,
+      scheduleId: s.current_schedule.schedule_id,
+      revision: s.current_schedule.revision,
+      schemaVersion: '3.0',
+      contentHash: contentHash(s.current_schedule),
+      payloadJson: s.current_schedule,
+    },
   });
-  const head = await db.operationsHead.findUnique({ where: { factoryId: plan.factory_id } });
+  const head = await db.operationsHead.update({
+    where: { factoryId: s.factory_id },
+    data: {
+      scheduleId: s.current_schedule.schedule_id,
+      scheduleRevision: s.current_schedule.revision,
+      planVersion: 1,
+      revision: { increment: 1 },
+    },
+  });
   const seedBody = {
     factory_id: plan.factory_id,
     source: {
@@ -433,7 +538,7 @@ async function race(first, second, beforeRelease = async () => {}) {
     release();
   }
 }
-test.each(['create', 'command', 'replay'])(
+test.each(['create', 'command', 'replay', 'recovery', 'recovery-replay'])(
   'revocation vs %s in both serialization orders',
   async (kind) => {
     for (const revokeFirst of [true, false]) {
@@ -442,6 +547,14 @@ test.each(['create', 'command', 'replay'])(
       if (kind === 'create') {
         user = f.users.MANAGER;
         write = () => f.create(p, { user });
+      } else if (kind.startsWith('recovery')) {
+        user = f.users.MANAGER;
+        const row = await running(p),
+          key = randomUUID(),
+          fields = { reason: 'Manager recovery' };
+        if (kind === 'recovery-replay')
+          expect((await f.command(row, 'MANAGER_HOLD', fields, user, key)).status).toBe(200);
+        write = () => f.command(row, 'MANAGER_HOLD', fields, user, key);
       } else {
         user = f.users.OPERATOR;
         let row = await running(p);
@@ -456,7 +569,7 @@ test.each(['create', 'command', 'replay'])(
         result = results[revokeFirst ? 1 : 0];
       expect(results[revokeFirst ? 0 : 1].status).toBe(200);
       expect(result.status).toBe(revokeFirst ? 404 : kind === 'create' ? 201 : 200);
-      if (revokeFirst || kind === 'replay') expect(await effects(p.body.factory_id)).toEqual(before);
+      if (revokeFirst || kind.endsWith('replay')) expect(await effects(p.body.factory_id)).toEqual(before);
       expect((await write()).status).toBe(404);
     }
   },

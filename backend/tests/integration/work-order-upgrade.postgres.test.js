@@ -9,7 +9,7 @@ const {
   validatePayload,
   contentHash,
 } = require('../../src/services/operations-contract.service');
-const baseline = 'f4b210265fd49e0459536fdcc642081d03e62cfb';
+const baseline = 'f8d94837159ca5fdc1a0f159fc8c28f75e394f7f';
 const root = path.resolve(__dirname, '../..'),
   repo = path.dirname(root),
   migration = '20261022010000_maintenance_work_orders';

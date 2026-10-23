@@ -1,11 +1,11 @@
 # Work Orders deployment and HTTP handoff
 
 Contract: [design/ERD/state machine](work-orders.md), [OpenAPI](../openapi.yaml),
-[examples](../examples/work-orders.json). Draft PR #48; contract-first commit
+[examples](../examples/work-orders.json). Implementation follows merged contract PR #48; contract-first commit
 `a41359fb3a16f4a6e8bf82cc773e4b350f426aff`. Exact migration base:
-`f4b210265fd49e0459536fdcc642081d03e62cfb`; factory access #46 is already merged.
-No Incident Center migration is assumed: its combined upgrade remains pending an
-identified Flex migration SHA. WorkOrderSummary and transaction-aware lookup are
+`f8d94837159ca5fdc1a0f159fc8c28f75e394f7f`; factory access #46 is already merged.
+Incident Center contract #49 (`4469b78`) is merged but includes no migration:
+combined database upgrade remains pending a real incident migration SHA. WorkOrderSummary and transaction-aware lookup are
 available independently; this module does not create incident links.
 
 ## Deploy and rollback
@@ -112,8 +112,10 @@ REASSIGN is a manager command with `assignee_user_id` and nonblank `reason`; onl
 ASSIGNED/ACCEPTED/BLOCKED allow it. The new user must ACCEPT, then START. Existing
 actual start is preserved and CANCEL stays forbidden after any start. STOPPED
 completion requires `stop_reason`; CLOSE then requires VERIFIED_STOPPED. Assignment
-does not grant membership. If an executing user's access is lost, do not impersonate
-them or invent an emergency PATCH; follow the documented state guards.
+does not grant membership. If an executing user's access is lost, a manager can MANAGER_HOLD with a reason,
+then REASSIGN. For COMPLETED work use independent REASSIGN_FOR_REWORK with a
+different eligible assignee and reason. Both preserve reports/start, and the new
+assignee must ACCEPT and START. No access regrant or false verification is needed.
 
 After stopping this demo API, drop **only the schema named in this manifest** using
 the test database's administrative connection, then remove the manifest. Example for

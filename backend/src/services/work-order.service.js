@@ -1,4 +1,4 @@
-const { ApiError } = require('../lib/api-error');
+const { recoverWorkOrder } = require('./work-order-recovery-policy');
 const { authorizeFactory, currentUser, lockFactory, lockUsers } = require('./factory-access.service');
 const { contentHash, validatePayload } = require('./operations-contract.service');
 const P = require('./work-order-policy');
@@ -288,9 +288,21 @@ async function commandWorkOrder(db, identity, id, raw, keyValue) {
     if (replay) return replay;
     if (row.revision !== body.expected_revision)
       throw P.conflict('WORK_ORDER_REVISION_CONFLICT', 'Work order revision changed');
-    const at = await R.clock(tx),
-      data = P.transition(row, user, body, at);
-    if (body.assignee_user_id) await eligibleAssignee(tx, row.factoryId, body.assignee_user_id);
+    const at = await R.clock(tx);
+    const target = body.assignee_user_id
+      ? await eligibleAssignee(tx, row.factoryId, body.assignee_user_id)
+      : null;
+    const data = ['MANAGER_HOLD', 'REASSIGN_FOR_REWORK'].includes(body.command)
+      ? recoverWorkOrder(
+          {
+            ...row,
+            latestCompletion: row.completions[0] ? { reportedBy: row.completions[0].actorId } : null,
+          },
+          body,
+          user,
+          { now: at, assignee: target ? { ...target, factoryAuthorized: true } : undefined },
+        ).patch
+      : P.transition(row, user, body, at);
     if (body.command === 'REQUEST_REWORK') await eligibleAssignee(tx, row.factoryId, row.assigneeUserId);
     if (body.command === 'COMPLETE')
       await tx.workOrderCompletion.create({

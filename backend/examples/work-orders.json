@@ -221,5 +221,18 @@
       "message": "Work order revision changed"
     },
     "requestId": "request-example"
-  }
+  },
+  "recovery_commands": [
+    {
+      "command": "MANAGER_HOLD",
+      "expected_revision": 4,
+      "reason": "Assignee access revoked; supervisor reviewed execution before handover"
+    },
+    {
+      "command": "REASSIGN_FOR_REWORK",
+      "expected_revision": 8,
+      "assignee_user_id": "b0000000-0000-4000-8000-000000000002",
+      "reason": "Independent verification requires rework by an eligible replacement"
+    }
+  ]
 }
