@@ -24,6 +24,1093 @@ security:
   - cookieAuth: []
   - bearerAuth: []
 paths:
+  /work-orders:
+    get:
+      tags:
+        - Work Orders
+      operationId: listWorkOrders
+      summary: List scoped maintenance work orders
+      description: >-
+        Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success
+        and errors. Filters AND; created_at DESC,id DESC, microsecond cursor signed and
+        actor/source/filter-bound. Cursor freezes overdue cutoff read_at. COMPLETED is overdue after
+        planned_end_at but waiting_verification=true; not ongoing machine repair. Historical machine filters do
+        not require current-snapshot presence.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: factory_id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - UNASSIGNED
+              - ASSIGNED
+              - ACCEPTED
+              - IN_PROGRESS
+              - BLOCKED
+              - COMPLETED
+              - CLOSED
+              - CANCELLED
+        - name: assignee_user_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: machine_id
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        - name: overdue
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderListResponse'
+              example:
+                success: true
+                data:
+                  - id: a0000000-0000-4000-8000-000000000001
+                    factory_id: factory-A
+                    machine_id: M03
+                    maintenance_request_id: MR-M03
+                    basis_snapshot_id: snapshot-basis-S1
+                    source:
+                      decision_case_id: a0000000-0000-4000-8000-000000000001
+                      schedule_id: schedule-committed
+                      schedule_revision: 1
+                      schedule_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                      assignment_id: A-MAINT-M03
+                      published_plan_version: 2
+                      basis_snapshot_id: snapshot-basis-S1
+                      basis_snapshot_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                    status: UNASSIGNED
+                    revision: 1
+                    assignee: null
+                    planned_start_at: '2026-10-22T01:00:00.000Z'
+                    planned_end_at: '2026-10-22T02:00:00.000Z'
+                    actual_started_at: null
+                    actual_completed_at: null
+                    created_at: '2026-10-22T00:00:00.000Z'
+                    updated_at: '2026-10-22T00:00:00.000Z'
+                    source_is_current: true
+                    machine_in_current_snapshot: true
+                    overdue: false
+                    waiting_verification: false
+                meta:
+                  read_at: '2026-10-22T00:00:00.000Z'
+                  timezone: UTC
+                  limit: 25
+                  has_more: false
+                  next_cursor: null
+        '400':
+          description: VALIDATION_ERROR / INVALID_CURSOR
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '403':
+          description: FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '409':
+          description: >-
+            WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED /
+            INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS /
+            WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+    post:
+      tags:
+        - Work Orders
+      operationId: createWorkOrder
+      summary: Create explicitly from current committed maintenance assignment
+      description: >-
+        Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success
+        and errors. ADMIN/ENGINEER. Lock factory, ordered users, then publication/head. Recheck expected head
+        after waiting; only current DecisionCommit source is accepted. Origin unique forever; active
+        factory+basis+request unique. Half-open same-machine planned-window overlap returns409;
+        overlap_override_reason explicitly permits overlap and is audited. No publication/telemetry writes.
+        Fresh access/role before historical receipt replay; replay returns original201 body.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[!-~]+$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderCreateRequest'
+            example:
+              factory_id: factory-A
+              source:
+                decision_case_id: a0000000-0000-4000-8000-000000000001
+                schedule_id: schedule-committed
+                schedule_revision: 1
+                schedule_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                assignment_id: A-MAINT-M03
+              expected_head:
+                snapshot_id: snapshot-current-S2
+                plan_version: 2
+                revision: 5
+      responses:
+        '201':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - 'true'
+                  - 'false'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderResponse'
+              example:
+                success: true
+                data:
+                  id: a0000000-0000-4000-8000-000000000001
+                  factory_id: factory-A
+                  machine_id: M03
+                  maintenance_request_id: MR-M03
+                  basis_snapshot_id: snapshot-basis-S1
+                  source:
+                    decision_case_id: a0000000-0000-4000-8000-000000000001
+                    schedule_id: schedule-committed
+                    schedule_revision: 1
+                    schedule_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                    assignment_id: A-MAINT-M03
+                    published_plan_version: 2
+                    basis_snapshot_id: snapshot-basis-S1
+                    basis_snapshot_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                  status: UNASSIGNED
+                  revision: 1
+                  assignee: null
+                  planned_start_at: '2026-10-22T01:00:00.000Z'
+                  planned_end_at: '2026-10-22T02:00:00.000Z'
+                  actual_started_at: null
+                  actual_completed_at: null
+                  created_at: '2026-10-22T00:00:00.000Z'
+                  updated_at: '2026-10-22T00:00:00.000Z'
+                  source_is_current: true
+                  machine_in_current_snapshot: true
+                  overdue: false
+                  waiting_verification: false
+                  source_technician_ids:
+                    - T01
+                  requirements:
+                    maintenance_type: CORRECTIVE
+                    action_type: REPLACE
+                    priority: HIGH
+                    required_skill_ids:
+                      - SKILL-MAINT
+                    minimum_skill_level: 1
+                    mandatory: true
+                    expected_duration_minutes: 60
+                  attempt: 1
+                  blocker: null
+                  latest_completion: null
+                  verification: null
+                  cancel_reason: null
+                  cancelled_at: null
+                  available_commands:
+                    - ASSIGN
+                    - CANCEL
+                meta:
+                  read_at: '2026-10-22T00:00:00.000Z'
+                  timezone: UTC
+        '400':
+          description: VALIDATION_ERROR / INVALID_CURSOR
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '403':
+          description: FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '409':
+          description: >-
+            WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED /
+            INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS /
+            WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  /work-orders/summaries:
+    get:
+      tags:
+        - Work Orders
+      operationId: lookupWorkOrderSummaries
+      summary: Bounded scoped summaries for incident links
+      description: >-
+        Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success
+        and errors. Read only. No reports, private notes or raw artifacts. UI owns href route mapping. Linking
+        caller must separately authorize the incident and compare factory/machine in its transaction; this
+        lookup never grants access.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: factory_id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 1849
+            description: >-
+              Comma-separated 1..50 unique UUIDs; input order preserved. Any missing/inaccessible ID returns
+              scoped404 for the entire request.
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderLookupResponse'
+              example:
+                success: true
+                data:
+                  - id: a0000000-0000-4000-8000-000000000001
+                    factory_id: factory-A
+                    machine_id: M03
+                    maintenance_request_id: MR-M03
+                    basis_snapshot_id: snapshot-basis-S1
+                    source:
+                      decision_case_id: a0000000-0000-4000-8000-000000000001
+                      schedule_id: schedule-committed
+                      schedule_revision: 1
+                      schedule_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                      assignment_id: A-MAINT-M03
+                      published_plan_version: 2
+                      basis_snapshot_id: snapshot-basis-S1
+                      basis_snapshot_hash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                    status: UNASSIGNED
+                    revision: 1
+                    assignee: null
+                    planned_start_at: '2026-10-22T01:00:00.000Z'
+                    planned_end_at: '2026-10-22T02:00:00.000Z'
+                    actual_started_at: null
+                    actual_completed_at: null
+                    created_at: '2026-10-22T00:00:00.000Z'
+                    updated_at: '2026-10-22T00:00:00.000Z'
+                    source_is_current: true
+                    machine_in_current_snapshot: true
+                    overdue: false
+                    waiting_verification: false
+                meta:
+                  read_at: '2026-10-22T00:00:00.000Z'
+                  timezone: UTC
+        '400':
+          description: VALIDATION_ERROR / INVALID_CURSOR
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '403':
+          description: FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '409':
+          description: >-
+            WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED /
+            INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS /
+            WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  '/work-orders/{id}':
+    get:
+      tags:
+        - Work Orders
+      operationId: getWorkOrder
+      summary: Read execution and immutable source
+      description: >-
+        Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success
+        and errors. Scoped404 for missing/inaccessible ID. Available commands advisory; detail reports only
+        within scope. Source_is_current compares publication, not telemetry basis. Server read_at UTC. No read
+        mutation.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderResponse'
+        '400':
+          description: VALIDATION_ERROR / INVALID_CURSOR
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '403':
+          description: FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '409':
+          description: >-
+            WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED /
+            INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS /
+            WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  '/work-orders/{id}/commands':
+    post:
+      tags:
+        - Work Orders
+      operationId: commandWorkOrder
+      summary: Execute guarded work order command
+      description: >-
+        Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success
+        and errors. All commands require expected_revision. ASSIGN/REASSIGN/CANCEL/CLOSE/REQUEST_REWORK:
+        ADMIN/ENGINEER. Execution: current eligible OPERATOR/ENGINEER assignee only. CLOSE/REWORK cannot
+        self-verify. Rework retains prior attempt reports. START never resets actual_started_at. CANCEL
+        forbidden after any start, including after reassignment. STOPPED requires stop_reason and CLOSE
+        VERIFIED_STOPPED. Unknown commands reject400; no free status PATCH. Current authorization and assignee
+        check precede receipt replay. Same key/different normalized body409. State/event/audit/receipt atomic.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[!-~]+$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderCommandRequest'
+            examples:
+              ASSIGN:
+                value:
+                  command: ASSIGN
+                  expected_revision: 1
+                  assignee_user_id: b0000000-0000-4000-8000-000000000001
+              ACCEPT:
+                value:
+                  command: ACCEPT
+                  expected_revision: 2
+              START:
+                value:
+                  command: START
+                  expected_revision: 3
+              BLOCK:
+                value:
+                  command: BLOCK
+                  expected_revision: 4
+                  reason: Reviewed execution situation
+              RESUME:
+                value:
+                  command: RESUME
+                  expected_revision: 5
+                  reason: Reviewed execution situation
+              COMPLETE:
+                value:
+                  command: COMPLETE
+                  expected_revision: 6
+                  report:
+                    outcome: SUCCESS
+                    work_performed: Replaced tool and inspected machine
+                    result: Inspection passed
+              CLOSE:
+                value:
+                  command: CLOSE
+                  expected_revision: 7
+                  verification:
+                    result: VERIFIED
+                    note: Independent inspection passed
+              REQUEST_REWORK:
+                value:
+                  command: REQUEST_REWORK
+                  expected_revision: 8
+                  reason: Reviewed execution situation
+              CANCEL:
+                value:
+                  command: CANCEL
+                  expected_revision: 9
+                  reason: Reviewed execution situation
+              REASSIGN:
+                value:
+                  command: REASSIGN
+                  expected_revision: 10
+                  assignee_user_id: b0000000-0000-4000-8000-000000000001
+                  reason: Reviewed execution situation
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - 'true'
+                  - 'false'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderResponse'
+        '400':
+          description: VALIDATION_ERROR / INVALID_CURSOR
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '403':
+          description: FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '409':
+          description: >-
+            WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED /
+            INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS /
+            WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  '/work-orders/{id}/events':
+    get:
+      tags:
+        - Work Orders
+      operationId: listWorkOrderEvents
+      summary: Read append-only command history
+      description: >-
+        Strict fields/query; repeated query keys rejected. Fresh DB user and factory access. No-store on success
+        and errors. Per-order sequence ASC. Server actor/time and allowlisted payload; scoped reports preserve
+        every completion/rework attempt. Poll after next_after_sequence. No fabricated worker/physical execution
+        acknowledgements.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: after_sequence
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2147483647
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+      responses:
+        '200':
+          description: Success
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderEventsResponse'
+        '400':
+          description: VALIDATION_ERROR / INVALID_CURSOR
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '403':
+          description: FORBIDDEN / WORK_ORDER_NOT_ASSIGNEE / SELF_VERIFICATION
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: WORK_ORDER_NOT_FOUND / FACTORY_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '409':
+          description: >-
+            WORK_ORDER_REVISION_CONFLICT / INVALID_WORK_ORDER_TRANSITION / SOURCE_PLAN_CHANGED /
+            INVALID_WORK_ORDER_SOURCE / WORK_ORDER_ORIGIN_EXISTS / ACTIVE_MAINTENANCE_REQUEST_EXISTS /
+            WORK_ORDER_OVERLAP / ASSIGNEE_UNAVAILABLE / IDEMPOTENCY_KEY_REUSED
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE / FACTORY_ACCESS_UNAVAILABLE / OPERATIONS_VALIDATOR_UNAVAILABLE
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
   '/decision-cases/{id}/decision':
     post:
       summary: 'Approve, reject or commit a decision case'
@@ -3788,6 +4875,1030 @@ components:
               message: Database unavailable. Check DATABASE_URL and make sure Postgres is running.
 
   schemas:
+    WorkOrderSourceInput:
+      type: object
+      additionalProperties: false
+      required:
+        - decision_case_id
+        - schedule_id
+        - schedule_revision
+        - schedule_hash
+        - assignment_id
+      properties:
+        decision_case_id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        schedule_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        schedule_hash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        assignment_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+    WorkOrderExpectedHead:
+      type: object
+      additionalProperties: false
+      required:
+        - snapshot_id
+        - plan_version
+        - revision
+      properties:
+        snapshot_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        plan_version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    WorkOrderCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - factory_id
+        - source
+        - expected_head
+      properties:
+        factory_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        source:
+          $ref: '#/components/schemas/WorkOrderSourceInput'
+        expected_head:
+          $ref: '#/components/schemas/WorkOrderExpectedHead'
+        overlap_override_reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderSource:
+      type: object
+      additionalProperties: false
+      required:
+        - decision_case_id
+        - schedule_id
+        - schedule_revision
+        - schedule_hash
+        - assignment_id
+        - published_plan_version
+        - basis_snapshot_id
+        - basis_snapshot_hash
+      properties:
+        decision_case_id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        schedule_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        schedule_hash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        assignment_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        published_plan_version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        basis_snapshot_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        basis_snapshot_hash:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+    WorkOrderAssignee:
+      type:
+        - object
+        - 'null'
+      additionalProperties: false
+      required:
+        - user_id
+        - username
+        - active
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        active:
+          type: boolean
+    WorkOrderReport:
+      type: object
+      additionalProperties: false
+      required:
+        - outcome
+        - work_performed
+        - result
+      properties:
+        outcome:
+          type: string
+          enum:
+            - SUCCESS
+            - PARTIAL
+            - STOPPED
+        work_performed:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+        result:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+        stop_reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+      description: STOPPED requires stop_reason. Server records completion time; caller timestamps are rejected.
+    WorkOrderVerification:
+      type: object
+      additionalProperties: false
+      required:
+        - result
+        - note
+      properties:
+        result:
+          type: string
+          enum:
+            - VERIFIED
+            - VERIFIED_STOPPED
+        note:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderCompletion:
+      type:
+        - object
+        - 'null'
+      additionalProperties: false
+      required:
+        - attempt
+        - actor_id
+        - completed_at
+        - report
+      properties:
+        attempt:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        actor_id:
+          type: string
+          format: uuid
+        completed_at:
+          type: string
+          format: date-time
+        report:
+          $ref: '#/components/schemas/WorkOrderReport'
+    WorkOrderRequirements:
+      type: object
+      additionalProperties: false
+      required:
+        - maintenance_type
+        - action_type
+        - priority
+        - required_skill_ids
+        - minimum_skill_level
+        - mandatory
+        - expected_duration_minutes
+      properties:
+        maintenance_type:
+          type: string
+        action_type:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        priority:
+          type: string
+        required_skill_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        minimum_skill_level:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        mandatory:
+          type: boolean
+        expected_duration_minutes:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    WorkOrderSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - factory_id
+        - machine_id
+        - maintenance_request_id
+        - basis_snapshot_id
+        - source
+        - status
+        - revision
+        - assignee
+        - planned_start_at
+        - planned_end_at
+        - actual_started_at
+        - actual_completed_at
+        - created_at
+        - updated_at
+        - source_is_current
+        - machine_in_current_snapshot
+        - overdue
+        - waiting_verification
+      properties:
+        id:
+          type: string
+          format: uuid
+        factory_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        machine_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        maintenance_request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        basis_snapshot_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        source:
+          $ref: '#/components/schemas/WorkOrderSource'
+        status:
+          type: string
+          enum:
+            - UNASSIGNED
+            - ASSIGNED
+            - ACCEPTED
+            - IN_PROGRESS
+            - BLOCKED
+            - COMPLETED
+            - CLOSED
+            - CANCELLED
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        assignee:
+          $ref: '#/components/schemas/WorkOrderAssignee'
+        planned_start_at:
+          type: string
+          format: date-time
+        planned_end_at:
+          type: string
+          format: date-time
+        actual_started_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        actual_completed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        source_is_current:
+          type: boolean
+        machine_in_current_snapshot:
+          type:
+            - boolean
+            - 'null'
+        overdue:
+          type: boolean
+        waiting_verification:
+          type: boolean
+    WorkOrderReadMeta:
+      type: object
+      additionalProperties: false
+      required:
+        - read_at
+        - timezone
+      properties:
+        read_at:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          enum:
+            - UTC
+    WorkOrderEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - work_order_id
+        - sequence
+        - actor_id
+        - occurred_at
+        - command
+        - payload
+      properties:
+        id:
+          type: string
+          format: uuid
+        work_order_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        actor_id:
+          type: string
+          format: uuid
+        occurred_at:
+          type: string
+          format: date-time
+        command:
+          type: string
+          enum:
+            - CREATE
+            - ASSIGN
+            - ACCEPT
+            - START
+            - BLOCK
+            - RESUME
+            - COMPLETE
+            - CLOSE
+            - REQUEST_REWORK
+            - CANCEL
+            - REASSIGN
+            - MANAGER_HOLD
+            - REASSIGN_FOR_REWORK
+        payload:
+          $ref: '#/components/schemas/WorkOrderEventPayload'
+    WorkOrderEventPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - from_status
+        - to_status
+        - revision
+        - attempt
+        - assignee_user_id
+      properties:
+        from_status:
+          type:
+            - string
+            - 'null'
+          enum:
+            - UNASSIGNED
+            - ASSIGNED
+            - ACCEPTED
+            - IN_PROGRESS
+            - BLOCKED
+            - COMPLETED
+            - CLOSED
+            - CANCELLED
+            - null
+        to_status:
+          type: string
+          enum:
+            - UNASSIGNED
+            - ASSIGNED
+            - ACCEPTED
+            - IN_PROGRESS
+            - BLOCKED
+            - COMPLETED
+            - CLOSED
+            - CANCELLED
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        attempt:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        assignee_user_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+        report:
+          $ref: '#/components/schemas/WorkOrderReport'
+        verification:
+          $ref: '#/components/schemas/WorkOrderVerification'
+        overlap_override_reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+        overlapping_work_order_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    WorkOrderError:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - error
+        - requestId
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+        requestId:
+          type: string
+    WorkOrderDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - factory_id
+        - machine_id
+        - maintenance_request_id
+        - basis_snapshot_id
+        - source
+        - status
+        - revision
+        - assignee
+        - planned_start_at
+        - planned_end_at
+        - actual_started_at
+        - actual_completed_at
+        - created_at
+        - updated_at
+        - source_is_current
+        - machine_in_current_snapshot
+        - overdue
+        - waiting_verification
+        - source_technician_ids
+        - requirements
+        - attempt
+        - blocker
+        - latest_completion
+        - verification
+        - cancel_reason
+        - cancelled_at
+        - available_commands
+      properties:
+        id:
+          type: string
+          format: uuid
+        factory_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        machine_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        maintenance_request_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        basis_snapshot_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        source:
+          $ref: '#/components/schemas/WorkOrderSource'
+        status:
+          type: string
+          enum:
+            - UNASSIGNED
+            - ASSIGNED
+            - ACCEPTED
+            - IN_PROGRESS
+            - BLOCKED
+            - COMPLETED
+            - CLOSED
+            - CANCELLED
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        assignee:
+          $ref: '#/components/schemas/WorkOrderAssignee'
+        planned_start_at:
+          type: string
+          format: date-time
+        planned_end_at:
+          type: string
+          format: date-time
+        actual_started_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        actual_completed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        source_is_current:
+          type: boolean
+        machine_in_current_snapshot:
+          type:
+            - boolean
+            - 'null'
+        overdue:
+          type: boolean
+        waiting_verification:
+          type: boolean
+        source_technician_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+        requirements:
+          $ref: '#/components/schemas/WorkOrderRequirements'
+        attempt:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        blocker:
+          type:
+            - string
+            - 'null'
+        latest_completion:
+          $ref: '#/components/schemas/WorkOrderCompletion'
+        verification:
+          type:
+            - object
+            - 'null'
+          additionalProperties: false
+          required:
+            - actor_id
+            - verified_at
+            - result
+            - note
+          properties:
+            actor_id:
+              type: string
+              format: uuid
+            verified_at:
+              type: string
+              format: date-time
+            result:
+              type: string
+              enum:
+                - VERIFIED
+                - VERIFIED_STOPPED
+            note:
+              type: string
+              minLength: 1
+              maxLength: 4000
+              description: 'Trimmed, nonblank text.'
+        cancel_reason:
+          type:
+            - string
+            - 'null'
+        cancelled_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        available_commands:
+          type: array
+          items:
+            type: string
+            enum:
+              - ASSIGN
+              - ACCEPT
+              - START
+              - BLOCK
+              - RESUME
+              - COMPLETE
+              - CLOSE
+              - REQUEST_REWORK
+              - CANCEL
+              - REASSIGN
+              - MANAGER_HOLD
+              - REASSIGN_FOR_REWORK
+    WorkOrderASSIGNCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - assignee_user_id
+      properties:
+        command:
+          type: string
+          enum:
+            - ASSIGN
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        assignee_user_id:
+          type: string
+          format: uuid
+    WorkOrderACCEPTCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+      properties:
+        command:
+          type: string
+          enum:
+            - ACCEPT
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    WorkOrderSTARTCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+      properties:
+        command:
+          type: string
+          enum:
+            - START
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    WorkOrderBLOCKCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - reason
+      properties:
+        command:
+          type: string
+          enum:
+            - BLOCK
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderRESUMECommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - reason
+      properties:
+        command:
+          type: string
+          enum:
+            - RESUME
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderCOMPLETECommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - report
+      properties:
+        command:
+          type: string
+          enum:
+            - COMPLETE
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        report:
+          $ref: '#/components/schemas/WorkOrderReport'
+    WorkOrderCLOSECommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - verification
+      properties:
+        command:
+          type: string
+          enum:
+            - CLOSE
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        verification:
+          $ref: '#/components/schemas/WorkOrderVerification'
+    WorkOrderREQUEST_REWORKCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - reason
+      properties:
+        command:
+          type: string
+          enum:
+            - REQUEST_REWORK
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderCANCELCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - reason
+      properties:
+        command:
+          type: string
+          enum:
+            - CANCEL
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderREASSIGNCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - command
+        - expected_revision
+        - assignee_user_id
+        - reason
+      properties:
+        command:
+          type: string
+          enum:
+            - REASSIGN
+            - MANAGER_HOLD
+            - REASSIGN_FOR_REWORK
+        expected_revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        assignee_user_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 'Trimmed, nonblank text.'
+    WorkOrderMANAGER_HOLDCommand:
+      type: object
+      additionalProperties: false
+      required: [command, expected_revision, reason]
+      properties:
+        command: {type: string, enum: [MANAGER_HOLD]}
+        expected_revision: {type: integer, minimum: 1, maximum: 2147483647}
+        reason: {type: string, minLength: 1, maxLength: 4000, pattern: '\S'}
+      description: ADMIN/ENGINEER explicitly puts IN_PROGRESS work on hold without impersonating its assignee. Preserves actual start and reports; records manager identity and reason. No access restoration required.
+    WorkOrderREASSIGN_FOR_REWORKCommand:
+      type: object
+      additionalProperties: false
+      required: [command, expected_revision, assignee_user_id, reason]
+      properties:
+        command: {type: string, enum: [REASSIGN_FOR_REWORK]}
+        expected_revision: {type: integer, minimum: 1, maximum: 2147483647}
+        assignee_user_id: {type: string, format: uuid}
+        reason: {type: string, minLength: 1, maxLength: 4000, pattern: '\S'}
+      description: Independent ADMIN/ENGINEER returns COMPLETED work to ASSIGNED with a different eligible assignee. Increments attempt, preserves old completion and actual start. New assignee must ACCEPT then START.
+    WorkOrderCommandRequest:
+      oneOf:
+        - $ref: '#/components/schemas/WorkOrderASSIGNCommand'
+        - $ref: '#/components/schemas/WorkOrderACCEPTCommand'
+        - $ref: '#/components/schemas/WorkOrderSTARTCommand'
+        - $ref: '#/components/schemas/WorkOrderBLOCKCommand'
+        - $ref: '#/components/schemas/WorkOrderRESUMECommand'
+        - $ref: '#/components/schemas/WorkOrderCOMPLETECommand'
+        - $ref: '#/components/schemas/WorkOrderCLOSECommand'
+        - $ref: '#/components/schemas/WorkOrderREQUEST_REWORKCommand'
+        - $ref: '#/components/schemas/WorkOrderCANCELCommand'
+        - $ref: '#/components/schemas/WorkOrderREASSIGNCommand'
+        - $ref: '#/components/schemas/WorkOrderMANAGER_HOLDCommand'
+        - $ref: '#/components/schemas/WorkOrderREASSIGN_FOR_REWORKCommand'
+      discriminator:
+        propertyName: command
+    WorkOrderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: '#/components/schemas/WorkOrderDetail'
+        meta:
+          $ref: '#/components/schemas/WorkOrderReadMeta'
+    WorkOrderListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderSummary'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+            - read_at
+            - timezone
+            - limit
+            - has_more
+            - next_cursor
+          properties:
+            read_at:
+              type: string
+              format: date-time
+            timezone:
+              type: string
+              enum:
+                - UTC
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+            has_more:
+              type: boolean
+            next_cursor:
+              type:
+                - string
+                - 'null'
+    WorkOrderLookupResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderSummary'
+        meta:
+          $ref: '#/components/schemas/WorkOrderReadMeta'
+    WorkOrderEventsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderEvent'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+            - read_at
+            - timezone
+            - limit
+            - has_more
+            - next_after_sequence
+          properties:
+            read_at:
+              type: string
+              format: date-time
+            timezone:
+              type: string
+              enum:
+                - UTC
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 200
+            has_more:
+              type: boolean
+            next_after_sequence:
+              type:
+                - integer
+                - 'null'
+              minimum: 1
     CaseContractRecommendationPackage:
       additionalProperties: false
       properties:
