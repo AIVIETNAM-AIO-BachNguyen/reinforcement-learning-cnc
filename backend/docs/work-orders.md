@@ -4,8 +4,8 @@ Implementation base main: `f8d94837159ca5fdc1a0f159fc8c28f75e394f7f` (2026-10-24
 Original contract base: `f4b210265fd49e0459536fdcc642081d03e62cfb`.
 Dependencies #46 (`20174df`) and #47 (`86ed39f`) are merged. Branch:
 `feat/maintenance-work-orders-api` (follow-up to merged contract PR #48). Draft only; no automatic merge or production deployment.
-Incident migration integration is pending an actual Flex branch/SHA; no mock result
-counts as integrated evidence. The coordination document assigns incident tables,
+Incident contract #49 at `4469b78` is merged into this base and has no database
+migration. Combined upgrade testing remains pending the actual migration artifact. The coordination document assigns incident tables,
 links and incident UI to Flex; this PR owns Work Orders only.
 
 ## Inventory and ownership
@@ -181,7 +181,7 @@ CI Contracts and Operations integration must be green at the final head.
 Deploy additive migration before code; no backfill of work orders or automatic spawn.
 Keep factory access mode consistent with #46. Roll back application routes only after
 quiescing Work Order writes; retain new history/tables and restrict FKs. Never drop
-orders/events or restore an old env grant map. Curl and two-factory smoke runbook will
+orders/events or restore an old env grant map. Curl and two-factory smoke instructions are
 available in [the runbook](work-orders-runbook.md). Full Work Order UI is a separate frontend task.
 
 ## Recovery implementation

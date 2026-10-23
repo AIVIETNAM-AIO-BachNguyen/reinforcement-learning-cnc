@@ -130,7 +130,8 @@ instead creates a fresh random schema and cleans it on success/failure.
 - 400: strict input/query/cursor error. 409: WORK_ORDER_REVISION_CONFLICT,
   INVALID_WORK_ORDER_TRANSITION, SOURCE_PLAN_CHANGED, INVALID_WORK_ORDER_SOURCE,
   WORK_ORDER_ORIGIN_EXISTS, ACTIVE_MAINTENANCE_REQUEST_EXISTS, WORK_ORDER_OVERLAP,
-  ASSIGNEE_UNAVAILABLE or IDEMPOTENCY_KEY_REUSED. DB outage is 503, never fallback.
+  ASSIGNEE_UNAVAILABLE or IDEMPOTENCY_KEY_REUSED. Recovery also uses
+  WORK_ORDER_STATE_CONFLICT and WORK_ORDER_INDEPENDENT_VERIFICATION_REQUIRED. DB outage is 503, never fallback.
 - Responses are no-store and carry X-Request-Id; errors use the product envelope.
   A timeout is not proof of rollback: retry the same normalized body/key, then GET.
 - List sort is created_at DESC/id DESC. Reuse next_cursor with the same actor,
