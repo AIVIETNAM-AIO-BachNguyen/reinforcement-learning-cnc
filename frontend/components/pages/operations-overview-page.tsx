@@ -19,12 +19,13 @@ import {
   type OperationsApiMode,
 } from "@/lib/operations-api";
 import { formatDateTime, formatTime } from "@/lib/operations/format";
+import { operationsUiClient } from "@/lib/operations-ui";
 
-function ResourceCount({ count, label, field }: { count: number; label: string; field: string }) {
+function ResourceCount({ count, label, field }: { count: number | undefined; label: string; field: string }) {
   return (
-    <article aria-label={`${count} ${label.toLowerCase()}`} className="rounded-lg border border-[var(--color-stone-border)] bg-white p-4">
+    <article aria-label={`${count ?? "Not provided"} ${label.toLowerCase()}`} className="rounded-lg border border-[var(--color-stone-border)] bg-white p-4">
       <p className="text-xs text-[var(--color-ash-gray)]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{count}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums">{count ?? "Not provided"}</p>
       <p className="mt-1 font-mono text-[11px] text-[var(--color-ash-gray)]">{field}.length</p>
     </article>
   );
@@ -53,8 +54,8 @@ function OperationsOverviewContent({ data }: { data: OperationsContextData }) {
 
       <section className="grid gap-3 sm:grid-cols-3" aria-label="Canonical resource counts">
         <ResourceCount count={machines.length} label="Machines" field="FactorySnapshot.machines" />
-        <ResourceCount count={jobs.length} label="Jobs" field="FactorySnapshot.jobs" />
-        <ResourceCount count={technicians.length} label="Technicians" field="FactorySnapshot.technicians" />
+        <ResourceCount count={snapshot.jobs?.length} label="Jobs" field="FactorySnapshot.jobs" />
+        <ResourceCount count={snapshot.technicians?.length} label="Technicians" field="FactorySnapshot.technicians" />
       </section>
 
       {!schedule ? <AsyncState kind="empty" compact title="No current schedule" description="The snapshot is available, but the Current Schedule API returned no committed schedule." /> : null}
@@ -91,7 +92,7 @@ export function OperationsOverviewPage({ api, factoryId, apiMode }: {
   factoryId?: string;
   apiMode?: OperationsApiMode;
 } = {}) {
-  const client = useMemo(() => api ?? getOperationsApiClient(), [api]);
+  const client = useMemo(() => api ?? (apiMode ? operationsUiClient(apiMode) : getOperationsApiClient()), [api, apiMode]);
   const selectedFactoryId = factoryId ?? getOperationsFactoryId();
   const selectedMode = apiMode ?? (api ? "mock" : getOperationsApiMode());
   const { state, retry } = useOperationsContext({ api: client, factoryId: selectedFactoryId });
@@ -102,7 +103,9 @@ export function OperationsOverviewPage({ api, factoryId, apiMode }: {
 
   return (
     <OperationsShell
-      title="Operations Overview"
+      title="Factory resources"
+      factoryId={selectedFactoryId}
+      demo={selectedMode === "mock"}
       description="Factory resources, health observations and the current schedule loaded through OperationsApiClient."
       dataSource={selectedMode === "real" ? "live" : "fixture"}
       actions={<button type="button" onClick={retry} disabled={state.kind === "loading"} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--color-stone-border)] bg-white px-4 text-sm font-medium disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${state.kind === "loading" ? "animate-spin" : ""}`} />Refresh</button>}

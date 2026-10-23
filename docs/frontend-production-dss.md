@@ -48,6 +48,9 @@ head revision must agree before entities or create controls render. A mismatch i
 not empty and requires review/refetch. No health/risk/utilization KPI is derived.
 Machine groups count returned entities only, explicitly scoped to that snapshot.
 No history API exists: show current measurements/units/source/time and unknowns.
+The UI observes the same summary-client error only to display a supplied
+correlation/request reference. It does not issue another fetch, replace the Flex
+hook state, expose raw diagnostics, or introduce another summary DTO.
 
 The existing journal, selected-candidate identity, confirmation, command gating,
 lost-response recovery, conflict review, APPROVE versus COMMIT and audit reads
@@ -68,3 +71,24 @@ their immutable package/basis, never current machine/job/technician observations
 - Real Overview → create → worker → approve → commit → schedule/history through the
   existing dedicated-schema CI harness. Verify S1/P1 → S2 keeps P1 based on S1.
   Do not substitute passing mock tests for real acceptance; no automatic merge.
+
+## Implemented real/demo inventory
+
+| Surface | Data and authority |
+| --- | --- |
+| Production Overview | Flex `useOperationsOverview`; server counts, preview and coverage |
+| Machine inspector / create | Existing synchronized snapshot/schedule hook; context must match Overview |
+| Decision Cases | Existing list hook and backend cursor chain; #44 URL commitment retained |
+| Recommendation / actions / audit | Existing case/artifact/event reads and #37 action journal; backend gating |
+| Current schedule | Current-schedule API's immutable `basis_snapshot`, not observation snapshot |
+| Case publication | Existing case/artifact APIs plus commit identity; never substitute a later head |
+| Explicit `demo=1` | Canonical mock adapter only, visibly labelled, isolated session cases/IDs, no backend writes |
+| Agents / What-if | Retained research/fixture UI, secondary navigation; not claimed live |
+| `/decisions` / experiments | Retained v2 experiment/research workflows; no lifecycle redesign |
+
+[Screenshot inventory and reproduction](screenshots/production-dss/README.md).
+Draft PR #50 was opened at route-map commit `36a20fb` **before** adding new E2E.
+Tests include totals versus a bounded preview, six statuses/search/keyboard/focus,
+missing measurements, context mismatches, correlation clearing, scoped navigation,
+VIEWER CTAs, immutable case publication and existing filter/journal regressions.
+CI supplies the final SHA-specific real-service acceptance evidence in the PR.

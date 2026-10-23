@@ -328,9 +328,9 @@ export function DecisionCenterPage({ api, canReview: canReviewOverride }: { api?
   };
 
   return (
-    <AppShell title="Decision Center">
+    <AppShell title="Decisions · research v2">
       <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <PageHeader title="Decision Center" eyebrow="Human-in-the-loop review" description="Prioritized machine recommendations from persisted experiment events. Reviews are recorded by the Maintenance API; no action is sent to a machine." actions={<button type="button" onClick={() => setRevision((value) => value + 1)} disabled={refreshing} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--color-stone-border)] bg-white px-4 text-sm font-medium disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh queue</button>} />
+        <PageHeader title="Decisions · research v2" eyebrow="Research / experiment review" description="Retained v2 experiment workflow, separate from production Decision Cases. Reviews are recorded by the Maintenance API; no action is sent to a machine." actions={<button type="button" onClick={() => setRevision((value) => value + 1)} disabled={refreshing} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--color-stone-border)] bg-white px-4 text-sm font-medium disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh queue</button>} />
         <div className="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900" role="note">Priority, risk, cost exposure, and review status are returned by the Maintenance API. Opening a row loads its source context for review without recalculating the recommendation in the browser.</div>
         {!queue && refreshing ? <AsyncState kind="loading" title="Loading decision queue" /> : null}
         {!queue && !refreshing && error ? <AsyncState kind="error" title="Decision queue unavailable" description={error} onRetry={() => setRevision((value) => value + 1)} /> : null}

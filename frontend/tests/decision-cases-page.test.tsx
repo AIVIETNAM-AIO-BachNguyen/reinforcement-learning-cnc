@@ -19,7 +19,7 @@ describe("Decision Cases discovery", () => {
     render(<DecisionCasesPage api={api} apiMode="real" initialQuery={{ factory_id: "factory-1" }} />);
     expect(screen.getByText("Loading decision cases")).toBeInTheDocument();
     const link = await screen.findByRole("link", { name: `Open recommendation for ${page.data[0].decision_case_id}` });
-    expect(link).toHaveAttribute("href", `/operations/recommendations?caseId=${page.data[0].decision_case_id}`);
+    expect(link).toHaveAttribute("href", `/operations/recommendations?factory_id=factory-1&caseId=${page.data[0].decision_case_id}`);
     expect(screen.getByText("Stale basis")).toBeInTheDocument();
     expect(screen.getByText(/Published plan version 1/)).toBeInTheDocument();
     expect(screen.getByText("Case revision")).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("Decision Cases discovery", () => {
     const api = createMockOperationsApiClient();
     render(<DecisionCasesPage api={api} apiMode="mock" initialQuery={{ factory_id: "factory-demo-01" }} />);
     expect(await screen.findByText("No matching cases")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create a case from Overview" })).toHaveAttribute("href", "/operations");
+    expect(screen.getByRole("link", { name: "Create a case from Overview" })).toHaveAttribute("href", "/overview?factory_id=factory-demo-01&demo=1");
   });
   it("renders mock-created canonical cases through the same typed list component without changing status", async () => {
     const api = createMockOperationsApiClient();

@@ -99,7 +99,7 @@ test("discover, filter, paginate, reopen, read complete audit, and reload/refres
   await page.reload();
   await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("COMMITTED");
   await page.getByRole("link", { name: `Open recommendation for ${harness.committedId}` }).click();
-  await expect(page).toHaveURL(new RegExp(`recommendations\\?caseId=${harness.committedId}`));
+  await expect(page).toHaveURL(new RegExp(`recommendations\\?.*caseId=${harness.committedId}`));
   const events = page.getByRole("list", { name: "Decision case audit events" });
   await expect(events.getByRole("listitem")).toHaveCount(4);
   await page.locator("#decision-case-audit").scrollIntoViewIfNeeded();
