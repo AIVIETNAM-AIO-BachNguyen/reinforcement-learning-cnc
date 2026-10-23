@@ -56,10 +56,12 @@ stateDiagram-v2
   ASSIGNED --> ACCEPTED: ACCEPT
   ACCEPTED --> IN_PROGRESS: START
   IN_PROGRESS --> BLOCKED: BLOCK
+  IN_PROGRESS --> BLOCKED: MANAGER_HOLD (manager)
   BLOCKED --> IN_PROGRESS: RESUME
   IN_PROGRESS --> COMPLETED: COMPLETE
   COMPLETED --> CLOSED: CLOSE
   COMPLETED --> IN_PROGRESS: REQUEST_REWORK
+  COMPLETED --> ASSIGNED: REASSIGN_FOR_REWORK (independent manager)
   ASSIGNED --> ASSIGNED: REASSIGN
   ACCEPTED --> ASSIGNED: REASSIGN
   BLOCKED --> ASSIGNED: REASSIGN
@@ -76,14 +78,22 @@ ACCEPT/START/BLOCK/RESUME/COMPLETE require the current assignee with a fresh eli
 role/access check. VIEWER only reads. ADMIN cannot bypass state/assignee guards.
 CLOSE/REQUEST_REWORK must be performed by a different user from the latest completion
 reporter. Rework requires a still-eligible assignee; otherwise409 ASSIGNEE_UNAVAILABLE.
-Restore authorized eligibility before rework, or independently verify/close the
-completed report; REASSIGN is not supported from COMPLETED.
+If the previous assignee is unavailable, use REASSIGN_FOR_REWORK from COMPLETED:
+an independent ADMIN/ENGINEER supplies a different active scoped OPERATOR/ENGINEER
+and a nonblank reason. It increments attempt, retains immutable completion history
+and original actual_started_at, clears the current actual_completed_at, and enters
+ASSIGNED. The new assignee must ACCEPT then START; no false verification or access
+restoration is required. Independent verification still applies to each completion.
 
 CANCEL also requires actual_started_at=null, including after reassignment. START
 preserves the original actual_started_at when an already-started order is reassigned.
-An inactive/revoked assignee in IN_PROGRESS cannot report: a manager may not silently
-BLOCK on their behalf. This case is unsupported by this contract until the situation
-is reviewed and an authorized assignee can BLOCK; no emergency PATCH is provided.
+An inactive/revoked assignee in IN_PROGRESS cannot report. ADMIN/ENGINEER can use
+MANAGER_HOLD with a nonblank reason to enter BLOCKED, then REASSIGN to an eligible
+replacement. MANAGER_HOLD is a distinct audited managerial act, not a BLOCK attributed
+to the old assignee. Preserve actual_started_at and all reports; do not regrant access,
+reset execution or claim the machine physically stopped. The replacement must ACCEPT
+then START. These commands require fresh manager authorization, factory/user locks,
+expected_revision and receipt handling just like existing commands.
 REASSIGN from BLOCKED is supported and requires a reason and a new eligible assignee.
 
 BLOCK, RESUME, REASSIGN, CANCEL and REQUEST_REWORK require nonblank reasons.
@@ -172,3 +182,12 @@ Keep factory access mode consistent with #46. Roll back application routes only 
 quiescing Work Order writes; retain new history/tables and restrict FKs. Never drop
 orders/events or restore an old env grant map. Curl and two-factory smoke runbook will
 be supplied with implementation evidence. Full Work Order UI is a separate frontend task.
+
+## Recovery guard implementation checkpoint
+
+Pure recovery guards live in src/services/work-order-recovery-policy.js. The future
+transactional service must supply freshly authorized actors/target users under the
+shared locks, preserve immutable reports and atomically persist patch/event/receipt.
+These unit guards are not deployed API or PostgreSQL workflow evidence. Add coordinated
+revoke vs recovery, concurrent recovery/reassignment, replay and rollback tests when
+persistence is implemented.
