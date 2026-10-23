@@ -90,7 +90,11 @@ The completion proof adds real child-process restart/read/event/receipt replay,
 inactive-assignee hold/reassignment without reactivation, downgraded-verifier replay
 denial, real DB connection failure returning no-store503, and direct transaction-client
 lookup. The focused run passed 3 tests; the other 16 tests intentionally deselected
-in that run are **not** counted as passes. Full final-head CI is recorded in the PR.
+in that run are **not** counted as passes. Full final-head CI is recorded in the PR. A separate real-planner flow test also
+passed: authenticated case creation, dedicated worker with real FastAPI planning,
+APPROVE/COMMIT, maintenance order execution and independent close. It asserts the
+publication/head remain unchanged after execution; no recommendation fixture is
+used in that end-to-end test.
 
 Runtime implementation already passed 158 PostgreSQL tests, 308 unit tests and 37
 real FastAPI planning tests at c96c0d8, with Contracts/Operations CI green. See
