@@ -191,3 +191,5 @@ and target-user authorization under the shared locks. State, event, report histo
 audit and receipt use the same transaction. PostgreSQL tests cover revoked-assignee
 recovery, both revoke/write serialization orders, historical replay and injected
 audit rollback. See [runbook](work-orders-runbook.md) for executable demo setup.
+
+Completion milestone: **API_READY**. Shared M3/M4 acceptance remains pending the actual Incident implementation; see [completion handoff](work-orders-completion-handoff.md).

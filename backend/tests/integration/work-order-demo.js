@@ -3,6 +3,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 async function main() {
+  const output = process.argv[2];
+  const withOrders = process.argv[3] === '--with-work-orders';
+  if (!output || process.argv.length > 4 || (process.argv[3] && !withOrders))
+    throw Error('Usage: node tests/integration/work-order-demo.js NEW_MANIFEST [--with-work-orders]');
+  if (fs.existsSync(output)) throw Error('Manifest already exists; choose a new output filename');
   const url = new URL(process.env.DATABASE_URL || '');
   const schema = url.searchParams.get('schema');
   if (
@@ -48,11 +53,24 @@ async function main() {
         ]),
       ),
       factories: [a.body, b.body],
+      work_orders: [],
     };
-    const output = process.argv[2];
-    if (!output) throw Error('Pass a new manifest output filename');
+    // Explicit opt-in for cross-module handoff; publications never dispatch orders.
+    if (withOrders) {
+      for (const publication of [a, b]) {
+        const order = await f.create(publication);
+        if (order.status !== 201) throw Error('Work Order HTTP handoff creation failed');
+        const summary = await f.http(
+          `/work-orders/summaries?factory_id=${publication.body.factory_id}&ids=${order.body.data.id}`,
+        );
+        if (summary.status !== 200) throw Error('Work Order HTTP summary handoff failed');
+        manifest.work_orders.push(summary.body.data[0]);
+      }
+    }
     fs.writeFileSync(output, JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' });
-    console.log('Two committed publications ready; no work orders auto-created. Manifest: ' + output);
+    console.log(
+      `Two committed publications ready; ${manifest.work_orders.length} explicitly requested handoff orders. Manifest: ${output}`,
+    );
   } catch (error) {
     if (owned) await db.$executeRawUnsafe('DROP SCHEMA "' + schema + '" CASCADE');
     throw error;

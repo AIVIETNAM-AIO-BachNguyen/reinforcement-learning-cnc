@@ -144,3 +144,5 @@ instead creates a fresh random schema and cleans it on success/failure.
   `npm run test:operations-planning` with explicit TEST_DATABASE_URL. Full CI uses
   `scripts/check-operations-integration.sh`, plus the Contracts workflow. Preserve
   the final SHA and job URLs as evidence; an older contract-only CI is insufficient.
+
+For the callable Flex lookup, live local seed IDs and cross-module acceptance status, see [completion handoff](work-orders-completion-handoff.md). The optional seed flag `--with-work-orders` explicitly creates two UNASSIGNED orders and captures their real summaries.

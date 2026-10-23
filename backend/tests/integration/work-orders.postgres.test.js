@@ -20,6 +20,139 @@ const ok = (r) => {
   expect(r.status).toBe(200);
   return r.body.data;
 };
+test('HTTP reload and historical receipt survive two independent API processes; real consumer lookup is scoped', async () => {
+  const { startApi } = require('../helpers/work-order-process-client');
+  const { lookupWorkOrderSummaries } = require('../../src/services/work-order-read.service');
+  const p = await f.publish(await f.factory());
+  let row = await running(p);
+  row = ok(await f.command(row, 'COMPLETE', { report }));
+  const key = randomUUID(),
+    body = {
+      command: 'CLOSE',
+      expected_revision: row.revision,
+      verification: { result: 'VERIFIED', note: 'Independent process verification' },
+    };
+  let api = await startApi();
+  let closed, events;
+  try {
+    closed = await api.http(`/work-orders/${row.id}/commands`, f.users.MANAGER, { body, key });
+    expect(closed.status).toBe(200);
+    events = await api.http(`/work-orders/${row.id}/events`, f.users.VIEWER);
+    expect(events.status).toBe(200);
+  } finally {
+    await api.stop();
+  }
+  const before = await effects(p.body.factory_id);
+  api = await startApi();
+  try {
+    const reload = await api.http(`/work-orders/${row.id}`, f.users.MANAGER);
+    expect(reload.status).toBe(200);
+    expect(reload.body.data).toEqual(closed.body.data);
+    expect((await api.http(`/work-orders/${row.id}/events`, f.users.VIEWER)).body.data).toEqual(
+      events.body.data,
+    );
+    expect(await api.http(`/work-orders/${row.id}/commands`, f.users.MANAGER, { body, key })).toMatchObject({
+      status: 200,
+      body: closed.body,
+      replay: 'true',
+    });
+    const summaries = await db.$transaction(
+      (tx) => lookupWorkOrderSummaries(tx, f.users.VIEWER, { factory_id: p.body.factory_id, ids: [row.id] }),
+      { isolationLevel: 'RepeatableRead' },
+    );
+    expect(summaries.data[0]).toMatchObject({
+      id: row.id,
+      status: 'CLOSED',
+      factory_id: p.body.factory_id,
+      machine_id: row.machine_id,
+    });
+    expect(summaries.data[0]).not.toHaveProperty('latest_completion');
+    await expect(
+      db.$transaction((tx) =>
+        lookupWorkOrderSummaries(tx, f.users.OUTSIDER, { factory_id: p.body.factory_id, ids: [row.id] }),
+      ),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      db.$transaction((tx) =>
+        lookupWorkOrderSummaries(tx, f.users.VIEWER, {
+          factory_id: p.body.factory_id,
+          ids: [row.id, randomUUID()],
+        }),
+      ),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(await effects(p.body.factory_id)).toEqual(before);
+  } finally {
+    await api.stop();
+  }
+}, 60000);
+
+test('inactive assignee recovery and role-downgraded historical replay enforce fresh DB users', async () => {
+  const p = await f.publish(await f.factory());
+  const executor = await db.user.create({
+    data: { username: randomUUID(), passwordHash: 'test-only', role: 'OPERATOR' },
+  });
+  await f.member(p.body.factory_id, executor);
+  let row = await running(p, executor);
+  const started = row.actual_started_at;
+  expect((await f.http(`/users/${executor.id}`, { method: 'PATCH', body: { active: false } })).status).toBe(
+    200,
+  );
+  expect((await f.command(row, 'COMPLETE', { report }, executor)).status).toBe(401);
+  row = ok(await f.command(row, 'MANAGER_HOLD', { reason: 'Inactive executor' }, f.users.MANAGER));
+  row = ok(
+    await f.command(
+      row,
+      'REASSIGN',
+      { reason: 'Eligible replacement', assignee_user_id: f.users.OTHER.id },
+      f.users.MANAGER,
+    ),
+  );
+  row = ok(await f.command(row, 'ACCEPT', {}, f.users.OTHER));
+  row = ok(await f.command(row, 'START', {}, f.users.OTHER));
+  expect(row.actual_started_at).toBe(started);
+  expect((await db.user.findUnique({ where: { id: executor.id } })).active).toBe(false);
+  row = ok(await f.command(row, 'COMPLETE', { report }, f.users.OTHER));
+  const verifier = await db.user.create({
+    data: { username: randomUUID(), passwordHash: 'test-only', role: 'ENGINEER' },
+  });
+  await f.member(p.body.factory_id, verifier);
+  const key = randomUUID(),
+    fields = { verification: { result: 'VERIFIED', note: 'Independent verification' } },
+    completed = row;
+  row = ok(await f.command(completed, 'CLOSE', fields, verifier, key));
+  const before = await effects(p.body.factory_id);
+  expect((await f.http(`/users/${verifier.id}`, { method: 'PATCH', body: { role: 'VIEWER' } })).status).toBe(
+    200,
+  );
+  expect((await f.command(completed, 'CLOSE', fields, verifier, key)).status).toBe(403);
+  expect(await effects(p.body.factory_id)).toEqual(before);
+}, 60000);
+
+test('real unavailable database returns 503 for summaries, never missing/closed or an env fallback', async () => {
+  const { startApi } = require('../helpers/work-order-process-client');
+  const url = new URL(process.env.DATABASE_URL);
+  url.hostname = '127.0.0.1';
+  url.port = '1';
+  url.searchParams.set('connect_timeout', '1');
+  const api = await startApi({
+    DATABASE_URL: url.toString(),
+    OPERATIONS_FACTORY_ACCESS: JSON.stringify({ 'factory-unavailable': [f.users.VIEWER.id] }),
+  });
+  try {
+    const r = await api.http(
+      '/work-orders/summaries?factory_id=factory-unavailable&ids=' + randomUUID(),
+      f.users.VIEWER,
+    );
+    expect(r).toMatchObject({
+      status: 503,
+      cache: 'no-store',
+      body: { success: false, error: { code: 'DB_UNAVAILABLE' }, requestId: 'restart-proof' },
+    });
+    expect(r.body).not.toHaveProperty('data');
+  } finally {
+    await api.stop();
+  }
+}, 30000);
 test('manager recovery preserves start and reports after access loss, with replay and rollback', async () => {
   const p = await f.publish(await f.factory());
   let row = await running(p);
