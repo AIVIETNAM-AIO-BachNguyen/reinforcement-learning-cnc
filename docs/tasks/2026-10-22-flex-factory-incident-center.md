@@ -1,5 +1,7 @@
 # Flex — Factory Incident Center, quản lý cảnh báo và xử lý sự cố
 
+> Đọc cùng [task hoàn tất Flex ngày23/10](2026-10-23-flex-incident-center-completion.md). Contract/policy/evidence đã merge; task tiếp theo phải hoàn tất persistence/API/UI và nghiệm thu thật.
+
 Ngày giao 22/10/2026. Owner Flex; nhánh đề xuất codex/factory-incident-center.
 Đọc [contract phối hợp](2026-10-22-maintenance-incidents-coordination.md). Flex nhận trọn module: database/API incident, UI desktop và kiểm thử tích hợp; không chỉ làm QA. Không tự merge.
 

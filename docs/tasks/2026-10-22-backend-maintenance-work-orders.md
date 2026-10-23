@@ -1,5 +1,7 @@
 # Backend — Maintenance Work Orders, quản lý thực hiện bảo trì
 
+> Đọc cùng [task hoàn tất Backend ngày23/10](2026-10-23-backend-work-orders-completion.md). Recovery contract mới có MANAGER_HOLD và REASSIGN_FOR_REWORK thay cho giới hạn phục hồi ban đầu bên dưới.
+
 Ngày giao 22/10/2026. Owner Backend; nhánh đề xuất codex/maintenance-work-orders.
 Đọc [contract phối hợp](2026-10-22-maintenance-incidents-coordination.md). Đây là một module hoàn chỉnh, không phải bổ sung vài endpoint vào Overview. Không tự merge.
 

@@ -1,5 +1,7 @@
 # Hai module nghiệp vụ: Work Orders và Incident Center — 22/10/2026
 
+> Bản giao ban đầu. Kế hoạch hoàn tất implementation hiện tại: [Hai goal ngày23/10](2026-10-23-two-module-completion-goals.md). PR #48/#49 đã merge phần contract/policy; tiếp tục bằng PR implementation mới.
+
 Bản giao việc để người dùng chuyển cho Backend và Flex; không phải xác nhận đã gửi task ra ngoài chat.
 
 ## Mục tiêu
