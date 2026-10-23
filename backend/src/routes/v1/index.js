@@ -11,6 +11,7 @@ const router = express.Router();
 router.use('/auth', authRoute);
 router.use('/users', userRoute);
 router.use('/factories', require('./factory.route'));
+router.use('/work-orders', require('./work-order.route'));
 router.use('/policies', policyRoute);
 router.use('/experiments', experimentRoute);
 router.use('/episodes', episodeRoute);
