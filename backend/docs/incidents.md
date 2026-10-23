@@ -66,7 +66,7 @@ and sanitized evidence projection, server actor and recorded time. Unique
 (factory, source_type, source_id), including CLOSED incidents. Manual source IDs
 are client UUIDs for the logical report; from_case source ID is the authorized case
 UUID. Read source fields from immutable request/basis, never client-supplied evidence.
-Allowlisted HEALTH_ALERT evidence includes trigger event/time, machine identity,
+Allowlisted HEALTH_ALERT evidence includes case creation time (not sensor event time), machine identity,
 failure_probability/alert_threshold and matching health references with only their
 actual time/model/horizon/value fields. Missing fields stay missing; no raw request,
 planner artifact, private notes or invented sensor history.
@@ -214,6 +214,23 @@ perform authorization lookup, transactions, receipt replay or source projection;
 the future transactional service must supply freshly authorized actor/owner/target
 data under #46 locks. Policy tests are not PostgreSQL or HTTP evidence.
 
-Remaining: freeze field-level evidence projection, incident persistence/migration,
+Remaining: incident persistence/migration,
 transactional API/auth/dedup/audit, desktop client/UI, real two-factory tests and
 combined Work Order integration. All end-to-end acceptance is still pending.
+
+## Frozen evidence projection (review follow-up)
+
+Occurrence.evidence is the strict IncidentEvidence union in incidents.openapi.yaml,
+with examples in examples/incidents.json and projection guards in incident-evidence.js.
+Manual evidence carries only kind/report_text. Case evidence carries case/factory/basis/
+machine identity, explicitly labelled case_created_at, HEALTH_ALERT probabilities,
+and allowlisted matching-machine health samples (ID, observed_at, health index, horizon,
+probability, confidence, model version). An absent sample remains an empty array.
+The persisted product request strips canonical event_id/occurred_at: do not invent
+these fields or present case_created_at as sensor/alert occurrence time. Samples from
+other machines, raw request/artifact, notes and technician data are never projected.
+No implied probability horizon is attached to the trigger: horizons belong to each
+health sample, whose values may differ from the trigger. The transactional API must
+authorize/validate the immutable source before calling this pure projector. API/UI/
+PostgreSQL/linked-service acceptance is still pending; this freezes the consumer DTO,
+not a deployed feature.

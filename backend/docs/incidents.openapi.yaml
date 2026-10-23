@@ -392,5 +392,55 @@ components:
               machine: { anyOf: [{ $ref: '#/components/schemas/Machine' }, { type: 'null' }] }
               actor_id: { type: string, format: uuid }
               recorded_at: { type: string, format: date-time }
-              evidence: { type: object, description: Pending field-level producer projection review; no consumer implementation until frozen. }
+              evidence: { $ref: '#/components/schemas/IncidentEvidence' }
         meta: { $ref: '#/components/schemas/HistoryMeta' }
+    IncidentEvidence:
+      oneOf:
+        - $ref: '#/components/schemas/ManualIncidentEvidence'
+        - $ref: '#/components/schemas/CaseHealthAlertEvidence'
+      discriminator: { propertyName: kind }
+    ManualIncidentEvidence:
+      type: object
+      additionalProperties: false
+      required: [kind, report_text]
+      properties:
+        kind: { const: manual }
+        report_text: { $ref: '#/components/schemas/Note' }
+      description: Human report only; no claim of measured health or physical recovery.
+    CaseHealthAlertEvidence:
+      type: object
+      additionalProperties: false
+      required: [kind, case_id, factory_id, basis_snapshot_id, case_created_at, machine_id, trigger, health_samples]
+      properties:
+        kind: { const: case_health_alert }
+        case_id: { type: string, format: uuid }
+        factory_id: { type: string, minLength: 1, maxLength: 128 }
+        basis_snapshot_id: { type: string, minLength: 1, maxLength: 128 }
+        case_created_at: { type: string, format: date-time }
+        machine_id: { type: string, minLength: 1, maxLength: 128 }
+        trigger:
+          type: object
+          additionalProperties: false
+          required: [type, failure_probability, alert_threshold]
+          properties:
+            type: { const: HEALTH_ALERT }
+            failure_probability: { type: number, minimum: 0, maximum: 1 }
+            alert_threshold: { type: number, minimum: 0, maximum: 1 }
+          description: Validated trigger probability meets its threshold. No inferred severity. Product request does not persist canonical event_id/occurred_at; never fabricate them from case creation time.
+        health_samples:
+          type: array
+          items: { $ref: '#/components/schemas/IncidentHealthEvidence' }
+          description: Only matching machine samples in the immutable basis; empty when absent. These are evidence samples, not a sensor-history series.
+    IncidentHealthEvidence:
+      type: object
+      additionalProperties: false
+      required: [health_snapshot_id, machine_id, observed_at, health_index, failure_probability_horizon_minutes, failure_probability, confidence, source_model_version]
+      properties:
+        health_snapshot_id: { type: string, minLength: 1, maxLength: 128 }
+        machine_id: { type: string, minLength: 1, maxLength: 128 }
+        observed_at: { type: string, format: date-time }
+        health_index: { type: number, minimum: 0, maximum: 1 }
+        failure_probability_horizon_minutes: { type: integer, minimum: 1 }
+        failure_probability: { type: number, minimum: 0, maximum: 1 }
+        confidence: { type: string, enum: [LOW, MEDIUM, HIGH] }
+        source_model_version: { type: string, minLength: 1, maxLength: 128 }
