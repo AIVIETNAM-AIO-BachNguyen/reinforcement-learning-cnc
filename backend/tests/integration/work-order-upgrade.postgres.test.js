@@ -240,9 +240,11 @@ test('exact-base populated work-order upgrade preserves publications, history, u
     const checksums =
       await db.$queryRaw`SELECT migration_name,checksum FROM _prisma_migrations ORDER BY migration_name`;
     await db.$disconnect();
-    fs.cpSync(path.join(root, 'prisma/migrations', migration), path.join(temp, 'migrations', migration), {
-      recursive: true,
-    });
+    for (const name of [migration, '20261024010000_work_order_cancelled_source_guard']) {
+      fs.cpSync(path.join(root, 'prisma/migrations', name), path.join(temp, 'migrations', name), {
+        recursive: true,
+      });
+    }
     fs.copyFileSync(path.join(root, 'prisma/schema.prisma'), path.join(temp, 'schema.prisma'));
     deploy();
     deploy();
@@ -283,4 +285,3 @@ test('exact-base populated work-order upgrade preserves publications, history, u
     fs.rmSync(temp, { recursive: true, force: true });
   }
 }, 120000);
-

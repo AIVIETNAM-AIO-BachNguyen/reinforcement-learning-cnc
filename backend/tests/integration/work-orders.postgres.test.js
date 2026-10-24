@@ -429,6 +429,60 @@ test('strict inputs, assignment eligibility, scoped404, non-assignee and no-stor
     (await f.command(assigned, 'ASSIGN', { assignee_user_id: f.users.OTHER.id }, f.users.MANAGER)).status,
   ).toBe(409);
 });
+test('cancelled published maintenance cannot create orders through HTTP or direct database inserts', async () => {
+  const p = await f.publish(await f.factory(), { maintenanceStatus: 'CANCELLED' });
+  const before = await effects(p.body.factory_id);
+  const schedules = await db.operationSchedule.findMany({ where: { factoryId: p.body.factory_id } });
+  const key = randomUUID();
+  for (const attemptKey of [key, key, randomUUID()]) {
+    const response = await f.create(p, { key: attemptKey });
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('INVALID_WORK_ORDER_SOURCE');
+    expect(await effects(p.body.factory_id)).toEqual(before);
+  }
+  const assignment = p.candidate.schedule.assignments.find(
+    (a) => a.assignment_id === p.body.source.assignment_id,
+  );
+  const request = p.snapshot.maintenance_requests.find(
+    (r) => r.maintenance_request_id === assignment.maintenance_request_id,
+  );
+  const { contentHash } = require('../../src/services/operations-contract.service');
+  await expect(
+    db.workOrder.create({
+      data: {
+        factoryId: p.body.factory_id,
+        sourceCaseId: p.id,
+        basisSnapshotId: p.snapshot.snapshot_id,
+        scheduleId: p.body.source.schedule_id,
+        scheduleRevision: p.body.source.schedule_revision,
+        scheduleHash: p.body.source.schedule_hash,
+        publishedPlanVersion: p.body.expected_head.plan_version,
+        basisSnapshotHash: contentHash(p.snapshot),
+        assignmentId: assignment.assignment_id,
+        machineId: assignment.machine_id,
+        maintenanceRequestId: request.maintenance_request_id,
+        plannedStartAt: new Date(assignment.start_at),
+        plannedEndAt: new Date(assignment.end_at),
+        sourceTechnicianIds: assignment.technician_ids,
+        requirementsJson: Object.fromEntries([
+          'maintenance_type', 'action_type', 'priority', 'required_skill_ids',
+          'minimum_skill_level', 'mandatory', 'expected_duration_minutes',
+        ].map((k) => [k, request[k]])),
+        actorId: f.users.ADMIN.id,
+      },
+    }),
+  ).rejects.toThrow('Work order source projection is inconsistent');
+  expect(await effects(p.body.factory_id)).toEqual(before);
+  expect(await db.operationSchedule.findMany({ where: { factoryId: p.body.factory_id } })).toEqual(schedules);
+});
+
+test('PROPOSED maintenance in a genuinely committed publication remains an eligible source', async () => {
+  const p = await f.publish(await f.factory(), { maintenanceStatus: 'PROPOSED' });
+  const response = await f.create(p);
+  expect(response.status).toBe(201);
+  expect(response.body.data.status).toBe('UNASSIGNED');
+});
+
 test('only current committed maintenance sources; P2 does not rebase P1 and active request is unique', async () => {
   const s = await f.factory();
   // Seed-style publication in a unique factory, never pollute the canonical demo.

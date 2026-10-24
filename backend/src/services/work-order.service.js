@@ -158,6 +158,7 @@ async function createWorkOrder(db, identity, raw, keyValue) {
     if (
       !assignment ||
       assignment.assignment_type !== 'MAINTENANCE' ||
+      assignment.status === 'CANCELLED' ||
       !request ||
       request.machine_id !== assignment.machine_id ||
       !basis.machines.some((m) => m.machine_id === assignment.machine_id)

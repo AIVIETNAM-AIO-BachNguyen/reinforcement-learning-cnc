@@ -193,3 +193,13 @@ recovery, both revoke/write serialization orders, historical replay and injected
 audit rollback. See [runbook](work-orders-runbook.md) for executable demo setup.
 
 Completion milestone: **API_READY**. Shared M3/M4 acceptance remains pending the actual Incident implementation; see [completion handoff](work-orders-completion-handoff.md).
+
+## Source cancellation guard
+
+A committed publication may retain CANCELLED assignments for history. Such entries
+are not eligible for a new execution Work Order: POST returns `409 INVALID_WORK_ORDER_SOURCE`
+without order/event/audit/receipt effects. The database insert guard enforces the same
+rule. PROPOSED maintenance assignments remain eligible when actually published by
+COMMIT; publication preserves the exact immutable candidate payload. The additive
+`20261024010000` migration replaces only the insert guard and never deletes/rebases
+existing orders or rewrites schedule payloads.
