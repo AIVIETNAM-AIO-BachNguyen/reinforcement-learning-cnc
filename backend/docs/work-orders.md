@@ -1,10 +1,11 @@
 # Maintenance Work Orders — backend contract
 
-Base main: `f4b210265fd49e0459536fdcc642081d03e62cfb` (2026-10-22).
+Implementation base main: `f8d94837159ca5fdc1a0f159fc8c28f75e394f7f` (2026-10-24).
+Original contract base: `f4b210265fd49e0459536fdcc642081d03e62cfb`.
 Dependencies #46 (`20174df`) and #47 (`86ed39f`) are merged. Branch:
-`feat/maintenance-work-orders`. Draft only; no automatic merge or production deployment.
-Incident migration integration is pending an actual Flex branch/SHA; no mock result
-counts as integrated evidence. The coordination document assigns incident tables,
+`feat/maintenance-work-orders-api` (follow-up to merged contract PR #48). Draft only; no automatic merge or production deployment.
+Incident contract #49 at `4469b78` is merged into this base and has no database
+migration. Combined upgrade testing remains pending the actual migration artifact. The coordination document assigns incident tables,
 links and incident UI to Flex; this PR owns Work Orders only.
 
 ## Inventory and ownership
@@ -180,14 +181,25 @@ CI Contracts and Operations integration must be green at the final head.
 Deploy additive migration before code; no backfill of work orders or automatic spawn.
 Keep factory access mode consistent with #46. Roll back application routes only after
 quiescing Work Order writes; retain new history/tables and restrict FKs. Never drop
-orders/events or restore an old env grant map. Curl and two-factory smoke runbook will
-be supplied with implementation evidence. Full Work Order UI is a separate frontend task.
+orders/events or restore an old env grant map. Curl and two-factory smoke instructions are
+available in [the runbook](work-orders-runbook.md). Full Work Order UI is a separate frontend task.
 
-## Recovery guard implementation checkpoint
+## Recovery implementation
 
-Pure recovery guards live in src/services/work-order-recovery-policy.js. The future
-transactional service must supply freshly authorized actors/target users under the
-shared locks, preserve immutable reports and atomically persist patch/event/receipt.
-These unit guards are not deployed API or PostgreSQL workflow evidence. Add coordinated
-revoke vs recovery, concurrent recovery/reassignment, replay and rollback tests when
-persistence is implemented.
+The transactional service calls the merged pure recovery guards after fresh manager
+and target-user authorization under the shared locks. State, event, report history,
+audit and receipt use the same transaction. PostgreSQL tests cover revoked-assignee
+recovery, both revoke/write serialization orders, historical replay and injected
+audit rollback. See [runbook](work-orders-runbook.md) for executable demo setup.
+
+Completion milestone: **API_READY**. Shared M3/M4 acceptance remains pending the actual Incident implementation; see [completion handoff](work-orders-completion-handoff.md).
+
+## Source cancellation guard
+
+A committed publication may retain CANCELLED assignments for history. Such entries
+are not eligible for a new execution Work Order: POST returns `409 INVALID_WORK_ORDER_SOURCE`
+without order/event/audit/receipt effects. The database insert guard enforces the same
+rule. PROPOSED maintenance assignments remain eligible when actually published by
+COMMIT; publication preserves the exact immutable candidate payload. The additive
+`20261024010000` migration replaces only the insert guard and never deletes/rebases
+existing orders or rewrites schedule payloads.

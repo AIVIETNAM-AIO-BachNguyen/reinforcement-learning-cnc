@@ -107,6 +107,7 @@ model DecisionHumanRecord {
 }
 
 model DecisionCommit {
+  workOrders WorkOrder[]
   caseId String @id @map("case_id") @db.Uuid
   factoryId String @map("factory_id")
   snapshotId String @map("snapshot_id")
@@ -122,6 +123,7 @@ model DecisionCommit {
   @@unique([factoryId, snapshotId, scheduleId, scheduleRevision])
   @@unique([caseId, factoryId], map: "decision_commits_case_factory_key")
   @@unique([factoryId, planVersion])
+  @@unique([caseId, factoryId, snapshotId, scheduleId, scheduleRevision, scheduleHash, planVersion], map: "decision_commits_work_order_source_key")
   @@map("decision_commits")
 }
 
@@ -314,6 +316,11 @@ model StepResult {
 }
 
 model User {
+  assignedWorkOrders WorkOrder[] @relation("WorkOrderAssignee")
+  createdWorkOrders WorkOrder[] @relation("WorkOrderCreator")
+  workOrderEvents WorkOrderEvent[]
+  workOrderCompletions WorkOrderCompletion[]
+  workOrderReceipts WorkOrderCommandReceipt[]
   factoryMemberships FactoryMembership[] @relation("MemberUser")
   factoryGrants FactoryMembership[] @relation("GrantActor")
   factoryRevocations FactoryMembership[] @relation("RevokeActor")
@@ -422,6 +429,7 @@ model MaintenanceDecisionAction {
 }
 
 model Factory {
+ workOrders WorkOrder[]
  factoryId String @id @map("factory_id")
  name String
  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -451,4 +459,91 @@ model FactoryMembership {
  @@index([userId,active,factoryId], map: "factory_memberships_user_active_factory_idx")
  @@index([factoryId,active,userId], map: "factory_memberships_factory_active_user_idx")
  @@map("factory_memberships")
+}
+
+model WorkOrder {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ factoryId String @map("factory_id")
+ sourceCaseId String @map("source_case_id") @db.Uuid
+ basisSnapshotId String @map("basis_snapshot_id")
+ scheduleId String @map("schedule_id")
+ scheduleRevision Int @map("schedule_revision")
+ scheduleHash String @map("schedule_hash") @db.Char(64)
+ publishedPlanVersion Int @map("published_plan_version")
+ basisSnapshotHash String @map("basis_snapshot_hash") @db.Char(64)
+ assignmentId String @map("assignment_id")
+ machineId String @map("machine_id")
+ maintenanceRequestId String @map("maintenance_request_id")
+ plannedStartAt DateTime @map("planned_start_at") @db.Timestamptz(6)
+ plannedEndAt DateTime @map("planned_end_at") @db.Timestamptz(6)
+ sourceTechnicianIds String[] @map("source_technician_ids")
+ requirementsJson Json @map("requirements_json") @db.JsonB
+ status String @default("UNASSIGNED")
+ revision Int @default(1)
+ attempt Int @default(1)
+ assigneeUserId String? @map("assignee_user_id") @db.Uuid
+ actorId String @map("actor_id") @db.Uuid
+ blocker String?
+ actualStartedAt DateTime? @map("actual_started_at") @db.Timestamptz(6)
+ actualCompletedAt DateTime? @map("actual_completed_at") @db.Timestamptz(6)
+ verificationJson Json? @map("verification_json") @db.JsonB
+ cancelReason String? @map("cancel_reason")
+ cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(6)
+ createdAt DateTime @default(dbgenerated("clock_timestamp()")) @map("created_at") @db.Timestamptz(6)
+ updatedAt DateTime @default(dbgenerated("clock_timestamp()")) @map("updated_at") @db.Timestamptz(6)
+ factory Factory @relation(fields:[factoryId], references:[factoryId], onDelete:Restrict, onUpdate:Restrict)
+ source DecisionCommit @relation(fields:[sourceCaseId,factoryId,basisSnapshotId,scheduleId,scheduleRevision,scheduleHash,publishedPlanVersion], references:[caseId,factoryId,snapshotId,scheduleId,scheduleRevision,scheduleHash,planVersion], onDelete:Restrict, onUpdate:Restrict)
+ assignee User? @relation("WorkOrderAssignee",fields:[assigneeUserId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ creator User @relation("WorkOrderCreator",fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ events WorkOrderEvent[]
+ completions WorkOrderCompletion[]
+ receipts WorkOrderCommandReceipt[]
+ @@unique([id,factoryId])
+ @@unique([factoryId,scheduleId,scheduleRevision,assignmentId])
+ @@index([factoryId,createdAt(sort:Desc),id(sort:Desc)],map:"work_orders_factory_created_id_idx")
+ @@index([factoryId,assigneeUserId,createdAt(sort:Desc),id(sort:Desc)],map:"work_orders_factory_assignee_idx")
+ @@index([factoryId,status,createdAt(sort:Desc),id(sort:Desc)],map:"work_orders_factory_status_idx")
+ @@map("work_orders")
+}
+model WorkOrderEvent {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ workOrderId String @map("work_order_id") @db.Uuid
+ factoryId String @map("factory_id")
+ sequence Int
+ actorId String @map("actor_id") @db.Uuid
+ command String
+ occurredAt DateTime @default(dbgenerated("clock_timestamp()")) @map("occurred_at") @db.Timestamptz(6)
+ payloadJson Json @map("payload_json") @db.JsonB
+ order WorkOrder @relation(fields:[workOrderId,factoryId],references:[id,factoryId],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([workOrderId,sequence])
+ @@map("work_order_events")
+}
+model WorkOrderCompletion {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ workOrderId String @map("work_order_id") @db.Uuid
+ factoryId String @map("factory_id")
+ attempt Int
+ actorId String @map("actor_id") @db.Uuid
+ completedAt DateTime @default(dbgenerated("clock_timestamp()")) @map("completed_at") @db.Timestamptz(6)
+ reportJson Json @map("report_json") @db.JsonB
+ order WorkOrder @relation(fields:[workOrderId,factoryId],references:[id,factoryId],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([workOrderId,attempt])
+ @@map("work_order_completions")
+}
+model WorkOrderCommandReceipt {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ factoryId String @map("factory_id")
+ actorId String @map("actor_id") @db.Uuid
+ key String
+ requestHash String @map("request_hash") @db.Char(64)
+ workOrderId String @map("work_order_id") @db.Uuid
+ statusCode Int @map("status_code")
+ responseJson Json @map("response_json") @db.JsonB
+ createdAt DateTime @default(dbgenerated("clock_timestamp()")) @map("created_at") @db.Timestamptz(6)
+ order WorkOrder @relation(fields:[workOrderId,factoryId],references:[id,factoryId],onDelete:Restrict,onUpdate:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+ @@unique([factoryId,actorId,key])
+ @@map("work_order_command_receipts")
 }
