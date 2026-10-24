@@ -15,6 +15,7 @@ const productionScreens = [
   { href: "/operations", label: "Factory resources", icon: Factory },
   { href: "/operations/schedule", label: "Integrated Schedule", icon: CalendarRange },
   { href: "/operations/cases", label: "Decision Cases", icon: ListChecks },
+  { href: "/operations/incidents", label: "Incident Center", icon: ListChecks },
 ] as const;
 const researchScreens = [
   { href: "/operations/recommendations", label: "Recommendations preview", icon: GitCompareArrows },

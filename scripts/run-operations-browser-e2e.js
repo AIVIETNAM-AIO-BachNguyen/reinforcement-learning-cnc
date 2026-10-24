@@ -151,7 +151,7 @@ async function stopProcess(child) {
   if (child.exitCode === null && child.signalCode === null) {
     if (child.e2eName === 'fastapi' && child.stdin?.writable) child.stdin.end();
     else if (process.platform === 'win32') {
-      spawnSync('taskkill', ['/PID', String(child.pid), '/T'], { windowsHide: true, stdio: 'ignore' });
+      spawnSync('taskkill', ['/PID', String(child.pid), '/T'], { windowsHide: true, stdio: 'ignore', timeout: 10000 });
     } else {
       try { process.kill(-child.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
     }
@@ -159,15 +159,19 @@ async function stopProcess(child) {
     const graceful = await Promise.race([closed.then(() => true), delay(5_000).then(() => false)]);
     if (!graceful && child.exitCode === null && child.signalCode === null) {
       if (process.platform === 'win32') {
-        spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+        const killed = spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: 10000 });
+        if (killed.error || killed.status !== 0) throw new Error(`Cannot stop owned ${child.e2eName} PID ${child.pid}; cleanup needs process termination permission`);
       } else {
         try { process.kill(-child.pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
       }
       await Promise.race([closed, delay(2_000)]);
     }
+    if (child.exitCode === null && child.signalCode === null) throw new Error(`Owned ${child.e2eName} PID ${child.pid} did not stop`);
   }
   if (child.e2eLog && !child.e2eLog.closed) {
-    await new Promise(resolve => child.e2eLog.end(resolve));
+    await Promise.race([new Promise(resolve => child.e2eLog.end(resolve)), delay(2000).then(() => {
+      if (!child.e2eLog.writableFinished) throw new Error(`Log stream for ${child.e2eName} did not finish`);
+    })]);
   }
 }
 
@@ -261,7 +265,7 @@ async function dropSchema(baseUrl, schema, env, journal, runDir) {
   forgetSchema(journal, schema);
 }
 
-async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPython }) {
+async function runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, operationsPython }) {
   const runDir = path.join(artifactRoot, `run-${run}`);
   fs.mkdirSync(runDir, { recursive: true });
   const schema = `product_api_it_browser_${process.pid}_${run}_${randomBytes(5).toString('hex')}`;
@@ -311,7 +315,10 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
       logFile: path.join(runDir, 'test-users.log'),
     });
     const testUsers = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-    commonEnv.OPERATIONS_FACTORY_ACCESS = JSON.stringify({ 'factory-demo-01': [testUsers.viewer.id] });
+    commonEnv.OPERATIONS_FACTORY_ACCESS = JSON.stringify({
+      'factory-demo-01': [testUsers.viewer.id],
+      'factory-incident-demo': [testUsers.viewer.id, testUsers.engineer.id, testUsers.operator.id],
+    });
 
     fastapi = await startFastApi(commonEnv, runDir);
     frontendPort = await freePort();
@@ -352,7 +359,8 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
     });
     await waitForHttp(`${webUrl}/api/health`, frontend, 'Frontend');
 
-    await command(process.execPath, [playwright, 'test', '--config', 'playwright.e2e.config.ts'], {
+    await command(process.execPath, [playwright, 'test', '--config', 'playwright.e2e.config.ts',
+      ...(process.argv.includes('--incidents') ? ['incidents.spec.ts'] : [])], {
       cwd: frontendRoot,
       env: {
         ...process.env,
@@ -366,36 +374,54 @@ async function runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPyt
         OPERATIONS_E2E_OUTSIDER_USERNAME: testUsers.outsider.username,
         OPERATIONS_E2E_FACTORY_ID: 'factory-demo-01',
         OPERATIONS_E2E_GIT_SHA: sha,
+        OPERATIONS_E2E_SOURCE_DIRTY: String(sourceDirty),
         OPERATIONS_E2E_RUN: String(run),
+        OPERATIONS_E2E_USERS_FILE: usersFile,
+        INCIDENT_E2E_FACTORY_ID: 'factory-incident-demo',
         OPERATIONS_E2E_EVIDENCE_FILE: path.join(runDir, 'evidence.json'),
         OPERATIONS_E2E_RUN_ARTIFACT_DIR: path.join(runDir, 'playwright'),
       },
       logFile: path.join(runDir, 'playwright.log'),
       treeOnAbort: true,
     });
-    return JSON.parse(fs.readFileSync(path.join(runDir, 'evidence.json'), 'utf8'));
+    const incidentEvidence = JSON.parse(fs.readFileSync(path.join(runDir, 'incident-evidence.json'), 'utf8'));
+    if (process.argv.includes('--incidents')) return incidentEvidence;
+    return { ...JSON.parse(fs.readFileSync(path.join(runDir, 'evidence.json'), 'utf8')), incidents: incidentEvidence };
   } finally {
+    let ownedProcessesStopped = true;
+    let ownedPortsClosed = true;
+    let schemaRemoved = true;
     for (const child of [frontend, worker, api, fastapi?.child]) {
-      try { await stopProcess(child); } catch (error) { cleanupErrors.push(error); }
+      try { await stopProcess(child); } catch (error) { ownedProcessesStopped = false; cleanupErrors.push(error); }
     }
     fastapi?.lines?.close();
     for (const port of [frontendPort, apiPort, fastapi?.port].filter(Boolean)) {
-      try { await waitForPortClosed(port); } catch (error) { cleanupErrors.push(error); }
+      try { await waitForPortClosed(port); } catch (error) { ownedPortsClosed = false; cleanupErrors.push(error); }
     }
-    try { await dropSchema(baseUrl, schema, commonEnv, journal, runDir); }
-    catch (error) { cleanupErrors.push(error); }
+    try {
+      if (!ownedProcessesStopped || !ownedPortsClosed) throw new Error('Schema retained in cleanup journal because owned services have not stopped');
+      await dropSchema(baseUrl, schema, commonEnv, journal, runDir);
+    }
+    catch (error) { schemaRemoved = false; cleanupErrors.push(error); }
+    fs.writeFileSync(path.join(runDir, 'cleanup-result.json'), JSON.stringify({
+      result: cleanupErrors.length ? 'failed' : 'passed',
+      schema_removed: schemaRemoved, owned_processes_stopped: ownedProcessesStopped,
+      owned_ports_closed: ownedPortsClosed,
+      recovery_required: cleanupErrors.length > 0, schema_journal: journal,
+    }, null, 2) + '\n');
     if (cleanupErrors.length) {
       throw new AggregateError(cleanupErrors, cleanupErrors.map(error => error.message).join('\n'));
     }
-    fs.writeFileSync(path.join(runDir, 'cleanup-result.json'), `${JSON.stringify({
-      result: 'passed', schema_removed: true, owned_processes_stopped: true, owned_ports_closed: true,
-    }, null, 2)}\n`);
   }
 }
 
 async function main() {
   const baseUrl = testDatabase();
   const sha = gitSha();
+  const sourceStatus = spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8', windowsHide: true });
+  if (sourceStatus.status !== 0) throw new Error('Cannot determine source worktree state');
+  const sourceDirty = Boolean(sourceStatus.stdout.trim());
+  if (process.argv.includes('--acceptance') && sourceDirty) throw new Error('Acceptance requires a clean committed source tree');
   const repeat = repeatCount();
   const artifactRoot = path.resolve(process.env.OPERATIONS_E2E_ARTIFACT_DIR
     || path.join(root, 'artifacts', 'operations-e2e', sha));
@@ -413,7 +439,18 @@ async function main() {
   const evidence = [];
   for (let run = 1; run <= repeat; run += 1) {
     controller.signal.throwIfAborted();
-    evidence.push(await runOnce({ baseUrl, sha, run, artifactRoot, journal, operationsPython }));
+    evidence.push(await runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, operationsPython }));
+  }
+  const incidentFingerprints = evidence.map(item => (process.argv.includes('--incidents') ? item : item.incidents).recommendation_fingerprint);
+  if (incidentFingerprints.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))) throw new Error('Incident linked planner fingerprint was not asserted');
+  if (repeat > 1 && new Set(incidentFingerprints).size !== 1) throw new Error('Incident planner deterministic replay failed');
+  if (process.argv.includes('--incidents')) {
+    fs.writeFileSync(path.join(artifactRoot, 'incident-summary.json'), JSON.stringify({
+      git_sha: sha, source_tree_dirty: sourceDirty, run_count: repeat, runs: evidence,
+      acceptance: 'IN_PROGRESS', deterministic_planner_replay: repeat > 1 ? 'passed' : 'single_run_only',
+    }, null, 2) + '\n');
+    console.log('[incident browser e2e] Targeted assertions passed; full acceptance remains pending.');
+    return;
   }
   const fingerprints = [...new Set(evidence.map(item => item.recommendation_fingerprint))];
   if (repeat > 1 && fingerprints.length !== 1) {
@@ -422,6 +459,8 @@ async function main() {
   const summary = {
     schema_version: '1.0',
     git_sha: sha,
+    source_tree_dirty: sourceDirty,
+    incident_deterministic_replay: repeat > 1 ? 'passed' : 'single_run_only',
     completed_at: new Date().toISOString(),
     run_count: repeat,
     deterministic_replay: fingerprints.length === 1,

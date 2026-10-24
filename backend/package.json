@@ -21,7 +21,8 @@
     "test:operations-flow": "node tests/integration/run-integration-tests.js --operations-flow",
     "operations:ingest": "node scripts/ingest-operations-snapshot.js",
     "test:operations-browser-e2e": "node ../scripts/run-operations-browser-e2e.js",
-    "operations:e2e-reset": "node ../scripts/reset-operations-e2e.js"
+    "operations:e2e-reset": "node ../scripts/reset-operations-e2e.js",
+    "operations:incident-demo": "node ../scripts/run-operations-browser-e2e.js --incidents"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
