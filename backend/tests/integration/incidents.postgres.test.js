@@ -81,10 +81,41 @@ test('stale concurrent commands have one winner and no losing receipt/event',asy
   const events=await http(`/incidents/${row.id}/events`);expect(events.body.data).toHaveLength(2);
   const receipts=await db.$queryRaw`SELECT count(*)::int AS count FROM incident_command_receipts WHERE incident_id=${row.id}::uuid`;expect(receipts[0].count).toBe(2);
 });
-test('new manual recurrence appends once and never auto-reopens a closed source',async()=>{
+test('new manual recurrence appends once without duplicate revision or count',async()=>{
   let row=await create();const source={type:'manual',source_event_id:randomUUID()};
   let r=await command(row,'APPEND_OCCURRENCE',{source,reason:'New human-confirmed observation'});expect(r.status).toBe(200);row=r.body.data.incident;expect(row.occurrence_count).toBe(2);
   r=await command(row,'APPEND_OCCURRENCE',{source,reason:'Same observation'});expect(r.status).toBe(200);expect(r.body.data.incident.revision).toBe(row.revision);expect(r.body.data.incident.occurrence_count).toBe(2);
+});
+
+test('closed source remains deduplicated and a new source does not reopen it', async () => {
+  const body = report({ severity: 'WARNING' });
+  const created = await http('/incidents', { method: 'POST', body });
+  expect(created.status).toBe(201);
+  let row = created.body.data.incident;
+  for (const [action, fields, actor] of [
+    ['ASSIGN', { owner_user_id: users.ENGINEER.id }, users.ADMIN],
+    ['ACKNOWLEDGE', {}, users.ENGINEER],
+    ['START_INVESTIGATION', {}, users.ENGINEER],
+    ['MARK_RESOLVED', { resolution: { code: 'FIXED', summary: 'Inspection complete', evidence: 'Human inspection' } }, users.ENGINEER],
+    ['CLOSE', { verification: { resolution_code: 'FIXED', note: 'Independent inspection' } }, users.ADMIN],
+  ]) {
+    const response = await command(row, action, fields, actor);
+    expect(response.status).toBe(200);
+    row = response.body.data.incident;
+  }
+  const events = await db.incidentEvent.count({ where: { incidentId: row.id } });
+  const duplicate = await http('/incidents', { method: 'POST', body });
+  expect(duplicate.status).toBe(200);
+  expect(duplicate.body.data.incident).toMatchObject({ id: row.id, status: 'CLOSED', revision: row.revision, occurrence_count: 1 });
+  expect(await db.incidentEvent.count({ where: { incidentId: row.id } })).toBe(events);
+  const changed = await http('/incidents', { method: 'POST', body: { ...body, description: 'Different report with reused source' } });
+  expect(changed.status).toBe(409);
+  const next = await create({ severity: 'WARNING' });
+  expect(next.id).not.toBe(row.id);
+  expect((await http(`/incidents/${row.id}`)).body.data.incident).toMatchObject({ status: 'CLOSED', revision: row.revision });
+  const conflict = await command(next, 'APPEND_OCCURRENCE', { source: body.source, reason: 'Source belongs to closed incident' });
+  expect(conflict.status).toBe(409);
+  expect((await http(`/incidents/${next.id}`)).body.data.incident.occurrence_count).toBe(1);
 });
 test('summary spans more than one page; search/filter/cursor scope are server-side and reads no-store',async()=>{
   for(let n=0;n<4;n++)await create({title:`Needle-${n}`});

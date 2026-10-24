@@ -13,9 +13,10 @@ Milestone: IN_PROGRESS. This is not final acceptance evidence.
 ## Checks performed during implementation
 
 - 47 policy/evidence/source/Work Order adapter unit tests passed.
-- 11 authenticated HTTP/PostgreSQL incident tests passed on isolated schemas.
+- 17 authenticated HTTP/PostgreSQL and populated-upgrade tests passed on isolated schemas,
+  including coordinated Incident resolution versus real Work Order cancellation.
 - Populated upgrade from exact base passed, preserving a real Work Order,
-  publications, memberships and append-only history (12 API/upgrade tests total).
+  publications, memberships and append-only history.
 - 234 frontend unit/component tests passed; production build and TypeScript passed.
 - Real browser manual and linked planner/Work Order smoke flows passed, with
   desktop screenshots and clean schema/process/port shutdown. These were dirty-tree
@@ -23,12 +24,19 @@ Milestone: IN_PROGRESS. This is not final acceptance evidence.
 - Fresh deployment of all 17 migrations, including both modules, passed.
 - Test runner dropped its schema after both successful and failed runs.
 - These are local intermediate results, not three final-SHA E2E runs.
+- Browser negative/navigation smoke passed: stale confirmation, duplicate append/link,
+  audited unlink, keyboard confirmation, full-factory counts exceeding the page size,
+  disjoint cursor pages, Back/reload and server-side status filters. Cleanup passed.
+- Draft implementation PR: https://github.com/AIVIETNAM-AIO-BachNguyen/reinforcement-learning-cnc/pull/54.
+- Contracts passed at `f8e69d0`. Operations integration reached the browser stage
+  and exposed an existing test's global case/publication counts after the Incident
+  suite created records in its separate factory. Assertions now scope those counts
+  to the Operations test factory; the corrected full gate still needs verification.
 
 ## Still pending
 
-Expanded negative/concurrency/browser recovery matrix; three clean-schema browser
-runs at the final SHA; draft PR
-and final CI gates. See [demo runbook](incident-center-demo-runbook.md).
+Final negative/concurrency/browser recovery audit; three clean-schema browser
+runs at the final SHA and final CI gates. See [demo runbook](incident-center-demo-runbook.md).
 
 ## Targeted local API check
 

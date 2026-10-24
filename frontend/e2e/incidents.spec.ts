@@ -23,11 +23,16 @@ async function context(browser: Browser, username: string, password: string) {
 }
 async function confirm(page: Page) {
   await page.getByRole("button", { name: "Review action", exact: true }).click();
-  await page.getByRole("button", { name: "Confirm action", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Confirm action", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
 }
 async function command(page: Page, name: string, fields: Record<string, string> = {}, expected = 200) {
   await page.getByLabel("Next action", { exact: true }).selectOption(name);
-  for (const [label, value] of Object.entries(fields)) await page.getByLabel(label, { exact: true }).fill(value);
+  for (const [label, value] of Object.entries(fields)) {
+    const field = page.getByLabel(label, { exact: true });
+    if (await field.evaluate(element => element.tagName) === "SELECT") await field.selectOption(value);
+    else await field.fill(value);
+  }
   const response = page.waitForResponse(r => r.url().includes("/incidents/") && r.url().endsWith("/commands") && r.request().method() === "POST");
   await confirm(page);
   const result = await response;
@@ -146,6 +151,44 @@ test("real incident desktop lifecycle, lost-response reload, roles and immutable
     expect(history[4].actor_id).toBe(users.engineer.id);
     expect(history[5].actor_id).not.toBe(users.engineer.id);
     passed.push("ui_report_assign_ack_investigate_resolve_independent_close_reopen", "history_matches_postgresql", "lifecycle_does_not_change_schedule");
+    const occurrenceSource = randomUUID();
+    const appended = await command(page, "APPEND_OCCURRENCE", {
+      "Existing source event ID (optional, for deduplication)": occurrenceSource, Reason: "New observation on the same incident",
+    });
+    expect(appended.data.incident.occurrence_count).toBe(2);
+    const duplicate = await command(page, "APPEND_OCCURRENCE", {
+      "Existing source event ID (optional, for deduplication)": occurrenceSource, Reason: "Explicit retry of observation",
+    });
+    expect(duplicate.data.incident.revision).toBe(appended.data.incident.revision);
+    expect(duplicate.data.incident.occurrence_count).toBe(2);
+    await command(page, "CHANGE_SEVERITY", { "Confirmed severity": "INFO", Reason: "Manager reviewed the observations" });
+    await command(page, "REASSIGN", {
+      "Owner user ID — active OPERATOR or ENGINEER in this factory": users.operator.id, Reason: "Transfer investigation ownership",
+    });
+    await ownerPage.reload();
+    await expect(ownerPage.getByLabel("Next action").locator("option[value=ACKNOWLEDGE]")).toHaveCount(0);
+    passed.push("ui_append_duplicate_noop", "ui_severity_confirmation", "ui_reassignment_revokes_old_owner_actions");
+    // Hold the confirmation open while another authenticated context changes the
+    // same Incident. The original browser request must retain its old revision.
+    await page.getByLabel("Next action", { exact: true }).selectOption("CHANGE_SEVERITY");
+    await page.getByLabel("Confirmed severity", { exact: true }).selectOption("WARNING");
+    await page.getByLabel("Reason", { exact: true }).fill("Stale confirmation");
+    await page.getByRole("button", { name: "Review action", exact: true }).click();
+    const current = (await (await manager.request.get(api + "/api/v1/incidents/" + id)).json()).data.incident;
+    await post(manager, "/incidents/" + id + "/commands", { command: "CHANGE_SEVERITY",
+      expected_revision: current.revision, severity: "CRITICAL", reason: "Valid concurrent manager update" });
+    const oldRequest = page.waitForResponse(r => r.url().endsWith("/commands") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Confirm action", exact: true }).click();
+    const stale = await oldRequest;
+    expect(stale.status()).toBe(409);
+    expect(stale.request().postDataJSON().expected_revision).toBe(current.revision);
+    expect((await stale.json()).error.code).toBe("INCIDENT_REVISION_CONFLICT");
+    await expect(page.getByRole("button", { name: "Refresh and review" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recover original request" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Refresh and review" }).click();
+    await expect(page.getByText("CRITICAL", { exact: true }).first()).toBeVisible();
+    expect((await database("SELECT count(*)::int AS count FROM incident_events WHERE incident_id=$1::uuid AND payload->>'reason'='Stale confirmation'", id))[0].count).toBe(0);
+    passed.push("stale_ui_confirmation_keeps_original_revision_no_side_effect");
     for (const width of [1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.screenshot({ path: path.join(artifact, "incident-detail-" + width + ".png"), fullPage: true });
@@ -218,8 +261,55 @@ test("real incident desktop lifecycle, lost-response reload, roles and immutable
     await expect(page.getByText("CLOSED", { exact: true }).first()).toBeVisible();
     expect(await database("SELECT to_jsonb(h) AS head FROM operations_heads h WHERE factory_id=$1", factory)).toEqual(publishedBeforeResolution);
     expect((await database("SELECT status FROM work_orders WHERE id=$1::uuid", order.id))[0].status).toBe("CLOSED");
+    const linkedDetail = (await (await manager.request.get(api + "/api/v1/incidents/" + linkedId)).json()).data;
+    await link(page, "work_order", order.id);
+    const afterDuplicate = (await (await manager.request.get(api + "/api/v1/incidents/" + linkedId)).json()).data;
+    expect(afterDuplicate.incident.revision).toBe(linkedDetail.incident.revision);
+    const caseLink = linkedDetail.links.find((l: { type: string }) => l.type === "case");
+    await page.getByLabel("Next action", { exact: true }).selectOption("UNLINK");
+    await page.getByLabel("Link to remove", { exact: true }).selectOption(caseLink.id);
+    await page.getByLabel("Reason", { exact: true }).fill("Remove association while preserving trace");
+    const unlinked = page.waitForResponse(r => r.url().includes("/links/") && r.request().method() === "DELETE");
+    await confirm(page);
+    expect((await unlinked).status()).toBe(200);
+    expect((await database("SELECT removal_reason FROM incident_case_links WHERE id=$1::uuid", caseLink.id))[0].removal_reason).toBe("Remove association while preserving trace");
+    passed.push("ui_duplicate_link_noop", "ui_unlink_preserves_trace");
     passed.push("real_worker_fastapi_approve_commit_work_order", "from_case_ui_immutable_evidence", "real_case_and_work_order_links",
       "active_and_completed_orders_block_resolution", "order_close_does_not_auto_close_incident", "independent_linked_incident_closure");
+    // Populate through the actual report form; counts must describe the entire
+    // factory even when a cursor page displays only ten rows.
+    for (let index = 0; index < 9; index++) {
+      await page.goto(web + "/operations/incidents?factory_id=" + factory);
+      await page.getByRole("button", { name: "Report incident", exact: true }).click();
+      await page.getByLabel("Title", { exact: true }).fill("Pagination observation " + index);
+      await page.getByLabel("Description — your observation", { exact: true }).fill("Independent human observation for navigation verification.");
+      await confirm(page);
+      await expect(page).toHaveURL(/\/operations\/incidents\/[0-9a-f-]+\?/);
+    }
+    await page.goto(web + "/operations/incidents?factory_id=" + factory);
+    await page.getByLabel("Page size", { exact: true }).selectOption("10");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    const total = (await database("SELECT count(*)::int AS total FROM factory_incidents WHERE factory_id=$1", factory))[0].total;
+    expect(total).toBeGreaterThan(10);
+    await expect(page.getByRole("region", { name: "Full factory counts" }).getByText(String(total), { exact: true })).toBeVisible();
+    const firstPage = await page.locator("tbody tr td:first-child a").allTextContents();
+    await page.getByRole("button", { name: "Next page", exact: true }).click();
+    await expect(page).toHaveURL(/cursor=/);
+    await expect(page.locator("tbody tr")).toHaveCount(total - 10);
+    const secondPage = await page.locator("tbody tr td:first-child a").allTextContents();
+    expect(secondPage.every(text => !firstPage.includes(text))).toBe(true);
+    await page.reload();
+    await expect(page.locator("tbody tr td:first-child a")).toHaveText(secondPage);
+    await page.goBack();
+    await expect(page.locator("tbody tr td:first-child a")).toHaveText(firstPage);
+    await page.getByLabel("Status", { exact: true }).selectOption("CLOSED");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page).toHaveURL(/status=CLOSED/);
+    await expect(page.getByRole("link", { name: "Linked maintenance incident", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: title, exact: true })).toHaveCount(0);
+    await page.screenshot({ path: path.join(artifact, "incident-filtered-list.png"), fullPage: true });
+    passed.push("ui_reports_count_exceeds_page", "cursor_disjoint_pages", "cursor_reload_and_browser_back", "server_status_filter");
     await writeFile(path.join(artifact, "incident-evidence.json"), JSON.stringify({
       git_sha: process.env.OPERATIONS_E2E_GIT_SHA, run: Number(process.env.OPERATIONS_E2E_RUN),
       source_tree_dirty: process.env.OPERATIONS_E2E_SOURCE_DIRTY !== "false",
