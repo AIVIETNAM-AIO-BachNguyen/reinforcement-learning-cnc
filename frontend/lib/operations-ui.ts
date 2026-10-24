@@ -14,7 +14,7 @@ export function firstParam(value?: string | string[]): string | undefined {
 export function productionMode(demo?: string | string[]): OperationsApiMode {
   return firstParam(demo) === "1" ? "mock" : "real";
 }
-export function operationsHref(path: string, factoryId?: string, options: { demo?: boolean; caseId?: string; status?: string; mode?: string; plan_version?: string; schedule_id?: string } = {}): string {
+export function operationsHref(path: string, factoryId?: string, options: { demo?: boolean; caseId?: string; status?: string; mode?: string; plan_version?: string; schedule_id?: string; schedule_revision?: string; assignment_id?: string } = {}): string {
   const url = new URL(path, "https://operations.local");
   if (factoryId) url.searchParams.set("factory_id", factoryId);
   if (options.demo) url.searchParams.set("demo", "1");

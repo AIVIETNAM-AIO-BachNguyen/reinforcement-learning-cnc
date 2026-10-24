@@ -1,4 +1,4 @@
-# Maintenance Workspace — M0 contract / route handoff
+# Maintenance Workspace — implementation and contract handoff
 
 Base: main `ff9a3aeec7d6f3b19e655a326cea214a968764c0` (merged #50/#51).
 Branch: `frontend/maintenance-workspace`. Backend implementation #51:
@@ -77,3 +77,11 @@ execution/report/recovery controls and source-context work while waiting.
 Mock is test isolation only. Do not relabel #50 Operations E2E or #51 backend
 tests as browser acceptance of this workspace. No Incident-linked acceptance
 claim without the actual Flex implementation. Record exact results/pending in PR.
+
+Implementation is now available in draft PR #53: generated producer types and
+schema-bound HTTP client, protected real reads, list/detail/paged history, source
+creation and all twelve command forms. D1-dependent assignment/reassignment
+remains disabled and D2 cannot resolve an origin conflict to an exact existing ID.
+See [setup, recovery, checks and evidence boundaries](frontend-maintenance-workspace-runbook.md).
+M2/M3 are pending these actual backend dependencies and full real-service
+lifecycle/recovery acceptance. Component fixtures are never a production adapter.

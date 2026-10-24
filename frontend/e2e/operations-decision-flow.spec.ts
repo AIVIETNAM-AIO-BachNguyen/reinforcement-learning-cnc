@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 
-import { expect, test, type APIRequestContext, type APIResponse, type Browser, type BrowserContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { createOperationsApiClient } from "../lib/operations-api/client";
 import { caseStatuses, processingStatuses, zeroBuckets } from "../lib/operations-api/overview";
 
@@ -36,6 +36,16 @@ const publicationState = () => databaseQuery(`SELECT jsonb_build_object(
   'schedules', (SELECT jsonb_agg(to_jsonb(s) ORDER BY schedule_id) FROM operation_schedules s),
   'publications', (SELECT jsonb_agg(to_jsonb(c) ORDER BY case_id) FROM decision_commits c)
 ) AS state`);
+
+async function captureWorkOrders(page: Page, name: string) {
+  const original = page.viewportSize();
+  for (const [width, height] of [[1440, 900], [1920, 1080], [2560, 1440]]) {
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`real-work-orders-${name}-${width}x${height}.png`) });
+  }
+  if (original) await page.setViewportSize(original);
+}
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -562,6 +572,52 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(decisionSubmissions).toHaveLength(4);
   await page.unroute(decisionUrl);
 
+  // Partial Work Orders workspace acceptance only. D1 eligible-assignee picker
+  // and D2 exact-origin lookup are absent on this base: do NOT relabel this as
+  // the complete assign/execute/independent-close/recovery acceptance.
+  const workOrderCreateUrl = `${apiBase}/api/v1/work-orders`;
+  const workOrderCreates: { key: string | undefined; body: string | null }[] = [];
+  await page.route(workOrderCreateUrl, async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    const response = await route.fetch(); // Real backend transaction, no fixture.
+    expect(response.status()).toBe(201);
+    workOrderCreates.push({ key: route.request().headers()["idempotency-key"], body: route.request().postData() });
+    if (workOrderCreates.length === 1) await route.abort("failed");
+    else { expect(response.headers()["idempotency-replayed"]).toBe("true"); await route.fulfill({ response }); }
+  });
+  await page.getByText("Maintenance assignments / Work Orders", { exact: true }).click();
+  const assignmentTable = page.getByRole("region", { name: "Published maintenance assignments" });
+  await expect(assignmentTable.getByRole("button", { name: "Review create work order" }).first()).toBeEnabled();
+  await assignmentTable.getByRole("button", { name: "Review create work order" }).first().click();
+  const createWorkOrderDialog = page.getByRole("dialog", { name: "Create work order from this publication" });
+  await expect(createWorkOrderDialog).toContainText(factoryId);
+  await captureWorkOrders(page, "source-confirmation");
+  await createWorkOrderDialog.getByRole("button", { name: "Create work order", exact: true }).click();
+  await expect(createWorkOrderDialog.getByRole("button", { name: "Retry original create" })).toBeVisible();
+  await createWorkOrderDialog.getByRole("button", { name: "Retry original create" }).click();
+  await expect(page).toHaveURL(/\/operations\/work-orders\/[0-9a-f-]+\?factory_id=/);
+  const workOrderId = page.url().split("/work-orders/")[1].split("?")[0];
+  await expect(page.getByRole("button", { name: "Assign", exact: true })).toBeDisabled();
+  await expect(page.getByText(/eligible-assignee picker for ENGINEER/)).toBeVisible();
+  expect(workOrderCreates).toHaveLength(2);
+  expect(workOrderCreates[1]).toEqual(workOrderCreates[0]);
+  expect(await databaseQuery("SELECT count(*)::int AS count FROM work_orders")).toEqual([{ count: 1 }]);
+  const workOrderPayload = JSON.parse(workOrderCreates[0].body!) as JsonObject;
+  expect(record(workOrderPayload.source)).toMatchObject({ decision_case_id: caseId, schedule_id: record(published.schedule).schedule_id, schedule_hash: record(published.commit).schedule_hash });
+  const sourceAssignment = array(record(published.schedule).assignments).map(record).find(item => item.assignment_id === record(workOrderPayload.source).assignment_id);
+  expect(sourceAssignment?.assignment_type).toBe("MAINTENANCE");
+  expect(sourceAssignment?.status).not.toBe("CANCELLED");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Cancel work order", exact: true })).toBeEnabled();
+  await expect(page.getByRole("list", { name: "Work Order events" }).getByRole("listitem")).toHaveCount(1);
+  await captureWorkOrders(page, "detail");
+  await page.getByRole("link", { name: "Back to filtered work orders" }).click();
+  await expect(page.getByRole("link", { name: `Open work order ${workOrderId}` })).toBeVisible();
+  await captureWorkOrders(page, "list");
+  await page.getByRole("link", { name: `Open work order ${workOrderId}` }).click();
+  await expect(page.getByRole("list", { name: "Work Order events" }).getByRole("listitem")).toHaveCount(1);
+  await page.unroute(workOrderCreateUrl);
+
   // Discovery/audit acceptance against the same real API and harness-owned DB.
   // No new cases/commands, mocks or GET interception are introduced here.
   const discoveryWrites: string[] = [];
@@ -818,6 +874,14 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(committedRows.some(row => row.decision_case_id === winner.id)).toBe(true);
   const rejectedRows = await listAllCases(viewer.request, { status: "REJECTED" });
   expect(rejectedRows.map(row => row.decision_case_id)).toContain(rejectCase.id);
+  await viewerPage.goto(`/operations/work-orders/${workOrderId}?factory_id=${factoryId}`);
+  await expect(viewerPage.getByText("VIEWER access is read-only.", { exact: true })).toBeVisible();
+  await expect(viewerPage.getByRole("region", { name: "Work Order commands" }).getByRole("button")).toHaveCount(0);
+  await captureWorkOrders(viewerPage, "viewer-detail");
+  const viewerWorkOrderWrite = await viewer.request.post(`${apiBase}/api/v1/work-orders/${workOrderId}/commands`, {
+    headers: { "Idempotency-Key": `viewer-work-order-forbidden-${randomUUID()}` }, data: { command: "CANCEL", expected_revision: 1, reason: "Negative authorization test" },
+  });
+  expect(viewerWorkOrderWrite.status()).toBe(403);
   const outsider = await loginContext(browser, outsiderUsername, rolePassword);
   const outsiderPage = await outsider.newPage();
   await outsiderPage.goto(`/overview?factory_id=${factoryId}`);
@@ -833,6 +897,15 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     const publicError = record(payload.error ?? payload);
     expect(publicError.code).toMatch(/^(FACTORY_NOT_FOUND|DECISION_CASE_NOT_FOUND)$/);
     expect(JSON.stringify(payload)).not.toContain(winner.id);
+  }
+  await outsiderPage.goto(`/operations/work-orders/${workOrderId}?factory_id=${factoryId}`);
+  await expect(outsiderPage.getByRole("heading", { name: "Work Orders unavailable or inaccessible" })).toBeVisible();
+  await expect(outsiderPage.getByRole("heading", { name: "Historical source and provenance" })).toHaveCount(0);
+  await captureWorkOrders(outsiderPage, "inaccessible");
+  for (const suffix of [`?factory_id=${factoryId}`, `/${workOrderId}`, `/${workOrderId}/events`]) {
+    const response = await outsider.request.get(`${apiBase}/api/v1/work-orders${suffix}`);
+    expect(response.status()).toBe(404);
+    expect(JSON.stringify(await json(response))).not.toContain(workOrderId);
   }
   await viewer.close();
   await outsider.close();
@@ -925,6 +998,23 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(scheduleAfterS2.basis_snapshot).toEqual(racePublished.basis_snapshot);
   expect(scheduleAfterS2.plan_version).toBe(racePublished.plan_version);
   expect(scheduleAfterS2.snapshot_id).toBe(nextSnapshot.snapshot_id);
+  await reopened.goto(`/operations/work-orders/${workOrderId}?factory_id=${factoryId}`);
+  await expect(reopened.getByText("Historical source publication", { exact: true })).toBeVisible();
+  await expect(reopened.getByRole("button", { name: "Cancel work order", exact: true })).toBeEnabled();
+  await reopened.getByRole("link", { name: "Open exact published plan" }).click();
+  await expect(reopened).toHaveURL(/schedule_id=.*schedule_revision=.*assignment_id=/);
+  await expect(reopened.getByText(/Selected source assignment:/)).toContainText(string(record(workOrderPayload.source).assignment_id, "work order source assignment"));
+  await reopened.screenshot({ path: test.info().outputPath("real-work-order-historical-source-1440.png") });
+  await reopened.goto(`/operations/work-orders/${workOrderId}?factory_id=${factoryId}`);
+  await reopened.getByRole("button", { name: "Cancel work order", exact: true }).click();
+  await reopened.getByRole("dialog").getByLabel("Reason", { exact: true }).fill("Manager reviewed cancellation of unstarted historical work");
+  await reopened.getByRole("dialog").getByRole("button", { name: "Confirm cancel work order", exact: true }).click();
+  await expect(reopened.getByText("Cancellation reason:", { exact: false })).toBeVisible();
+  await expect(reopened.getByRole("list", { name: "Work Order events" }).getByRole("listitem")).toHaveCount(2);
+  await reopened.reload();
+  await expect(reopened.getByRole("list", { name: "Work Order events" }).getByRole("listitem")).toHaveCount(2);
+  expect(await databaseQuery("SELECT status,revision FROM work_orders WHERE id=$1::uuid", workOrderId)).toEqual([{ status: "CANCELLED", revision: 2 }]);
+  await captureWorkOrders(reopened, "cancel-history");
   const observationsAfter = await publicationState();
   expect(record(array(observationsAfter)[0]).state).toMatchObject({ schedules: record(record(array(observationsBefore)[0]).state).schedules, publications: record(record(array(observationsBefore)[0]).state).publications });
 
@@ -954,6 +1044,10 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     decision_submissions: decisionSubmissions,
     case_discovery: { list_pages: listPages, audit_pages: auditPages, event_sequences: freshSequences,
       viewports: ["desktop", "mobile"], case_commands: completedDiscoveryWrites, read_interception: false },
+    work_orders_workspace: { milestone: "M1 plus partial M2", work_order_id: workOrderId,
+      real_ui_create_read_cancel: "passed", original_create_key_body_replay: "passed", source_S1_P1_preserved_after_S2_P2: "passed", viewer_read_write_denied: "passed", outsider_scoped_404: "passed",
+      complete_lifecycle_recovery: "NOT_VERIFIED", pending: ["D1 eligible assignees API", "D2 exact origin lookup", "D3 producer oneOf overlap"],
+      incident_linked_acceptance: "NOT_VERIFIED" },
     checks: {
       overview_adapter_counts_preview_head_match_database: "passed",
       redesigned_overview_entrypoint: "passed",
