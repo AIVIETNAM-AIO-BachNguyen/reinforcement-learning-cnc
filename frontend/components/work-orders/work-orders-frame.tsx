@@ -40,7 +40,12 @@ export function WorkOrderAccess({ factoryId, api = workOrdersApi, children }: { 
         setIdentity(user); setChecking(false);
       }).catch((failure: unknown) => {
         if (signal.aborted || serial !== generation) return;
-        clearWorkOrderMemory(); clearWorkOrderNavigation(); setIdentity(null); setError(workOrderError(failure)); setChecking(false);
+        const failed = workOrderError(failure);
+        // A temporary identity read failure cannot prove logout/revocation and
+        // must not erase the only original key/body for an uncertain write.
+        // Protected children are still unmounted until identity is verified.
+        if (failed.status === 401 || failed.status === 403) { clearWorkOrderMemory(); clearWorkOrderNavigation(); }
+        setIdentity(null); setError(failed); setChecking(false);
       });
     };
     const visibility = () => { if (document.visibilityState === "visible") check(); else setChecking(true); };
