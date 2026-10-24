@@ -19,7 +19,7 @@ import {
 import { formatDateTime } from "@/lib/operations/format";
 import { operationsUiClient } from "@/lib/operations-ui";
 import { createRealRecommendationCenterDataSource, useRecommendationCenter } from "@/lib/recommendation-center";
-import { PublishedDecisionSchedule } from "@/components/operations/published-plan";
+import { PublishedDecisionSchedule, publishedCandidate } from "@/components/operations/published-plan";
 
 function ContextValue({ label, value }: { label: string; value: string }) {
   return (
@@ -136,32 +136,39 @@ export function CurrentSchedule({ data }: { data: OperationsContextData }) {
   );
 }
 
-function CasePublishedSchedule({ api, factoryId, caseId, mode }: { api: OperationsApiClient; factoryId?: string; caseId: string; mode: OperationsApiMode }) {
+export type PublishedSourceHint = { scheduleId: string; revision: string; assignmentId: string };
+function CasePublishedSchedule({ api, factoryId, caseId, mode, sourceHint }: { api: OperationsApiClient; factoryId?: string; caseId: string; mode: OperationsApiMode; sourceHint?: PublishedSourceHint }) {
   // Existing case/artifact read endpoints recover the exact published plan.
   // There is no historical-current-schedule endpoint or fabricated selector.
   const source = useMemo(() => createRealRecommendationCenterDataSource(api), [api]);
   const { state, refresh, refreshing } = useRecommendationCenter({ dataSource: source, caseId });
   const data = state.kind === "ready" && state.data.source !== "mock" ? state.data : null;
   const factoryMatches = data?.caseMeta?.factory_id && (!factoryId || data.caseMeta.factory_id === factoryId);
+  const candidate = data?.artifactState === "ready" ? publishedCandidate(data) : undefined;
+  const sourceMatches = !sourceHint || (candidate && candidate.schedule.schedule_id === sourceHint.scheduleId
+    && String(candidate.schedule.revision) === sourceHint.revision && candidate.schedule.assignments?.some(assignment => assignment.assignment_id === sourceHint.assignmentId));
   return <OperationsShell title="Published case schedule" description="Immutable approved plan recovered from this case, not substituted with a later current factory head." factoryId={data?.caseMeta?.factory_id ?? factoryId} demo={mode === "mock"} dataSource={mode === "mock" ? "fixture" : "live"} dataSourceMessage={mode === "mock" ? "DEMO / PREVIEW · isolated mock publication, no backend writes." : "Live Operations API · exact immutable case publication; newer factory heads are not substituted."} actions={<button className="dss-secondary" disabled={state.kind === "loading" || refreshing} onClick={refresh}>Refresh publication</button>}>
     {state.kind === "loading" ? <AsyncState kind="loading" title="Loading published case" /> : null}
     {"message" in state ? <AsyncState kind="error" title="Published case could not be loaded" description={state.message} onRetry={refresh} /> : null}
     {data && !factoryMatches ? <AsyncState kind="error" title="Case factory mismatch" description="The URL factory does not match the authoritative case. No plan is displayed." /> : null}
-    {data && factoryMatches && data.artifactState === "ready" && data.caseStatus.status === "COMMITTED" ? <PublishedDecisionSchedule data={mode === "mock" ? { ...data, source: "mock-workflow" } : data} /> : null}
+    {data && factoryMatches && !sourceMatches ? <AsyncState kind="error" title="Historical source identity mismatch" description="This case artifact does not match the exact schedule revision and assignment in the link. No current-head or different assignment is substituted." /> : null}
+    {data && factoryMatches && sourceMatches && data.artifactState === "ready" && data.caseStatus.status === "COMMITTED" ? <PublishedDecisionSchedule data={mode === "mock" ? { ...data, source: "mock-workflow" } : data} assignmentId={sourceHint?.assignmentId} /> : null}
     {data && factoryMatches && (data.artifactState !== "ready" || data.caseStatus.status !== "COMMITTED") ? <AsyncState kind="empty" title="Published artifact unavailable" description="This case does not provide a verified committed recommendation artifact. No current-head or fixture plan is substituted." onRetry={refresh} /> : null}
   </OperationsShell>;
 }
 
-export function IntegratedSchedulePage({ api, factoryId, apiMode, caseId }: {
+export function IntegratedSchedulePage({ api, factoryId, apiMode, caseId, sourceHint }: {
   api?: OperationsApiClient;
   factoryId?: string;
   apiMode?: OperationsApiMode;
   caseId?: string;
+  sourceHint?: PublishedSourceHint;
 } = {}) {
   const client = useMemo(() => api ?? (apiMode ? operationsUiClient(apiMode) : getOperationsApiClient()), [api, apiMode]);
   const selectedFactoryId = factoryId ?? getOperationsFactoryId();
   const selectedMode = apiMode ?? (api ? "mock" : getOperationsApiMode());
-  if (caseId) return <CasePublishedSchedule api={client} caseId={caseId} factoryId={factoryId} mode={selectedMode} />;
+  if (caseId) return <CasePublishedSchedule api={client} caseId={caseId} factoryId={factoryId} mode={selectedMode} sourceHint={sourceHint} />;
+  if (sourceHint) return <OperationsShell title="Published source required" factoryId={factoryId} dataSource="live" description="This historical source link requires its decision case identity."><AsyncState kind="error" title="Historical source identity incomplete" description="A case ID is required to recover the exact publication; the latest head will not be used instead." /></OperationsShell>;
   return <CurrentSchedulePage api={client} factoryId={selectedFactoryId} mode={selectedMode} />;
 }
 
