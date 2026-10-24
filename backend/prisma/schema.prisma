@@ -1,8 +1,141 @@
+model FactoryIncident {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ factoryId String @map("factory_id")
+ title String
+ description String
+ category String
+ machineId String? @map("machine_id")
+ basisSnapshotId String? @map("basis_snapshot_id")
+ source String
+ severity String?
+ proposedSeverity String? @map("proposed_severity")
+ status String @default("OPEN")
+ ownerUserId String? @map("owner_user_id") @db.Uuid
+ revision Int @default(1)
+ occurrenceCount Int @default(1) @map("occurrence_count")
+ firstOccurredAt DateTime @default(now()) @map("first_occurred_at") @db.Timestamptz(6)
+ lastOccurredAt DateTime @default(now()) @map("last_occurred_at") @db.Timestamptz(6)
+ acknowledgedBy String? @map("acknowledged_by") @db.Uuid
+ acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz(6)
+ resolvedBy String? @map("resolved_by") @db.Uuid
+ resolvedAt DateTime? @map("resolved_at") @db.Timestamptz(6)
+ resolution Json? @db.JsonB
+ closedBy String? @map("closed_by") @db.Uuid
+ closedAt DateTime? @map("closed_at") @db.Timestamptz(6)
+ verification Json? @db.JsonB
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+ factory Factory @relation(fields: [factoryId], references: [factoryId], onDelete: Restrict, onUpdate: Restrict)
+ basis FactorySnapshot? @relation(fields: [factoryId, basisSnapshotId], references: [factoryId, snapshotId], onDelete: Restrict, onUpdate: Restrict)
+ owner User? @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ acknowledger User? @relation("IncidentAcknowledger", fields: [acknowledgedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ resolver User? @relation("IncidentResolver", fields: [resolvedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ verifier User? @relation("IncidentVerifier", fields: [closedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ occurrences IncidentOccurrence[]
+ events IncidentEvent[]
+ receipts IncidentCommandReceipt[]
+ caseLinks IncidentCaseLink[]
+ workOrderLinks IncidentWorkOrderLink[]
+ @@unique([factoryId, id])
+ @@index([factoryId, createdAt(sort: Desc), id(sort: Desc)], map: "factory_incidents_list_idx")
+ @@index([factoryId, machineId, status], map: "factory_incidents_machine_idx")
+ @@map("factory_incidents")
+}
+
+model IncidentOccurrence {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ factoryId String @map("factory_id")
+ incidentId String @map("incident_id") @db.Uuid
+ sequence Int
+ sourceType String @map("source_type")
+ sourceId String @map("source_id") @db.Uuid
+ sourceHash String @map("source_hash") @db.Char(64)
+ machineId String? @map("machine_id")
+ basisSnapshotId String? @map("basis_snapshot_id")
+ evidence Json @db.JsonB
+ actorId String @map("actor_id") @db.Uuid
+ recordedAt DateTime @default(now()) @map("recorded_at") @db.Timestamptz(6)
+ incident FactoryIncident @relation(fields: [factoryId, incidentId], references: [factoryId, id], onDelete: Restrict, onUpdate: Restrict)
+ basis FactorySnapshot? @relation(fields: [factoryId, basisSnapshotId], references: [factoryId, snapshotId], onDelete: Restrict, onUpdate: Restrict)
+ actor User @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ @@unique([factoryId, sourceType, sourceId])
+ @@unique([incidentId, sequence])
+ @@map("incident_occurrences")
+}
+
+model IncidentEvent {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ incidentId String @map("incident_id") @db.Uuid
+ sequence Int
+ command String
+ actorId String @map("actor_id") @db.Uuid
+ occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+ payload Json @db.JsonB
+ incident FactoryIncident @relation(fields: [incidentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ actor User @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ @@unique([incidentId, sequence])
+ @@map("incident_events")
+}
+
+model IncidentCommandReceipt {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ factoryId String @map("factory_id")
+ actorId String @map("actor_id") @db.Uuid
+ key String @map("idempotency_key") @db.VarChar(128)
+ requestHash String @map("request_hash") @db.Char(64)
+ incidentId String @map("incident_id") @db.Uuid
+ responseStatus Int @map("response_status")
+ responseBody Json @map("response_body") @db.JsonB
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ factory Factory @relation(fields: [factoryId], references: [factoryId], onDelete: Restrict, onUpdate: NoAction)
+ incident FactoryIncident @relation(fields: [factoryId, incidentId], references: [factoryId, id], onDelete: Restrict, onUpdate: NoAction)
+ actor User @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ @@unique([factoryId, actorId, key])
+ @@map("incident_command_receipts")
+}
+
+model IncidentCaseLink {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ incidentId String @map("incident_id") @db.Uuid
+ targetId String @map("target_id") @db.Uuid
+ associationScope String @map("association_scope")
+ createdBy String @map("created_by") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ removedBy String? @map("removed_by") @db.Uuid
+ removedAt DateTime? @map("removed_at") @db.Timestamptz(6)
+ removalReason String? @map("removal_reason")
+ incident FactoryIncident @relation(fields: [incidentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ target DecisionCase @relation(fields: [targetId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ creator User @relation("IncidentCaseLinkCreator", fields: [createdBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ remover User? @relation("IncidentCaseLinkRemover", fields: [removedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ // Active-target uniqueness is a partial index enforced by the SQL migration.
+ @@map("incident_case_links")
+}
+
+model IncidentWorkOrderLink {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ incidentId String @map("incident_id") @db.Uuid
+ targetId String @map("target_id") @db.Uuid
+ associationScope String @map("association_scope")
+ createdBy String @map("created_by") @db.Uuid
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ removedBy String? @map("removed_by") @db.Uuid
+ removedAt DateTime? @map("removed_at") @db.Timestamptz(6)
+ removalReason String? @map("removal_reason")
+ incident FactoryIncident @relation(fields: [incidentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ creator User @relation("IncidentWorkOrderLinkCreator", fields: [createdBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ remover User? @relation("IncidentWorkOrderLinkRemover", fields: [removedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ // Producer-owned target lookup; active-target uniqueness is a partial SQL index.
+ @@map("incident_work_order_links")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
 model FactorySnapshot {
+  incidents FactoryIncident[]
+  incidentOccurrences IncidentOccurrence[]
   factory Factory @relation(fields: [factoryId], references: [factoryId], onDelete: Restrict, onUpdate: Restrict)
   factoryId String @map("factory_id")
   snapshotId String @map("snapshot_id")
@@ -59,6 +192,7 @@ datasource db {
 }
 
 model DecisionCase {
+  incidentLinks IncidentCaseLink[]
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   factoryId String @map("factory_id")
   snapshotId String @map("snapshot_id")
@@ -316,6 +450,17 @@ model StepResult {
 }
 
 model User {
+  ownedIncidents FactoryIncident[] @relation("IncidentOwner")
+  acknowledgedIncidents FactoryIncident[] @relation("IncidentAcknowledger")
+  resolvedIncidents FactoryIncident[] @relation("IncidentResolver")
+  verifiedIncidents FactoryIncident[] @relation("IncidentVerifier")
+  incidentOccurrences IncidentOccurrence[]
+  incidentEvents IncidentEvent[]
+  incidentReceipts IncidentCommandReceipt[]
+  createdIncidentCaseLinks IncidentCaseLink[] @relation("IncidentCaseLinkCreator")
+  removedIncidentCaseLinks IncidentCaseLink[] @relation("IncidentCaseLinkRemover")
+  createdIncidentWorkOrderLinks IncidentWorkOrderLink[] @relation("IncidentWorkOrderLinkCreator")
+  removedIncidentWorkOrderLinks IncidentWorkOrderLink[] @relation("IncidentWorkOrderLinkRemover")
   assignedWorkOrders WorkOrder[] @relation("WorkOrderAssignee")
   createdWorkOrders WorkOrder[] @relation("WorkOrderCreator")
   workOrderEvents WorkOrderEvent[]
@@ -429,6 +574,8 @@ model MaintenanceDecisionAction {
 }
 
 model Factory {
+ incidents FactoryIncident[]
+ incidentReceipts IncidentCommandReceipt[]
  workOrders WorkOrder[]
  factoryId String @id @map("factory_id")
  name String
