@@ -4,6 +4,7 @@ const yaml = require('js-yaml');
 
 const ROOT = path.resolve(__dirname, '../..');
 const PATHS = [
+  "/maintenance-analytics/overview", "/maintenance-analytics/definitions", "/maintenance-analytics/trends", "/maintenance-analytics/machines", "/maintenance-analytics/drilldown",
   '/work-orders', '/work-orders/summaries', '/work-orders/{id}', '/work-orders/{id}/commands', '/work-orders/{id}/events',
   '/factories', '/factories/{factory_id}', '/factories/{factory_id}/members', '/factories/{factory_id}/members/{user_id}',
   '/operations/overview', '/operations/snapshot', '/schedules/current', '/decision-cases',
