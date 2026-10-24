@@ -304,12 +304,26 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await page.getByLabel("Username").fill("admin");
   await page.locator('input[autocomplete="current-password"]').fill(adminPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/overview(?:\?|$)/);
 
-  await page.goto("/operations");
-  await expect(page.getByRole("main").getByRole("heading", { name: "Operations Overview" })).toBeVisible();
-  await expect(page.getByText("CNC M06").first()).toBeVisible();
-  await expect(page.getByRole("note").first()).toContainText("Live Operations API mode");
+  await page.goto(`/overview?factory_id=${factoryId}`);
+  await expect(page.getByRole("main").getByRole("heading", { name: "Factory Overview", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Choose machine" })).toBeVisible();
+  await expect(page.getByRole("note").first()).toContainText("no fixture fallback");
+  for (const width of [1280, 1440, 1920, 2560]) {
+    await page.setViewportSize({ width, height: width === 2560 ? 1440 : 1000 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`real-overview-empty-${width}.png`) });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Choose machine" }).click();
+  await expect(page.getByRole("combobox", { name: "Search machines" })).toBeFocused();
+  await page.screenshot({ path: test.info().outputPath("real-machine-picker-1440.png") });
+  await page.getByRole("combobox", { name: "Search machines" }).fill("M03");
+  await page.getByRole("combobox", { name: "Search machines" }).press("Enter");
+  await expect(page.getByRole("region", { name: "Selected machine detail" })).toContainText("Observed");
+  await page.getByRole("region", { name: "Selected machine detail" }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: test.info().outputPath("real-machine-detail-1440.png") });
   const contextBefore = await currentContext(page.request);
   const scheduleBefore = await currentSchedule(page.request);
 
@@ -334,7 +348,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(page.getByRole("button", { name: "Create case", exact: true })).toBeDisabled();
   expect(submitted).toHaveLength(1);
   await page.getByRole("button", { name: "Recover create outcome" }).click();
-  await expect(page).toHaveURL(/\/operations\/recommendations\?caseId=/);
+  await expect(page).toHaveURL(/\/operations\/recommendations\?.*caseId=/);
   expect(submitted).toHaveLength(2);
   expect(submitted[1]).toEqual(submitted[0]);
   expect(await databaseQuery('SELECT count(*)::int AS count FROM decision_cases')).toEqual([{ count: 1 }]);
@@ -521,12 +535,15 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   const approvedIdentity = record(record(approvedPayload.meta).approved_candidate);
   expect(record(record(approvedPayload.meta).human_decision).actor_id).toBe(actorId);
   await page.getByRole("button", { name: "Commit approved schedule" }).click();
+  await expect(page.getByRole("dialog")).toContainText(factoryId);
+  await expect(page.getByRole("dialog")).toContainText(string(approvedIdentity.candidate_plan_id, "approved candidate"));
+  await page.screenshot({ path: test.info().outputPath("real-commit-confirmation-1440.png") });
   await page.getByRole("button", { name: "Confirm commit", exact: true }).click();
   await expect(page.getByRole("button", { name: "Recover decision outcome" })).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Recover decision outcome" }).click();
   await expect(page.getByRole("heading", { name: "Published schedule", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Current committed schedule", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open this published Gantt" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Recover decision outcome" })).toHaveCount(0);
   const published = await currentSchedule(page.request);
   expect(published.plan_version).toBe(contextBefore.planVersion + 1);
@@ -606,7 +623,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
     await expect(page.getByRole("article")).toHaveCount(1);
     await page.screenshot({ path: test.info().outputPath(`real-case-list-${name}.png`), fullPage: true });
     await open.click();
-    await expect(page).toHaveURL(new RegExp(`recommendations\\?caseId=${caseId}`));
+    await expect(page).toHaveURL(new RegExp(`recommendations\\?.*caseId=${caseId}`));
     const timeline = page.getByRole("list", { name: "Decision case audit events" });
     await expect(timeline.getByRole("listitem")).toHaveCount(freshEvents.length);
     expect(await timeline.getByRole("listitem").evaluateAll(nodes => nodes.map(node => Number(node.getAttribute("data-sequence"))))).toEqual(freshSequences);
@@ -786,6 +803,10 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   const viewerRead = await viewer.request.get(`${apiBase}/api/v1/decision-cases/${winner.id}`);
   expect(viewerRead.status()).toBe(200);
   expect(record((await json(viewerRead)).meta).available_commands).toEqual([]);
+  const viewerPage = await viewer.newPage();
+  await viewerPage.goto(`/operations/recommendations?factory_id=${factoryId}&caseId=${winner.id}`);
+  await expect(viewerPage.getByText(/VIEWER access is read-only/)).toBeVisible();
+  for (const name of ["Approve", "Reject", "Commit approved schedule", "Modify", "Recover decision outcome"]) await expect(viewerPage.getByRole("button", { name, exact: true })).toHaveCount(0);
   const viewerWrite = await viewer.request.post(`${apiBase}/api/v1/decision-cases/${loser.id}/decision`, {
     headers: { "Idempotency-Key": `viewer-forbidden-${randomUUID()}` }, data: raceCommands[loserIndex],
   });
@@ -798,6 +819,10 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   const rejectedRows = await listAllCases(viewer.request, { status: "REJECTED" });
   expect(rejectedRows.map(row => row.decision_case_id)).toContain(rejectCase.id);
   const outsider = await loginContext(browser, outsiderUsername, rolePassword);
+  const outsiderPage = await outsider.newPage();
+  await outsiderPage.goto(`/overview?factory_id=${factoryId}`);
+  await expect(outsiderPage.getByRole("heading", { name: "Factory context unavailable" })).toBeVisible();
+  await outsiderPage.screenshot({ path: test.info().outputPath("real-overview-inaccessible-1440.png") });
   for (const response of [
     await outsider.request.get(`${apiBase}/api/v1/operations/snapshot`, { params: { factory_id: factoryId } }),
     await outsider.request.get(`${apiBase}/api/v1/decision-cases`, { params: { factory_id: factoryId } }),
@@ -822,7 +847,8 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(reopened.getByText(winner.id, { exact: true }).first()).toBeVisible();
 
   // Exercise the shipped transport adapter against the real API, not a fixture server.
-  // This is adapter evidence, NOT acceptance of the redesigned /overview page.
+  // Compare the shipped summary adapter with PostgreSQL, then verify the same
+  // authoritative buckets and preview through the redesigned production page.
   await expect.poll(async () => {
     const rows = array(await databaseQuery("SELECT count(*)::int AS count FROM decision_cases WHERE factory_id = $1 AND processing_status IN ('PENDING', 'RUNNING')", factoryId));
     return record(rows[0]).count;
@@ -856,12 +882,58 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   }
   expect(await publicationState()).toEqual(beforeOverview);
 
+  await reopened.setViewportSize({ width: 1440, height: 1000 });
+  await reopened.goto(`/overview?factory_id=${factoryId}`);
+  const awaitingCard = reopened.getByRole("link", { name: "LIVE cases awaiting approval" });
+  await expect(awaitingCard).toContainText(String(overview.cases.LIVE.by_status.AWAITING_APPROVAL));
+  await expect(awaitingCard).toHaveAttribute("href", `/operations/cases?factory_id=${factoryId}&status=AWAITING_APPROVAL&mode=LIVE`);
+  await expect(reopened.getByRole("region", { name: "Factory read context" })).toContainText(overview.context.snapshot_id);
+  await reopened.screenshot({ path: test.info().outputPath("real-overview-review-1440.png") });
+  const observationsBefore = await publicationState();
+  // Advance observation only through the existing trusted ingestion service on
+  // this harness-owned schema; no backend changes, SQL mutation or new endpoint.
+  const testUrl = new URL(required("OPERATIONS_E2E_DATABASE_URL"));
+  if (!/_(test|ci)$/.test(testUrl.pathname) || !/^product_api_it_browser_/.test(testUrl.searchParams.get("schema") || "")) throw new Error("Expected isolated test schema");
+  const backendRequire = createRequire(path.resolve("../backend/package.json"));
+  const { PrismaClient } = backendRequire("@prisma/client");
+  const { ingestFactorySnapshot } = backendRequire("./src/services/operations-snapshot.service");
+  const db = new PrismaClient({ datasources: { db: { url: testUrl.toString() } } });
+  const nextSnapshot = { ...overviewSnapshot.snapshot, snapshot_id: `${overviewSnapshot.snapshot_id}-S2`,
+    captured_at: new Date(Date.parse(overviewSnapshot.captured_at) + 1000).toISOString(), current_schedule: null,
+    machines: overviewSnapshot.snapshot.machines.map(machine => ({ ...machine, display_name: `S2 ${machine.display_name}` })) };
+  try { await ingestFactorySnapshot({ factoryId, expectedHeadRevision: overview.context.head_revision, snapshot: nextSnapshot, sourceId: "browser-acceptance" }, db); }
+  finally { await db.$disconnect(); }
+  await reopened.getByRole("button", { name: "Refresh overview" }).click();
+  await expect(reopened.getByRole("region", { name: "Factory read context" })).toContainText(nextSnapshot.snapshot_id);
+  await expect(reopened.getByRole("region", { name: "Published factory plan" })).toContainText(string(record(racePublished.basis_snapshot).snapshot_id, "published immutable basis"));
+  await reopened.screenshot({ path: test.info().outputPath("real-overview-S2-P1-1440.png") });
+  await reopened.getByRole("link", { name: "Open integrated schedule" }).click();
+  await expect(reopened).toHaveURL(/\/operations\/schedule\?factory_id=/);
+  await expect(reopened.getByRole("heading", { name: "Current committed schedule", exact: true })).toBeVisible();
+  const context = reopened.getByRole("region", { name: "Schedule context" });
+  await expect(context.getByText("Observation snapshot ID").locator("..")).toContainText(nextSnapshot.snapshot_id);
+  await expect(context.getByText("Published basis snapshot ID").locator("..")).toContainText(string(record(racePublished.basis_snapshot).snapshot_id, "old basis"));
+  await expect(reopened.getByText(/^S2 CNC/)).toHaveCount(0);
+  await reopened.screenshot({ path: test.info().outputPath("real-current-Gantt-S2-P1-1440.png") });
+  await reopened.goto(`/operations/schedule?factory_id=${factoryId}&caseId=${caseId}`);
+  await expect(reopened.getByRole("heading", { name: "Published case schedule", exact: true }).last()).toBeVisible();
+  await expect(reopened.getByRole("heading", { name: "Published schedule", exact: true })).toBeVisible();
+  await expect(reopened.getByText(`Published plan version ${published.plan_version}`, { exact: false })).toBeVisible();
+  await reopened.screenshot({ path: test.info().outputPath("real-original-published-Gantt-1440.png") });
+  const scheduleAfterS2 = await currentSchedule(adminContext.request);
+  expect(scheduleAfterS2.schedule).toEqual(racePublished.schedule);
+  expect(scheduleAfterS2.basis_snapshot).toEqual(racePublished.basis_snapshot);
+  expect(scheduleAfterS2.plan_version).toBe(racePublished.plan_version);
+  expect(scheduleAfterS2.snapshot_id).toBe(nextSnapshot.snapshot_id);
+  const observationsAfter = await publicationState();
+  expect(record(array(observationsAfter)[0]).state).toMatchObject({ schedules: record(record(array(observationsBefore)[0]).state).schedules, publications: record(record(array(observationsBefore)[0]).state).publications });
+
   const evidence = {
     overview_dependency: {
       backend_pr: "https://github.com/AIVIETNAM-AIO-BachNguyen/reinforcement-learning-cnc/pull/45",
       backend_sha: "9404ecb35810501d82f1428e9ccadcc77275bf35",
-      frontend_redesign_sha: null,
-      scope: "real Overview adapter; redesigned entrypoint not available",
+      frontend_redesign_sha: required("OPERATIONS_E2E_GIT_SHA"),
+      scope: "real production Overview entrypoint, picker, create, worker, approval, commit, published Gantt and audit",
     },
     runtime: { node: process.version, postgresql: await databaseQuery("SHOW server_version") },
     schema_version: "1.0",
@@ -884,7 +956,9 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
       viewports: ["desktop", "mobile"], case_commands: completedDiscoveryWrites, read_interception: false },
     checks: {
       overview_adapter_counts_preview_head_match_database: "passed",
-      redesigned_overview_entrypoint: "not_available",
+      redesigned_overview_entrypoint: "passed",
+      observation_S2_preserves_published_basis_S1: "passed",
+      exact_case_publication_not_latest_head: "passed",
       real_fastapi_recommendation: "passed",
       exact_same_request_replay: "passed",
       unauthorized_access: "passed",
