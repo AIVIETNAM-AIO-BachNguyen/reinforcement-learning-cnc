@@ -1,5 +1,12 @@
 # Maintenance Workspace — implementation and contract handoff
 
+> Current follow-up (2026-10-25): integrated main #52 (472fe2b).
+> D1/D2 implementations and D3 producer correction now exist in this branch;
+> the earlier dependency notes below describe the previous M1 checkpoint.
+> Keep #53 Draft / NOT_VERIFIED until the final integration SHA has three
+> consecutive clean-schema full UI lifecycle runs and green CI.
+> See [current follow-up](maintenance-workspace-follow-up.md).
+
 Base: main `ff9a3aeec7d6f3b19e655a326cea214a968764c0` (merged #50/#51).
 Branch: `frontend/maintenance-workspace`. Backend implementation #51:
 `65b9733` (merge `ff9a3ae`); #50 frontend: `aaad285` (merge `1dcc4ed`).

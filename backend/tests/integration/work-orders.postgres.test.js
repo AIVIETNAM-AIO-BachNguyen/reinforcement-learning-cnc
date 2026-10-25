@@ -886,3 +886,36 @@ test.each(['auditLog', 'workOrderCommandReceipt'])(
   },
   60000,
 );
+
+
+test('assignee discovery uses current factory membership and role; exact-origin lookup never substitutes another publication', async () => {
+  const p = await f.publish(await f.factory());
+  const row = (await f.create(p)).body.data;
+  const base = '/work-orders/eligible-assignees?factory_id=' + p.body.factory_id;
+  for (const actor of [f.users.ADMIN, f.users.MANAGER]) {
+    const found = await f.http(base, {user: actor});
+    expect(found.status).toBe(200);
+    expect(found.body.data.map(u => u.user_id).sort()).toEqual([f.users.MANAGER.id, f.users.OPERATOR.id, f.users.OTHER.id].sort());
+    expect(found.body.data.some(u => ['ADMIN','VIEWER','OUTSIDER','INACTIVE'].some(k => f.users[k].id === u.user_id))).toBe(false);
+  }
+  expect((await f.http(base, {user: f.users.VIEWER})).status).toBe(403);
+  expect((await f.http(base, {user: f.users.OUTSIDER})).status).toBe(404);
+  const page = await f.http(base + '&limit=1', {user: f.users.MANAGER});
+  expect(page.body.data).toHaveLength(1);
+  expect(page.body.meta.has_more).toBe(true);
+  const next = await f.http(base + '&limit=1&after=' + page.body.meta.next_after, {user: f.users.MANAGER});
+  expect(next.body.data[0].user_id).not.toBe(page.body.data[0].user_id);
+  const origin = new URLSearchParams({factory_id: p.body.factory_id, schedule_id: p.body.source.schedule_id, schedule_revision: String(p.body.source.schedule_revision), assignment_id: p.body.source.assignment_id});
+  const lookup = () => '/work-orders/by-origin?' + origin;
+  expect((await f.http(lookup(), {user: f.users.VIEWER})).body.data).toEqual({id: row.id});
+  const denied = await f.http(lookup(), {user: f.users.OUTSIDER});
+  expect(denied.status).toBe(404); expect(JSON.stringify(denied.body)).not.toContain(row.id);
+  origin.set('schedule_revision', String(p.body.source.schedule_revision + 1));
+  expect((await f.http(lookup())).status).toBe(404);
+  origin.delete('schedule_revision');
+  expect((await f.http(lookup())).status).toBe(400);
+  await f.member(p.body.factory_id, f.users.OPERATOR, 'DELETE');
+  const after = await f.http(base, {user: f.users.MANAGER});
+  expect(after.body.data.some(u => u.user_id === f.users.OPERATOR.id)).toBe(false);
+  expect((await f.command(row, 'ASSIGN', {assignee_user_id: f.users.OPERATOR.id}, f.users.MANAGER)).body.error.code).toBe('ASSIGNEE_UNAVAILABLE');
+}, 30000);

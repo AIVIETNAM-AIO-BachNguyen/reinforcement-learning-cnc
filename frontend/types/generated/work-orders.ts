@@ -167,7 +167,7 @@ export interface WorkOrderREQUEST_REWORKCommand {
  */
 export interface WorkOrderREASSIGNCommand {
   assignee_user_id: string;
-  command: "REASSIGN" | "MANAGER_HOLD" | "REASSIGN_FOR_REWORK";
+  command: "REASSIGN";
   expected_revision: number;
   /**
    * Trimmed, nonblank text.
@@ -314,6 +314,23 @@ export interface WorkOrderSource {
 }
 /**
  * This interface was referenced by `WorkOrderContractCatalog`'s JSON-Schema
+ * via the `definition` "WorkOrderEligibleAssigneesResponse".
+ */
+export interface WorkOrderEligibleAssigneesResponse {
+  data: {
+    user_id: string;
+    username: string;
+  }[];
+  meta: {
+    has_more: boolean;
+    next_after: string | null;
+    read_at: string;
+    timezone: "UTC";
+  };
+  success: true;
+}
+/**
+ * This interface was referenced by `WorkOrderContractCatalog`'s JSON-Schema
  * via the `definition` "WorkOrderError".
  */
 export interface WorkOrderError {
@@ -444,6 +461,20 @@ export interface WorkOrderLookupResponse {
 export interface WorkOrderReadMeta {
   read_at: string;
   timezone: "UTC";
+}
+/**
+ * This interface was referenced by `WorkOrderContractCatalog`'s JSON-Schema
+ * via the `definition` "WorkOrderOriginResponse".
+ */
+export interface WorkOrderOriginResponse {
+  data: {
+    id: string;
+  };
+  meta: {
+    read_at: string;
+    timezone: "UTC";
+  };
+  success: true;
 }
 /**
  * This interface was referenced by `WorkOrderContractCatalog`'s JSON-Schema

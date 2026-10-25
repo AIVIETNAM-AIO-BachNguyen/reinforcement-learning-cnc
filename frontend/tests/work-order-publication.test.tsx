@@ -96,3 +96,14 @@ describe("create from authoritative COMMIT publication", () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 });
+
+it("finds and opens only the authorized exact-origin order", async () => {
+ const {api, commit, assignment, result, user, create} = await setup();
+ const lookup = vi.spyOn(api, "byOrigin").mockResolvedValue({success: true, data: {id: result.data.id}, meta: result.meta});
+ await user.click(screen.getByRole("button", {name: "Close review"}));
+ await user.click(screen.getByRole("button", {name: "Find existing work order"}));
+ const link = await screen.findByRole("link", {name: "Open existing work order"});
+ expect(link).toHaveAttribute("href", `/operations/work-orders/${result.data.id}?factory_id=${commit.factory_id}`);
+ expect(lookup).toHaveBeenCalledWith(commit.factory_id, commit.schedule_id, commit.schedule_revision, assignment.assignment_id);
+ expect(create).not.toHaveBeenCalled();
+});

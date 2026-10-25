@@ -5584,6 +5584,75 @@
         ],
         "type": "object"
       },
+      "WorkOrderEligibleAssigneesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "user_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "user_id",
+                "username"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "has_more": {
+                "type": "boolean"
+              },
+              "next_after": {
+                "format": "uuid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "timezone": {
+                "enum": [
+                  "UTC"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "read_at",
+              "timezone",
+              "has_more",
+              "next_after"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
       "WorkOrderError": {
         "additionalProperties": false,
         "properties": {
@@ -5965,6 +6034,56 @@
         ],
         "type": "object"
       },
+      "WorkOrderOriginResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "timezone": {
+                "enum": [
+                  "UTC"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "read_at",
+              "timezone"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
       "WorkOrderREASSIGNCommand": {
         "additionalProperties": false,
         "properties": {
@@ -5974,9 +6093,7 @@
           },
           "command": {
             "enum": [
-              "REASSIGN",
-              "MANAGER_HOLD",
-              "REASSIGN_FOR_REWORK"
+              "REASSIGN"
             ],
             "type": "string"
           },
@@ -11651,6 +11768,131 @@
           }
         ],
         "summary": "Create explicitly from current committed maintenance assignment",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/by-origin": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "schedule_revision",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderOriginResponse"
+                }
+              }
+            },
+            "description": "Scoped authoritative result"
+          },
+          "403": {
+            "description": "Management role required for assignee discovery"
+          },
+          "404": {
+            "description": "Factory or origin unavailable"
+          }
+        },
+        "summary": "by-origin",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/eligible-assignees": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderEligibleAssigneesResponse"
+                }
+              }
+            },
+            "description": "Scoped authoritative result"
+          },
+          "403": {
+            "description": "Management role required for assignee discovery"
+          },
+          "404": {
+            "description": "Factory or origin unavailable"
+          }
+        },
+        "summary": "eligible-assignees",
         "tags": [
           "Work Orders"
         ]

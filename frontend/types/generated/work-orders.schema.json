@@ -510,6 +510,75 @@
       ],
       "type": "object"
     },
+    "WorkOrderEligibleAssigneesResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "user_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "user_id",
+              "username"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "meta": {
+          "additionalProperties": false,
+          "properties": {
+            "has_more": {
+              "type": "boolean"
+            },
+            "next_after": {
+              "format": "uuid",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "read_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "timezone": {
+              "enum": [
+                "UTC"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "read_at",
+            "timezone",
+            "has_more",
+            "next_after"
+          ],
+          "type": "object"
+        },
+        "success": {
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "meta"
+      ],
+      "type": "object"
+    },
     "WorkOrderError": {
       "additionalProperties": false,
       "properties": {
@@ -891,6 +960,56 @@
       ],
       "type": "object"
     },
+    "WorkOrderOriginResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "meta": {
+          "additionalProperties": false,
+          "properties": {
+            "read_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "timezone": {
+              "enum": [
+                "UTC"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "read_at",
+            "timezone"
+          ],
+          "type": "object"
+        },
+        "success": {
+          "enum": [
+            true
+          ],
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "meta"
+      ],
+      "type": "object"
+    },
     "WorkOrderREASSIGNCommand": {
       "additionalProperties": false,
       "properties": {
@@ -900,9 +1019,7 @@
         },
         "command": {
           "enum": [
-            "REASSIGN",
-            "MANAGER_HOLD",
-            "REASSIGN_FOR_REWORK"
+            "REASSIGN"
           ],
           "type": "string"
         },

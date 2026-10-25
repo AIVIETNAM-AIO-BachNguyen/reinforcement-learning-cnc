@@ -8,7 +8,7 @@ import { parseWorkOrderQuery, workOrderReturnHref, workOrdersHref } from "@/lib/
 import { eventsExample, workOrderExample, workOrderListExample } from "./work-order-fixtures";
 
 describe("Work Orders producer contract transport", () => {
-  it("generates every WorkOrder schema without a parallel model, preserving nulls and producer enum ambiguity", () => {
+  it("generates every WorkOrder schema without a parallel model, preserving nulls and exact producer command variants", () => {
     const definitions = Object.fromEntries(Object.entries(contract.components.schemas).filter(([key]) => key.startsWith("WorkOrder")));
     expect(generated.definitions).toEqual(JSON.parse(JSON.stringify(definitions).replaceAll("#/components/schemas/", "#/definitions/")));
   });

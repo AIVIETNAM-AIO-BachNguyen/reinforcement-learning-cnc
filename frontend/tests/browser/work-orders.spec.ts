@@ -28,6 +28,7 @@ async function harness(page: Page) {
     reads.push(url);
     if (options.offline) return route.abort("connectionfailed");
     if (options.status !== 200) return route.fulfill({ status: options.status, json: { success: false, error: { code: options.status === 400 ? "INVALID_CURSOR" : "READ_UNAVAILABLE", message: "Private database details must not be displayed" }, requestId: `contract-read-${options.status}` } });
+    if (url.pathname.endsWith("/eligible-assignees")) return route.fulfill({ json: {success: true, data: [], meta: {read_at: list.meta.read_at, timezone: "UTC", has_more: false, next_after: null}} });
     if (url.pathname.endsWith("/events")) {
       const after = Number(url.searchParams.get("after_sequence") ?? 0);
       const event = eventExample(after + 1);
@@ -76,7 +77,7 @@ test("desktop list filters commit to URL, opaque cursor/back and exact detail re
   await expect.poll(() => new URL(page.url()).searchParams.get("machine_id")).toBe("M01");
   await expect(page.getByLabel("Machine ID", { exact: true })).toHaveValue("M01");
   expect(api.writes).toHaveLength(0);
-  expect(api.reads.filter(url => !url.pathname.endsWith("/events") && url.pathname !== "/api/v1/work-orders" && !url.pathname.endsWith(`/${id}`))).toHaveLength(0);
+  expect(api.reads.filter(url => !url.pathname.endsWith("/events") && !url.pathname.endsWith("/eligible-assignees") && url.pathname !== "/api/v1/work-orders" && !url.pathname.endsWith(`/${id}`))).toHaveLength(0);
 });
 
 test("historical detail keeps paged old reports, exact provenance and independent verification modal", async ({ page }, info) => {

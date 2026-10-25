@@ -1,6 +1,6 @@
 import { authFetch, endpoint, type TokenUser } from "@/lib/auth";
 import contract from "@/types/generated/work-orders.schema.json";
-import type { WorkOrderCommandRequest, WorkOrderCreateRequest, WorkOrderEventsResponse, WorkOrderListResponse, WorkOrderLookupResponse, WorkOrderResponse, WorkOrderSummary } from "@/types/generated/work-orders";
+import type { WorkOrderEligibleAssigneesResponse, WorkOrderOriginResponse, WorkOrderCommandRequest, WorkOrderCreateRequest, WorkOrderEventsResponse, WorkOrderListResponse, WorkOrderLookupResponse, WorkOrderResponse, WorkOrderSummary } from "@/types/generated/work-orders";
 
 export const WORK_ORDER_STATUSES = contract.definitions.WorkOrderSummary.properties.status.enum;
 export type WorkOrderStatus = WorkOrderSummary["status"];
@@ -51,7 +51,7 @@ export const errorExplanation = (error: WorkOrdersError) => {
   if (error.status === 404) return "This resource is unavailable or inaccessible. No metadata is disclosed.";
   const codes: Record<string, string> = {
     INVALID_CURSOR: "This cursor is no longer valid for your user, factory or filters. Restart pagination.",
-    WORK_ORDER_ORIGIN_EXISTS: "An order already exists for this exact publication assignment. Exact origin lookup is not provided yet; browse the factory list, do not guess an order ID.",
+    WORK_ORDER_ORIGIN_EXISTS: "An order already exists for this exact publication assignment. Open the existing order using the exact publication origin.",
     ACTIVE_MAINTENANCE_REQUEST_EXISTS: "An active order already exists for this maintenance request. Review existing work; nothing was cancelled or bypassed.",
     WORK_ORDER_OVERLAP: "The planned window overlaps existing work. Review the source and explicitly provide an override reason for a new intent, if authorized.",
     SOURCE_PLAN_CHANGED: "The source publication/head changed. Review this original source against the refreshed context; it will not be replaced with a newer assignment.",
@@ -82,6 +82,8 @@ export function createWorkOrdersClient({ fetcher = authFetch, baseUrl = endpoint
   }
   const queryString = (query: Record<string, string | number | undefined>) => new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string | number] => entry[1] !== undefined).map(([key, value]) => [key, String(value)])).toString();
   return {
+    eligibleAssignees: (factoryId: string, query = "", after?: string, options?: RequestOptions) => read<WorkOrderEligibleAssigneesResponse>(`/work-orders/eligible-assignees?${queryString({ factory_id: factoryId, query, after })}`, "WorkOrderEligibleAssigneesResponse", options),
+    byOrigin: (factoryId: string, scheduleId: string, scheduleRevision: number, assignmentId: string, options?: RequestOptions) => read<WorkOrderOriginResponse>(`/work-orders/by-origin?${queryString({ factory_id: factoryId, schedule_id: scheduleId, schedule_revision: scheduleRevision, assignment_id: assignmentId })}`, "WorkOrderOriginResponse", options),
     async identity(options: RequestOptions = {}): Promise<TokenUser> {
       const response = await fetcher(`${base}/auth/me`, { signal: options.signal, credentials: "include", cache: "no-store" });
       if (!response.ok) throw new WorkOrdersError(response.status, "SESSION_UNAVAILABLE", response.headers.get("X-Request-Id") ?? undefined);

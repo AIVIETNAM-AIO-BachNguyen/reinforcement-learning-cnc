@@ -37,7 +37,7 @@ describe("available-command forms, not a parallel lifecycle", () => {
   it.each([["ASSIGN", "Assign"], ["REASSIGN", "Reassign"], ["REASSIGN_FOR_REWORK", "Reassign for rework"]] as const)("%s requires picker data, never a production UUID workaround", async (command, name) => {
     const user = userEvent.setup(); const { submit, view } = setup(command);
     expect(screen.getByRole("button", { name })).toBeDisabled();
-    expect(screen.getByRole("note")).toHaveTextContent("D1");
+    expect(screen.getByRole("note")).toHaveTextContent("Eligible assignees");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     view.unmount();
     clearWorkOrderMemory();
@@ -114,4 +114,20 @@ describe("available-command forms, not a parallel lifecycle", () => {
     expect(submit.mock.calls[1][1]).toEqual(submit.mock.calls[0][1]);
     expect(submit.mock.calls[1][2].key).toBe(submit.mock.calls[0][2].key);
   });
+});
+
+it.each([["ASSIGN", "Assign"], ["REASSIGN", "Reassign"], ["REASSIGN_FOR_REWORK", "Reassign for rework"]] as const)("%s loads the authenticated picker without injected options", async (command, name) => {
+ const api = createWorkOrdersClient();
+ vi.spyOn(api, "identity").mockResolvedValue(workOrderActor);
+ const picker = vi.spyOn(api, "eligibleAssignees").mockResolvedValue({success: true, data: [{user_id: "b0000000-0000-4000-8000-000000000002", username: "Scoped operator"}], meta: {read_at: new Date().toISOString(), timezone: "UTC", has_more: false, next_after: null}});
+ const response = workOrderExample(); response.data.available_commands = [command];
+ const submit = vi.spyOn(api, "command").mockResolvedValue(response);
+ render(<WorkOrderActions api={api} actor={workOrderActor} response={response} fresh={true} refresh={vi.fn()} />);
+ await waitFor(() => expect(screen.getByRole("button", {name})).toBeEnabled());
+ await userEvent.click(screen.getByRole("button", {name}));
+ await userEvent.selectOptions(screen.getByLabelText("Eligible assignee"), "b0000000-0000-4000-8000-000000000002");
+ if(command !== "ASSIGN") await userEvent.type(screen.getByLabelText("Reason"), "Independent review");
+ await userEvent.click(screen.getByRole("button", {name: `Confirm ${name.toLowerCase()}`}));
+ await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+ expect(picker).toHaveBeenCalledWith(response.data.factory_id, "", undefined, expect.objectContaining({signal: expect.any(AbortSignal)}));
 });

@@ -34,6 +34,13 @@ function PublicationWorkOrderContent({ actor, sessionFresh, commit, snapshot, as
   const [selected, setSelected] = useState<ScheduleAssignment | null>(null);
   const [override, setOverride] = useState("");
   const [overrideRequired, setOverrideRequired] = useState(false);
+  const [existing, setExisting] = useState<Record<string, string>>({});
+  const [originError, setOriginError] = useState("");
+  const originEpoch = useRef(0);
+  useEffect(() => {
+    originEpoch.current += 1; setExisting({}); setOriginError("");
+    return () => { originEpoch.current += 1; };
+  }, [actor.id, actor.role, sessionFresh, commit.factory_id, commit.schedule_id, commit.schedule_revision]);
   const [created, setCreated] = useState<string>();
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
@@ -75,6 +82,13 @@ function PublicationWorkOrderContent({ actor, sessionFresh, commit, snapshot, as
     const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", leave); return () => window.removeEventListener("beforeunload", leave);
   }, [intent.unresolved, override]);
+  const openExisting = async (assignmentId: string) => {
+    if (!sessionFresh) return;
+    const epoch = originEpoch.current;
+    setOriginError("");
+    try { const result = await api.byOrigin(commit.factory_id, commit.schedule_id, commit.schedule_revision, assignmentId); if (epoch === originEpoch.current) setExisting(old => ({ ...old, [assignmentId]: result.data.id })); }
+    catch (error) { if (epoch === originEpoch.current) setOriginError(errorExplanation(error instanceof WorkOrdersError ? error : new WorkOrdersError(0, "REQUEST_FAILED"))); }
+  };
   const close = () => { if (intent.busy) return; if ((override.trim() || intent.state.kind === "uncertain") && !window.confirm("Close this review? An unconfirmed create may already exist. The original request remains in memory only; do not create another intent to recover it.")) return; setSelected(null); };
   const rejected = intent.state.kind === "rejected";
   return <div className="mt-4 space-y-4">
@@ -86,8 +100,8 @@ function PublicationWorkOrderContent({ actor, sessionFresh, commit, snapshot, as
     {intent.state.kind === "uncertain" ? <div className="space-y-3 rounded border border-amber-300 bg-amber-50 p-4"><p role="alert" className="text-sm">Create outcome unconfirmed for assignment <code className="break-all">{intent.original?.source.assignment_id}</code>. Retry the original key/body/head; it may already have succeeded. No new intent is allowed.</p><button className="dss-primary" disabled={intent.busy} onClick={intent.retry}>Retry original create</button></div> : null}
     {intent.state.error ? <WorkOrderFailure error={intent.state.error} retry={refresh} /> : null}
     {rejected ? <button className="dss-secondary" disabled={state.kind !== "ready"} onClick={intent.reviewed}>I reviewed this original source and refreshed context</button> : null}
-    <div className="overflow-auto rounded border bg-white" role="region" aria-label="Published maintenance assignments" tabIndex={0}><table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-slate-100 text-xs text-slate-500"><tr><th className="p-3">Machine / request</th><th className="p-3">Planned window</th><th className="p-3">Assignment</th><th className="p-3">Create</th></tr></thead><tbody className="divide-y">{assignments.map(assignment => <tr key={assignment.assignment_id}><td className="p-3"><p className="font-mono">{assignment.machine_id}</p><p className="mt-1 break-all text-xs text-slate-500">{assignment.maintenance_request_id ?? "Not provided"}</p></td><td className="p-3 font-mono text-xs tabular-nums">{workOrderTime(assignment.start_at)}<br />to {workOrderTime(assignment.end_at)}</td><td className="max-w-48 break-all p-3 font-mono text-xs">{assignment.assignment_id}</td><td className="p-3">{management ? <button className="dss-primary" disabled={!matches || intent.unresolved || intent.busy} onClick={() => { trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSelected(assignment); }}>Review create work order</button> : <span className="text-xs text-slate-500">Management access required</span>}</td></tr>)}</tbody></table></div>
-    <p className="text-xs text-slate-500">Exact existing-order lookup is not available (D2). An origin-exists response is never mapped to a guessed ID or an order from a different assignment.</p>
+    <div className="overflow-auto rounded border bg-white" role="region" aria-label="Published maintenance assignments" tabIndex={0}><table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-slate-100 text-xs text-slate-500"><tr><th className="p-3">Machine / request</th><th className="p-3">Planned window</th><th className="p-3">Assignment</th><th className="p-3">Create</th></tr></thead><tbody className="divide-y">{assignments.map(assignment => <tr key={assignment.assignment_id}><td className="p-3"><p className="font-mono">{assignment.machine_id}</p><p className="mt-1 break-all text-xs text-slate-500">{assignment.maintenance_request_id ?? "Not provided"}</p></td><td className="p-3 font-mono text-xs tabular-nums">{workOrderTime(assignment.start_at)}<br />to {workOrderTime(assignment.end_at)}</td><td className="max-w-48 break-all p-3 font-mono text-xs">{assignment.assignment_id}</td><td className="p-3">{sessionFresh ? existing[assignment.assignment_id] ? <Link className="dss-secondary" href={workOrderDetailHref(existing[assignment.assignment_id], commit.factory_id)}>Open existing work order</Link> : <button className="dss-secondary" onClick={() => openExisting(assignment.assignment_id)}>Find existing work order</button> : null}{management ? <button className="dss-primary" disabled={!matches || intent.unresolved || intent.busy} onClick={() => { trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSelected(assignment); }}>Review create work order</button> : <span className="text-xs text-slate-500">Management access required</span>}</td></tr>)}</tbody></table></div>
+    {originError ? <p role="alert" className="text-sm text-rose-800">{originError}</p> : null}
     {selected ? <dialog ref={dialog} aria-labelledby="wo-create-title" onCancel={event => { event.preventDefault(); close(); }} className="fixed inset-0 z-50 m-auto max-h-[90vh] w-[calc(100%-3rem)] max-w-2xl overflow-y-auto rounded-xl border bg-white p-6 shadow-xl backdrop:bg-slate-950/40"><form className="space-y-4" onSubmit={event => {
       event.preventDefault();
       if (!context || !matches || !management || intent.unresolved || intent.busy || (overrideRequired && !override.trim())) return;
