@@ -8,7 +8,7 @@ const baseline = require('../../contracts/v3/operations-http.openapi.json');
 test('frozen HTTP contract contains all Operations routes and their complete reference closure', () => {
   expect(extract(api)).toEqual(baseline);
   expect(Object.keys(baseline.paths).sort()).toEqual(PATHS.slice().sort());
-  expect(Object.values(baseline.paths).reduce((count, item) => count + Object.keys(item).length, 0)).toBe(27);
+  expect(Object.values(baseline.paths).reduce((count, item) => count + Object.keys(item).length, 0)).toBe(29);
   expect(baseline.components.securitySchemes).toHaveProperty('cookieAuth');
   expect(baseline.components.securitySchemes).toHaveProperty('bearerAuth');
 });

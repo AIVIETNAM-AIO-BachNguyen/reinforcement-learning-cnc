@@ -11,13 +11,13 @@ async function main() {
   if (!output || !password) throw new Error('OPERATIONS_E2E_USERS_FILE and OPERATIONS_E2E_ROLE_PASSWORD are required');
   const passwordHash = await bcrypt.hash(password, 12);
   const users = {};
-  for (const [key, username] of [['viewer', 'operations_e2e_viewer'], ['outsider', 'operations_e2e_outsider']]) {
+  for (const [key, username] of [['viewer', 'operations_e2e_viewer'], ['outsider', 'operations_e2e_outsider'], ['operator', 'maintenance_e2e_operator'], ['replacement', 'maintenance_e2e_replacement'], ['engineer', 'maintenance_e2e_engineer']]) {
     users[key] = await prisma.user.create({ data: {
       username,
       fullName: `Operations E2E ${key}`,
       email: `${username}@example.test`,
       passwordHash,
-      role: 'VIEWER',
+      role: key === 'engineer' ? 'ENGINEER' : ['operator', 'replacement'].includes(key) ? 'OPERATOR' : 'VIEWER',
       active: true,
     }, select: { id: true, username: true, role: true } });
   }

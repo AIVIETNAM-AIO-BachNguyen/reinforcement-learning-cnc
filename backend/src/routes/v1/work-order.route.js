@@ -9,6 +9,8 @@ const noQuery = (req) => parse(z.object({}).strict(), req.query);
 router.use(requireAuth);
 router.get('/', async (req, res) => res.json(await read.listWorkOrders(db, req.user, req.query)));
 router.get('/summaries', async (req, res) => res.json(await read.lookupHttp(db, req.user, req.query)));
+router.get('/eligible-assignees', async (req, res) => res.json(await read.eligibleAssignees(db, req.user, req.query)));
+router.get('/by-origin', async (req, res) => res.json(await read.byOrigin(db, req.user, req.query)));
 router.post('/', async (req, res) => {
   noQuery(req);
   const r = await write.createWorkOrder(db, req.user, req.body, req.get('Idempotency-Key'));

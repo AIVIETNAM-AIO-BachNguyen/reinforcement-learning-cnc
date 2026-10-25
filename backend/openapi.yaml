@@ -24,6 +24,85 @@ security:
   - cookieAuth: []
   - bearerAuth: []
 paths:
+  /work-orders/eligible-assignees:
+    get:
+      tags:
+        - Work Orders
+      summary: eligible-assignees
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+        - in: query
+          name: after
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Scoped authoritative result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderEligibleAssigneesResponse'
+        '403':
+          description: Management role required for assignee discovery
+        '404':
+          description: Factory or origin unavailable
+  /work-orders/by-origin:
+    get:
+      tags:
+        - Work Orders
+      summary: by-origin
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: schedule_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: schedule_revision
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: assignment_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scoped authoritative result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderOriginResponse'
+        '403':
+          description: Management role required for assignee discovery
+        '404':
+          description: Factory or origin unavailable
   /maintenance-analytics/overview:
     get:
       tags:
@@ -5546,6 +5625,90 @@ components:
               message: Database unavailable. Check DATABASE_URL and make sure Postgres is running.
 
   schemas:
+    WorkOrderEligibleAssigneesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - user_id
+              - username
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              username:
+                type: string
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+            - read_at
+            - timezone
+            - has_more
+            - next_after
+          properties:
+            read_at:
+              type: string
+              format: date-time
+            timezone:
+              type: string
+              enum:
+                - UTC
+            has_more:
+              type: boolean
+            next_after:
+              type:
+                - string
+                - 'null'
+              format: uuid
+    WorkOrderOriginResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+            - read_at
+            - timezone
+          properties:
+            read_at:
+              type: string
+              format: date-time
+            timezone:
+              type: string
+              enum:
+                - UTC
     MaintenanceAnalyticsMeta:
       type: object
       additionalProperties: false
@@ -7114,8 +7277,6 @@ components:
           type: string
           enum:
             - REASSIGN
-            - MANAGER_HOLD
-            - REASSIGN_FOR_REWORK
         expected_revision:
           type: integer
           minimum: 1
