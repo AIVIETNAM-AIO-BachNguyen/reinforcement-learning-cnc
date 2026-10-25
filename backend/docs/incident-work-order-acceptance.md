@@ -1,7 +1,7 @@
 # Incident / Work Order joint acceptance
 
 Status: IN_PROGRESS. This follow-up is stacked on Incident Center PR #54 at
-`50eb879866983204fd84f694ab6d0d214e1611dc`, which includes main
+`8e4efd8d8b69e182d96c73afb8df054cf29e20b0`, which includes main
 `ff9a3aeec7d6f3b19e655a326cea214a968764c0` and merged Work Orders #51.
 It does not change product APIs, the Incident UI, or the planner.
 
@@ -28,8 +28,10 @@ The harness now verifies two separate properties, without replacing the planner:
    technicians, statuses, locks, candidate versions and validation verdicts.
    Case-derived opaque IDs and stochastic ranking are excluded only here.
 
-The original selected-candidate fingerprint remains in each browser evidence file
-for diagnosis. `planner_replay` records the additional checks. Missing recorded
+Dependency update `8e4efd8` independently adds exact persisted-request replay and
+API restart checks to the Incident browser harness. Those checks are retained.
+This follow-up additionally replays the actual recorded worker request (rather
+than reconstructing it) and records `planner_replay`. Missing recorded
 requests, failed HTTP replay, or any full-response mismatch fails the run.
 
 ## Reproduce
@@ -55,6 +57,10 @@ Do not publish authentication cookies or browser traces containing sessions.
 Passing this targeted harness alone does not mean VERIFIED_DONE. The full negative
 and recovery matrix, final Contracts/Operations CI, and final-SHA evidence must
 all be audited before joint acceptance is declared complete.
+
+The dependency's restart check covers Incident detail, events and occurrences
+after a real API restart in every browser run. The linked recovery test below also
+checks both producer and consumer responses through two independent API processes.
 
 ## Requirement-to-evidence map
 

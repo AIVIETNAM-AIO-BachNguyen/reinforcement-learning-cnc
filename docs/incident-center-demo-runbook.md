@@ -41,7 +41,9 @@ npm --prefix backend run operations:incident-demo -- --repeat=3 --acceptance
 deploys all migrations, seeds two factories and role users, then starts the API,
 dedicated worker, real planner and Next.js with readiness checks. It uses Chromium
 for Incident actions and authenticated producer APIs for Work Order execution.
-The harness closes owned services/ports and drops the schema after each run.
+After browser assertions, the harness restarts its API, logs in again and compares
+Incident detail, evidence and event history against the pre-restart responses.
+It closes owned services/ports and drops the schema after each run.
 No existing schema is reset or swept.
 
 For a development smoke run omit `--acceptance` and use `--repeat=1`.
@@ -113,8 +115,12 @@ processes or drop a broad set of schemas.
 Default directory: `artifacts/operations-e2e/<git SHA>/run-N/`.
 Includes migration/service logs, Playwright failure traces, desktop screenshots
 at 1280/1440/1920, `incident-evidence.json` with only executed assertions, and
-`cleanup-result.json`. `incident-summary.json` records the three planner
-fingerprints; differing fingerprints fail the run.
+`cleanup-result.json`. Each Incident run replays the exact persisted planning
+request twice against FastAPI and compares the complete recommendation with the
+worker's persisted package. `incident-summary.json` compares the physical plans
+for all strategies across resets; differing fingerprints fail the run. Case IDs
+change across resets and participate in the simulator seed, so the selected
+strategy and Monte-Carlo risk estimates are not compared across different cases.
 
 Traces may contain ephemeral test-session cookies; handle artifacts as test
 diagnostics, not public documentation. Never reuse those credentials elsewhere.

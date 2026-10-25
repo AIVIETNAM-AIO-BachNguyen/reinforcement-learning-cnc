@@ -32,6 +32,12 @@ Milestone: IN_PROGRESS. This is not final acceptance evidence.
   and exposed an existing test's global case/publication counts after the Incident
   suite created records in its separate factory. Assertions now scope those counts
   to the Operations test factory; the corrected full gate still needs verification.
+- At `50eb879`, CI completed all three browser runs and cleanup, then rejected
+  the Incident cross-reset fingerprint. The new test incorrectly compared only
+  the recommended strategy across different case IDs (which affect simulation
+  seeds). The correction compares complete packages on exact-request replay and
+  all physical candidate plans across resets. Final checks must restart on the
+  corrected SHA. Local runs 1 and 2 passed; run 3 was interrupted and is not passed.
 
 ## Still pending
 
