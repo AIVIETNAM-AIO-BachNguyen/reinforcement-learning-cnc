@@ -34,6 +34,81 @@ const link = (row, target, key = randomUUID()) => f.http('/incidents/' + row.id 
   { method: 'POST', key, body: { expected_revision: row.revision, target } });
 const resolution = { code: 'FIXED', summary: 'Reviewed', evidence: 'Recorded inspection' };
 
+test('linked order survives both access-loss recoveries, S2/P2, reopen and independent API restarts', async () => {
+  const { startApi } = require('../helpers/work-order-process-client');
+  const { ingestFactorySnapshot } = require('../../src/services/operations-snapshot.service');
+  let { row, order, publication } = await setup();
+  row = data(await link(row, { type: 'work_order', id: order.id })).incident;
+  row = data(await link(row, { type: 'case', id: publication.id })).incident;
+  const source = order.source;
+  const execute = async (name, fields = {}, actor = f.users.OPERATOR) => {
+    order = data(await f.command(order, name, fields, actor));
+  };
+  await execute('ASSIGN', { assignee_user_id: f.users.OPERATOR.id }, f.users.MANAGER);
+  await execute('ACCEPT');
+  await execute('START');
+  const started = order.actual_started_at;
+  await execute('BLOCK', { reason: 'Inspection material unavailable' });
+  await execute('RESUME', { reason: 'Material received' });
+  expect((await f.member(publication.body.factory_id, f.users.OPERATOR, 'DELETE')).status).toBe(200);
+  expect((await f.command(order, 'COMPLETE', { report: { outcome: 'SUCCESS', work_performed: 'Denied', result: 'Denied' } })).status).toBe(404);
+  await execute('MANAGER_HOLD', { reason: 'Assignee access revoked during execution' }, f.users.MANAGER);
+  await execute('REASSIGN', { assignee_user_id: f.users.OTHER.id, reason: 'Eligible replacement' }, f.users.MANAGER);
+  await execute('ACCEPT', {}, f.users.OTHER);
+  await execute('START', {}, f.users.OTHER);
+  expect(order.actual_started_at).toBe(started);
+  await execute('COMPLETE', { report: { outcome: 'PARTIAL', work_performed: 'First inspection', result: 'Further work required' } }, f.users.OTHER);
+  const firstCompletion = await db.workOrderCompletion.findFirstOrThrow({ where: { workOrderId: order.id, attempt: 1 } });
+  expect((await f.member(publication.body.factory_id, f.users.OTHER, 'DELETE')).status).toBe(200);
+  expect((await f.member(publication.body.factory_id, f.users.OUTSIDER)).status).toBe(200);
+  await execute('REASSIGN_FOR_REWORK', { assignee_user_id: f.users.OUTSIDER.id, reason: 'Independent review requires rework by eligible replacement' }, f.users.MANAGER);
+  expect(order).toMatchObject({ status: 'ASSIGNED', attempt: 2, actual_started_at: started });
+  expect(await db.workOrderCompletion.findUnique({ where: { id: firstCompletion.id } })).toEqual(firstCompletion);
+  for (const user of [f.users.OPERATOR, f.users.OTHER]) {
+    expect((await db.factoryMembership.findUnique({ where: { factoryId_userId: { factoryId: publication.body.factory_id, userId: user.id } } })).active).toBe(false);
+    expect((await f.http('/work-orders/' + order.id, { user })).status).toBe(404);
+  }
+  await execute('ACCEPT', {}, f.users.OUTSIDER);
+  await execute('START', {}, f.users.OUTSIDER);
+  await execute('COMPLETE', { report: { outcome: 'SUCCESS', work_performed: 'Replacement inspection', result: 'Ready for independent verification' } }, f.users.OUTSIDER);
+  expect((await command(row, 'MARK_RESOLVED', { resolution })).body.error.code).toBe('INCIDENT_WORK_ORDER_ACTIVE');
+  await execute('CLOSE', { verification: { result: 'VERIFIED', note: 'Independent verification after rework' } }, f.users.MANAGER);
+  expect(data(await f.http('/incidents/' + row.id)).incident.status).toBe('INVESTIGATING');
+
+  const head = await db.operationsHead.findUnique({ where: { factoryId: publication.body.factory_id } });
+  const s2 = { ...structuredClone(publication.snapshot), snapshot_id: 'linked-recovery-S2-' + randomUUID() };
+  await ingestFactorySnapshot({ factoryId: s2.factory_id, expectedHeadRevision: head.revision, snapshot: s2, sourceId: 'linked-recovery-upgrade' }, db);
+  await f.publish(s2);
+  const headAfterP2 = await db.operationsHead.findUnique({ where: { factoryId: s2.factory_id } });
+  const snapshotsAfterP2 = await db.factorySnapshot.findMany({ where: { factoryId: s2.factory_id }, orderBy: { snapshotId: 'asc' } });
+  expect(data(await f.http('/work-orders/' + order.id))).toMatchObject({ source, source_is_current: false });
+  row = data(await command(row, 'MARK_RESOLVED', { resolution })).incident;
+  row = data(await command(row, 'CLOSE', { verification: { resolution_code: 'FIXED', note: 'Independent incident verification' } }, f.users.ADMIN)).incident;
+  const closed = data(await f.http('/incidents/' + row.id));
+  row = data(await command(row, 'REOPEN', { reason: 'A new human observation needs investigation' }, f.users.ADMIN)).incident;
+  const paths = ['/incidents/' + row.id, '/incidents/' + row.id + '/events', '/incidents/' + row.id + '/occurrences', '/work-orders/' + order.id, '/work-orders/' + order.id + '/events'];
+  const expected = await Promise.all(paths.map(async path => data(await f.http(path))));
+  expect(expected[0].incident.resolution).toEqual(closed.incident.resolution);
+  expect(expected[0].incident.verification).toEqual(closed.incident.verification);
+  expect(expected[0].work_orders[0]).toMatchObject({ id: order.id, status: 'CLOSED', source_is_current: false });
+  for (let restart = 0; restart < 2; restart++) {
+    const api = await startApi();
+    try {
+      for (let i = 0; i < paths.length; i++) {
+        const response = await api.http(paths[i], f.users.ADMIN);
+        expect(response.status).toBe(200);
+        expect(response.cache).toBe('no-store');
+        expect(response.body.data).toEqual(expected[i]);
+      }
+      expect((await api.http('/incidents/' + row.id, f.users.OPERATOR)).status).toBe(404);
+    } finally { await api.stop(); }
+  }
+  expect(await db.operationsHead.findUnique({ where: { factoryId: s2.factory_id } })).toEqual(headAfterP2);
+  expect(await db.factorySnapshot.findMany({ where: { factoryId: s2.factory_id }, orderBy: { snapshotId: 'asc' } })).toEqual(snapshotsAfterP2);
+  expect(await db.workOrderCompletion.count({ where: { workOrderId: order.id } })).toBe(2);
+  expect(await db.workOrderCompletion.findUnique({ where: { id: firstCompletion.id } })).toEqual(firstCompletion);
+}, 90000);
+
 test('real Work Order overrides are explicit and audited; unlink keeps history and never changes producer state', async () => {
   let { row, order } = await setup();
   const target = { type: 'work_order', id: order.id };
