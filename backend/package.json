@@ -10,6 +10,7 @@
     "worker:dev": "nodemon src/worker/index.js",
     "test": "jest",
     "test:integration": "node tests/integration/run-integration-tests.js",
+    "test:maintenance-analytics": "node tests/integration/run-integration-tests.js --maintenance-analytics",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",

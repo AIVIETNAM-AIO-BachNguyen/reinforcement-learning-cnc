@@ -24,6 +24,677 @@ security:
   - cookieAuth: []
   - bearerAuth: []
 paths:
+  /maintenance-analytics/overview:
+    get:
+      tags:
+        - Maintenance Analytics
+      operationId: maintenanceAnalyticsOverview
+      summary: Read maintenance analytics overview
+      description: >-
+        Active authenticated user; scoped factory authorization except definitions. See
+        docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+            maxLength: 128
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: timezone
+          required: false
+          schema:
+            type: string
+            default: UTC
+            description: IANA timezone; calendar weeks begin Monday
+        - in: query
+          name: machine_id
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Consistent read; observation time is not telemetry freshness. No workflow writes.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceAnalyticsOverviewResponse'
+        '400':
+          description: VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '500':
+          description: MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE; no fallback or fabricated zero
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  /maintenance-analytics/definitions:
+    get:
+      tags:
+        - Maintenance Analytics
+      operationId: maintenanceAnalyticsDefinitions
+      summary: Read maintenance analytics definitions
+      description: >-
+        Active authenticated user; scoped factory authorization except definitions. See
+        docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.
+      parameters: []
+      responses:
+        '200':
+          description: Consistent read; observation time is not telemetry freshness. No workflow writes.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceAnalyticsDefinitionsResponse'
+        '400':
+          description: VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '500':
+          description: MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE; no fallback or fabricated zero
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  /maintenance-analytics/trends:
+    get:
+      tags:
+        - Maintenance Analytics
+      operationId: maintenanceAnalyticsTrends
+      summary: Read maintenance analytics trends
+      description: >-
+        Active authenticated user; scoped factory authorization except definitions. See
+        docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+            maxLength: 128
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: timezone
+          required: false
+          schema:
+            type: string
+            default: UTC
+            description: IANA timezone; calendar weeks begin Monday
+        - in: query
+          name: machine_id
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: metric_key
+          required: true
+          schema:
+            enum:
+              - created_orders
+              - closed_orders
+              - cancelled_orders
+              - successful_verified_orders
+              - rework_decision_rate
+              - first_pass_verified_rate
+              - time_to_first_accept
+              - active_execution_time
+              - verification_wait_time
+        - in: query
+          name: bucket
+          required: false
+          schema:
+            enum:
+              - day
+              - week
+              - month
+            default: day
+      responses:
+        '200':
+          description: Consistent read; observation time is not telemetry freshness. No workflow writes.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceAnalyticsTrendsResponse'
+        '400':
+          description: VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '500':
+          description: MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE; no fallback or fabricated zero
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  /maintenance-analytics/machines:
+    get:
+      tags:
+        - Maintenance Analytics
+      operationId: maintenanceAnalyticsMachines
+      summary: Read maintenance analytics machines
+      description: >-
+        Active authenticated user; scoped factory authorization except definitions. See
+        docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+            maxLength: 128
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: timezone
+          required: false
+          schema:
+            type: string
+            default: UTC
+            description: IANA timezone; calendar weeks begin Monday
+        - in: query
+          name: machine_id
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            maxLength: 8192
+            description: >-
+              Signed keyset bound to actor, source, scope, filters and definition version. Not a frozen
+              cross-request snapshot.
+        - in: query
+          name: sort
+          required: false
+          schema:
+            enum:
+              - overdue
+              - blocked
+              - open
+              - rework_rate
+              - active_p90
+            default: overdue
+      responses:
+        '200':
+          description: Consistent read; observation time is not telemetry freshness. No workflow writes.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceAnalyticsMachinesResponse'
+        '400':
+          description: VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '500':
+          description: MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE; no fallback or fabricated zero
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+  /maintenance-analytics/drilldown:
+    get:
+      tags:
+        - Maintenance Analytics
+      operationId: maintenanceAnalyticsDrilldown
+      summary: Read maintenance analytics drilldown
+      description: >-
+        Active authenticated user; scoped factory authorization except definitions. See
+        docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.
+      parameters:
+        - in: query
+          name: factory_id
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+            maxLength: 128
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+            description: RFC3339 offset required. from < to <= read_at; at most 366 days.
+        - in: query
+          name: timezone
+          required: false
+          schema:
+            type: string
+            default: UTC
+            description: IANA timezone; calendar weeks begin Monday
+        - in: query
+          name: machine_id
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            maxLength: 8192
+            description: >-
+              Signed keyset bound to actor, source, scope, filters and definition version. Not a frozen
+              cross-request snapshot.
+        - in: query
+          name: metric_key
+          required: true
+          schema:
+            enum:
+              - open_orders
+              - overdue_orders
+              - blocked_orders
+              - waiting_verification_orders
+              - created_orders
+              - closed_orders
+              - cancelled_orders
+              - successful_verified_orders
+              - rework_decision_rate
+              - first_pass_verified_rate
+              - time_to_first_accept
+              - active_execution_time
+              - verification_wait_time
+        - in: query
+          name: population
+          required: false
+          schema:
+            enum:
+              - numerator
+              - denominator
+            description: Required only for rate metrics
+      responses:
+        '200':
+          description: Consistent read; observation time is not telemetry freshness. No workflow writes.
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceAnalyticsDrilldownResponse'
+        '400':
+          description: VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '401':
+          description: UNAUTHORIZED
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '404':
+          description: FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '500':
+          description: MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
+        '503':
+          description: DB_UNAVAILABLE; no fallback or fabricated zero
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderError'
   /work-orders:
     get:
       tags:
@@ -4875,6 +5546,720 @@ components:
               message: Database unavailable. Check DATABASE_URL and make sure Postgres is running.
 
   schemas:
+    MaintenanceAnalyticsMeta:
+      type: object
+      additionalProperties: false
+      properties:
+        read_at:
+          type: string
+          format: date-time
+        metric_definition_version:
+          const: maintenance-analytics.v1
+        filters:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                factory_id:
+                  type: string
+                machine_id:
+                  type:
+                    - string
+                    - 'null'
+              required:
+                - factory_id
+                - machine_id
+            - type: 'null'
+        period:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+              required:
+                - from
+                - to
+            - type: 'null'
+        timezone:
+          type: string
+        comparison_period:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              properties:
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+              required:
+                - from
+                - to
+            - type: 'null'
+      required:
+        - read_at
+        - metric_definition_version
+        - filters
+        - period
+        - timezone
+        - comparison_period
+    MaintenanceAnalyticsCount:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          type: integer
+          minimum: 0
+        availability:
+          const: AVAILABLE
+        verification:
+          type: object
+          additionalProperties: false
+          properties:
+            VERIFIED:
+              type: integer
+            VERIFIED_STOPPED:
+              type: integer
+          required:
+            - VERIFIED
+            - VERIFIED_STOPPED
+      required:
+        - value
+        - availability
+    MaintenanceAnalyticsRate:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          type:
+            - number
+            - 'null'
+        numerator:
+          type: integer
+          minimum: 0
+        denominator:
+          type: integer
+          minimum: 0
+        availability:
+          enum:
+            - AVAILABLE
+            - NO_DATA
+      required:
+        - value
+        - numerator
+        - denominator
+        - availability
+    MaintenanceAnalyticsDuration:
+      type: object
+      additionalProperties: false
+      properties:
+        median:
+          type:
+            - number
+            - 'null'
+        p90:
+          type:
+            - number
+            - 'null'
+        sample_count:
+          type: integer
+          minimum: 0
+        excluded_count:
+          type: integer
+          minimum: 0
+        exclusions:
+          type: object
+          additionalProperties: false
+          properties:
+            MISSING_HISTORY:
+              type: integer
+            INCONSISTENT_HISTORY:
+              type: integer
+          required:
+            - MISSING_HISTORY
+            - INCONSISTENT_HISTORY
+        availability:
+          enum:
+            - AVAILABLE
+            - NO_DATA
+            - PARTIAL
+        unit:
+          const: seconds
+      required:
+        - median
+        - p90
+        - sample_count
+        - excluded_count
+        - exclusions
+        - availability
+        - unit
+    MaintenanceAnalyticsDelta:
+      type: object
+      additionalProperties: false
+      properties:
+        absolute:
+          type:
+            - number
+            - 'null'
+        percent:
+          type:
+            - number
+            - 'null'
+      required:
+        - absolute
+        - percent
+    MaintenanceAnalyticsDefinition:
+      type: object
+      additionalProperties: false
+      properties:
+        metric_key:
+          enum:
+            - open_orders
+            - overdue_orders
+            - blocked_orders
+            - waiting_verification_orders
+            - created_orders
+            - closed_orders
+            - cancelled_orders
+            - successful_verified_orders
+            - rework_decision_rate
+            - first_pass_verified_rate
+            - time_to_first_accept
+            - active_execution_time
+            - verification_wait_time
+        grain:
+          enum:
+            - ORDER
+            - ATTEMPT
+            - DECISION
+        cohort:
+          type: string
+        unit:
+          enum:
+            - count
+            - fraction
+            - seconds
+        formula:
+          type: string
+        percentile:
+          type: string
+        exclusions:
+          type: array
+          items:
+            type: string
+        meaning:
+          type: string
+      required:
+        - metric_key
+        - grain
+        - cohort
+        - unit
+        - formula
+    MaintenanceAnalyticsOverview:
+      type: object
+      additionalProperties: false
+      properties:
+        snapshot:
+          type: object
+          additionalProperties: false
+          properties:
+            open_orders:
+              $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+            overdue_orders:
+              $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+            blocked_orders:
+              $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+            waiting_verification_orders:
+              $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+          required:
+            - open_orders
+            - overdue_orders
+            - blocked_orders
+            - waiting_verification_orders
+        period:
+          type: object
+          additionalProperties: false
+          properties:
+            created_orders:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                delta:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+              required:
+                - current
+                - previous
+                - delta
+            closed_orders:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                delta:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+              required:
+                - current
+                - previous
+                - delta
+            cancelled_orders:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                delta:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+              required:
+                - current
+                - previous
+                - delta
+            successful_verified_orders:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                delta:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+              required:
+                - current
+                - previous
+                - delta
+            rework_decision_rate:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                delta_percentage_points:
+                  type:
+                    - number
+                    - 'null'
+              required:
+                - current
+                - previous
+                - delta_percentage_points
+            first_pass_verified_rate:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                delta_percentage_points:
+                  type:
+                    - number
+                    - 'null'
+              required:
+                - current
+                - previous
+                - delta_percentage_points
+            time_to_first_accept:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                delta:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    median:
+                      $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+                    p90:
+                      $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+                  required:
+                    - median
+                    - p90
+              required:
+                - current
+                - previous
+                - delta
+            active_execution_time:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                delta:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    median:
+                      $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+                    p90:
+                      $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+                  required:
+                    - median
+                    - p90
+              required:
+                - current
+                - previous
+                - delta
+            verification_wait_time:
+              type: object
+              additionalProperties: false
+              properties:
+                current:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                previous:
+                  $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                delta:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    median:
+                      $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+                    p90:
+                      $ref: '#/components/schemas/MaintenanceAnalyticsDelta'
+                  required:
+                    - median
+                    - p90
+              required:
+                - current
+                - previous
+                - delta
+          required:
+            - created_orders
+            - closed_orders
+            - cancelled_orders
+            - successful_verified_orders
+            - rework_decision_rate
+            - first_pass_verified_rate
+            - time_to_first_accept
+            - active_execution_time
+            - verification_wait_time
+        coverage:
+          enum:
+            - AVAILABLE
+            - PARTIAL
+      required:
+        - snapshot
+        - period
+        - coverage
+    MaintenanceAnalyticsSample:
+      type: object
+      additionalProperties: false
+      properties:
+        work_order_id:
+          type: string
+        sample_id:
+          type: string
+        event_id:
+          type:
+            - string
+            - 'null'
+        completion_id:
+          type:
+            - string
+            - 'null'
+        cohort_at:
+          type: string
+          format: date-time
+        attempt:
+          type:
+            - integer
+            - 'null'
+        command:
+          type:
+            - string
+            - 'null'
+        metric_key:
+          enum:
+            - open_orders
+            - overdue_orders
+            - blocked_orders
+            - waiting_verification_orders
+            - created_orders
+            - closed_orders
+            - cancelled_orders
+            - successful_verified_orders
+            - rework_decision_rate
+            - first_pass_verified_rate
+            - time_to_first_accept
+            - active_execution_time
+            - verification_wait_time
+        contribution:
+          type: number
+        duration_seconds:
+          type:
+            - number
+            - 'null'
+        exclusion_reason:
+          type:
+            - string
+            - 'null'
+          enum:
+            - null
+            - MISSING_HISTORY
+            - INCONSISTENT_HISTORY
+        verification_result:
+          type:
+            - string
+            - 'null'
+        reason:
+          type:
+            - string
+            - 'null'
+        factory_id:
+          type: string
+        machine_id:
+          type: string
+        status:
+          type: string
+        basis_snapshot_id:
+          type: string
+        source_case_id:
+          type: string
+        schedule_id:
+          type: string
+        schedule_revision:
+          type: integer
+        assignment_id:
+          type: string
+        published_plan_version:
+          type: integer
+        grain:
+          enum:
+            - ORDER
+            - ATTEMPT
+            - DECISION
+      required:
+        - work_order_id
+        - sample_id
+        - event_id
+        - completion_id
+        - cohort_at
+        - attempt
+        - command
+        - metric_key
+        - contribution
+        - duration_seconds
+        - exclusion_reason
+        - verification_result
+        - reason
+        - factory_id
+        - machine_id
+        - status
+        - basis_snapshot_id
+        - source_case_id
+        - schedule_id
+        - schedule_revision
+        - assignment_id
+        - published_plan_version
+        - grain
+    MaintenanceAnalyticsOverviewResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success:
+          const: true
+        data:
+          $ref: '#/components/schemas/MaintenanceAnalyticsOverview'
+        meta:
+          $ref: '#/components/schemas/MaintenanceAnalyticsMeta'
+      required:
+        - success
+        - data
+        - meta
+    MaintenanceAnalyticsDefinitionsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success:
+          const: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceAnalyticsDefinition'
+        meta:
+          $ref: '#/components/schemas/MaintenanceAnalyticsMeta'
+      required:
+        - success
+        - data
+        - meta
+    MaintenanceAnalyticsTrendsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success:
+          const: true
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              start:
+                type: string
+                format: date-time
+              end:
+                type: string
+                format: date-time
+              metric:
+                oneOf:
+                  - $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                  - $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                  - $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+            required:
+              - start
+              - end
+              - metric
+        meta:
+          $ref: '#/components/schemas/MaintenanceAnalyticsMeta'
+      required:
+        - success
+        - data
+        - meta
+    MaintenanceAnalyticsMachinesResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  machine_id:
+                    type: string
+                  name:
+                    type:
+                      - string
+                      - 'null'
+                  present_in_current_snapshot:
+                    type: boolean
+                  metrics:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      open_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      overdue_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      blocked_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      waiting_verification_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      created_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      closed_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      cancelled_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      successful_verified_orders:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsCount'
+                      rework_decision_rate:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                      first_pass_verified_rate:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsRate'
+                      time_to_first_accept:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                      active_execution_time:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                      verification_wait_time:
+                        $ref: '#/components/schemas/MaintenanceAnalyticsDuration'
+                    required:
+                      - open_orders
+                      - overdue_orders
+                      - blocked_orders
+                      - waiting_verification_orders
+                      - created_orders
+                      - closed_orders
+                      - cancelled_orders
+                      - successful_verified_orders
+                      - rework_decision_rate
+                      - first_pass_verified_rate
+                      - time_to_first_accept
+                      - active_execution_time
+                      - verification_wait_time
+                required:
+                  - machine_id
+                  - name
+                  - present_in_current_snapshot
+                  - metrics
+            total:
+              type: integer
+            has_more:
+              type: boolean
+            next_cursor:
+              type:
+                - string
+                - 'null'
+          required:
+            - items
+            - total
+            - has_more
+            - next_cursor
+        meta:
+          $ref: '#/components/schemas/MaintenanceAnalyticsMeta'
+      required:
+        - success
+        - data
+        - meta
+    MaintenanceAnalyticsDrilldownResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        success:
+          const: true
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MaintenanceAnalyticsSample'
+            total:
+              type: integer
+            has_more:
+              type: boolean
+            next_cursor:
+              type:
+                - string
+                - 'null'
+          required:
+            - items
+            - total
+            - has_more
+            - next_cursor
+        meta:
+          $ref: '#/components/schemas/MaintenanceAnalyticsMeta'
+      required:
+        - success
+        - data
+        - meta
     WorkOrderSourceInput:
       type: object
       additionalProperties: false

@@ -70,6 +70,7 @@ stage 'Canonical contracts and generated client types' uv run --frozen --project
 stage 'Backend unit tests' env NODE_ENV=test npm --prefix backend test -- --runInBand
 # Each runner migrates its own fresh schema, and cleans it in finally even on failure.
 stage 'PostgreSQL integration' npm --prefix backend run test:integration
+stage 'Maintenance analytics sequential HTTP benchmark (10k orders / 110k events)' node backend/scripts/run-maintenance-analytics-benchmark.js
 stage 'Persisted snapshot and Decision Case worker through real FastAPI planning' npm --prefix backend run test:operations-planning
 stage 'Frontend generated types' npm --prefix frontend run contracts:check
 stage 'Frontend typecheck' npm --prefix frontend run typecheck
