@@ -7,6 +7,7 @@ const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { createInterface } = require('node:readline');
 const { setTimeout: delay } = require('node:timers/promises');
+const { deepStrictEqual, strictEqual } = require('node:assert');
 
 const root = path.resolve(__dirname, '..');
 const backendRoot = path.join(root, 'backend');
@@ -385,6 +386,38 @@ async function runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, 
       treeOnAbort: true,
     });
     const incidentEvidence = JSON.parse(fs.readFileSync(path.join(runDir, 'incident-evidence.json'), 'utf8'));
+    // Verify durable state through a new authenticated API process, not merely a
+    // browser reload against the same process. Do not save session cookies.
+    async function readIncidentHistory() {
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
+      const login = await fetch(`${apiUrl}/api/v1/auth/login`, { method: 'POST', signal,
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: adminPassword }) });
+      strictEqual(login.status, 200, 'Restart verification login must succeed');
+      const cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
+      if (!cookie) throw new Error('Restart verification requires a real login cookie');
+      const result = {};
+      for (const id of [incidentEvidence.incident_id, incidentEvidence.linked_incident_id]) {
+        for (const suffix of ['', '/events', '/occurrences']) {
+          const response = await fetch(`${apiUrl}/api/v1/incidents/${id}${suffix}`, { signal, headers: { Cookie: cookie } });
+          strictEqual(response.status, 200, 'Incident remains readable after API restart');
+          const body = await response.json();
+          strictEqual(body.success, true);
+          if (body.meta?.has_more) throw new Error('Restart check must compare complete incident history');
+          result[id + suffix] = body.data;
+        }
+      }
+      return result;
+    }
+    const beforeRestart = await readIncidentHistory();
+    await stopProcess(api);
+    await waitForPortClosed(apiPort);
+    api = startProcess('backend-api-restarted', process.execPath, ['src/server.js'], {
+      cwd: backendRoot, env: serviceEnv, logFile: path.join(runDir, 'backend-api-restarted.log'),
+    });
+    await waitForHttp(`${apiUrl}/api/health`, api, 'Restarted backend API');
+    deepStrictEqual(await readIncidentHistory(), beforeRestart, 'Incident detail, evidence and audit must survive process restart');
+    incidentEvidence.assertions_passed.push('incident_detail_occurrences_audit_survive_api_restart');
+    fs.writeFileSync(path.join(runDir, 'incident-evidence.json'), JSON.stringify(incidentEvidence, null, 2) + '\n');
     if (process.argv.includes('--incidents')) return incidentEvidence;
     return { ...JSON.parse(fs.readFileSync(path.join(runDir, 'evidence.json'), 'utf8')), incidents: incidentEvidence };
   } finally {

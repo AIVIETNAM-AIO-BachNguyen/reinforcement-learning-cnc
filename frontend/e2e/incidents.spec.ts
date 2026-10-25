@@ -58,6 +58,22 @@ async function realPublication(ctx: BrowserContext) {
     { timeout: 90000 }).toBe("AWAITING_APPROVAL");
   const status = await (await ctx.request.get(api + "/api/v1/decision-cases/" + id)).json();
   const recommendation = (await (await ctx.request.get(api + "/api/v1/decision-cases/" + id + "/recommendation")).json()).data.recommendation;
+  const [stored] = await database(`SELECT c.request_json, c.created_at, c.actor_id, s.payload_json
+    FROM decision_cases c JOIN factory_snapshots s ON s.factory_id=c.factory_id AND s.snapshot_id=c.snapshot_id
+    WHERE c.id=$1::uuid`, id);
+  const replayRequest = {
+    schema_version: "3.0", decision_case_id: id, mode: stored.request_json.request.mode,
+    factory_snapshot: stored.payload_json, requested_by_user_id: stored.actor_id,
+    trigger: { ...stored.request_json.request.trigger, event_id: id, occurred_at: stored.created_at.toISOString() },
+    planning_config: stored.request_json.request.planning_config,
+  };
+  for (let replay = 0; replay < 2; replay++) {
+    const response = await ctx.request.post(process.env.OPERATIONS_E2E_AI_URL + "/v1/operations/plan", {
+      headers: { "X-Request-Id": "incident-replay-" + id, "X-Correlation-Id": id }, data: replayRequest,
+    });
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual(recommendation);
+  }
   expect(recommendation.candidate_plans.length).toBeGreaterThanOrEqual(1);
   expect(recommendation.candidate_plans.length).toBeLessThanOrEqual(3);
   const candidate = recommendation.candidate_plans.find((c: { candidate_plan_id: string }) => c.candidate_plan_id === recommendation.recommended_plan_id);
@@ -77,11 +93,15 @@ async function realPublication(ctx: BrowserContext) {
       schedule_revision: publication.schedule_revision, schedule_hash: publication.schedule_hash, assignment_id: assignment.assignment_id },
     expected_head: { snapshot_id: current.snapshot_id, plan_version: current.plan_version, revision: current.revision },
   }, 201);
-  const fingerprint = createHash("sha256").update(JSON.stringify({
-    strategy: candidate.strategy,
-    assignments: candidate.schedule.assignments.map((a: Record<string, unknown>) => Object.fromEntries(
-      ["assignment_type", "machine_id", "job_id", "operation_id", "maintenance_request_id", "technician_ids", "start_at", "end_at", "status"].map(key => [key, a[key]]))),
-  })).digest("hex");
+  // Across resets case/schedule IDs differ, so Monte-Carlo risk estimates and
+  // the recommended strategy may differ. Exact replay above compares the entire
+  // package for identical inputs; this fingerprint compares all physical plans.
+  const physicalPlans = recommendation.candidate_plans.map((plan: typeof candidate) => ({
+    strategy: plan.strategy, plan_version: plan.plan_version, validation: plan.validation.verdict,
+    assignments: plan.schedule.assignments.map((a: Record<string, unknown>) => Object.fromEntries(
+      ["assignment_type", "machine_id", "job_id", "operation_id", "maintenance_request_id", "technician_ids", "start_at", "end_at", "status", "locked"].map(key => [key, a[key]]))),
+  })).sort((left: { strategy: string }, right: { strategy: string }) => left.strategy.localeCompare(right.strategy));
+  const fingerprint = createHash("sha256").update(JSON.stringify(physicalPlans)).digest("hex");
   return { caseId: id, order: order.data, fingerprint };
 }
 async function link(page: Page, type: string, id: string) {
@@ -274,7 +294,7 @@ test("real incident desktop lifecycle, lost-response reload, roles and immutable
     expect((await unlinked).status()).toBe(200);
     expect((await database("SELECT removal_reason FROM incident_case_links WHERE id=$1::uuid", caseLink.id))[0].removal_reason).toBe("Remove association while preserving trace");
     passed.push("ui_duplicate_link_noop", "ui_unlink_preserves_trace");
-    passed.push("real_worker_fastapi_approve_commit_work_order", "from_case_ui_immutable_evidence", "real_case_and_work_order_links",
+    passed.push("exact_persisted_request_replay_matches_full_recommendation", "real_worker_fastapi_approve_commit_work_order", "from_case_ui_immutable_evidence", "real_case_and_work_order_links",
       "active_and_completed_orders_block_resolution", "order_close_does_not_auto_close_incident", "independent_linked_incident_closure");
     // Populate through the actual report form; counts must describe the entire
     // factory even when a cursor page displays only ten rows.
@@ -316,7 +336,7 @@ test("real incident desktop lifecycle, lost-response reload, roles and immutable
       incident_id: id, assertions_passed: passed,
       linked_incident_id: linkedId, decision_case_id: planned.caseId, work_order_id: order.id,
       recommendation_fingerprint: planned.fingerprint,
-      pending: ["populated_upgrade", "full_negative_matrix"],
+      not_covered_by_this_suite: ["populated_exact_base_upgrade", "http_role_revocation_and_coordinated_lock_tests"],
     }, null, 2));
   } finally {
     for (const ctx of contexts.reverse()) await ctx.close().catch(error => {
