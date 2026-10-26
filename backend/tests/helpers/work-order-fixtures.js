@@ -66,7 +66,7 @@ async function fixture(db, app) {
       if ((await member(factoryId, users[name])).status !== 200) throw Error('fixture grant failed');
     return snapshot;
   }
-  async function publish(snapshot, { mode = 'LIVE', commit = true, maintenanceStatus } = {}) {
+  async function publish(snapshot, { mode = 'LIVE', commit = true, maintenanceStatus, transformCandidate } = {}) {
     const head = await db.operationsHead.findUnique({ where: { factoryId: snapshot.factory_id } });
     const r = await http('/decision-cases', {
       method: 'POST',
@@ -95,6 +95,7 @@ async function fixture(db, app) {
         schedule_id: 'wo-schedule-' + id,
       },
     };
+    if (transformCandidate) transformCandidate(candidate);
     if (maintenanceStatus) {
       const maintenance = candidate.schedule.assignments.find((a) => a.assignment_type === 'MAINTENANCE');
       maintenance.status = maintenanceStatus;

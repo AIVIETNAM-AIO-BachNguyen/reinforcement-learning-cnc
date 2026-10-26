@@ -46,3 +46,10 @@ test('recovery commands are available in request, detail and event contracts', (
     expect(api.components.schemas.WorkOrderEvent.properties.command.enum).toContain(name);
   }
 });
+
+test('every command discriminator selects exactly one producer branch', () => {
+ const variants = api.components.schemas.WorkOrderCommandRequest.oneOf.map(r => api.components.schemas[r.$ref.split('/').at(-1)]);
+ const commands = variants.flatMap(s => s.properties.command.enum);
+ expect(new Set(commands).size).toBe(12);
+ expect(commands).toHaveLength(12);
+});

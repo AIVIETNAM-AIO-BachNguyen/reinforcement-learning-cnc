@@ -3657,6 +3657,1017 @@
         ],
         "type": "object"
       },
+      "MaintenanceAnalyticsCount": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "const": "AVAILABLE"
+          },
+          "value": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "verification": {
+            "additionalProperties": false,
+            "properties": {
+              "VERIFIED": {
+                "type": "integer"
+              },
+              "VERIFIED_STOPPED": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "VERIFIED",
+              "VERIFIED_STOPPED"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "value",
+          "availability"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "cohort": {
+            "type": "string"
+          },
+          "exclusions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "formula": {
+            "type": "string"
+          },
+          "grain": {
+            "enum": [
+              "ORDER",
+              "ATTEMPT",
+              "DECISION"
+            ]
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "metric_key": {
+            "enum": [
+              "open_orders",
+              "overdue_orders",
+              "blocked_orders",
+              "waiting_verification_orders",
+              "created_orders",
+              "closed_orders",
+              "cancelled_orders",
+              "successful_verified_orders",
+              "rework_decision_rate",
+              "first_pass_verified_rate",
+              "time_to_first_accept",
+              "active_execution_time",
+              "verification_wait_time"
+            ]
+          },
+          "percentile": {
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "count",
+              "fraction",
+              "seconds"
+            ]
+          }
+        },
+        "required": [
+          "metric_key",
+          "grain",
+          "cohort",
+          "unit",
+          "formula"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsDefinitionsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceAnalyticsDefinition"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MaintenanceAnalyticsMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsDelta": {
+        "additionalProperties": false,
+        "properties": {
+          "absolute": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "percent": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "absolute",
+          "percent"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsDrilldownResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "has_more": {
+                "type": "boolean"
+              },
+              "items": {
+                "items": {
+                  "$ref": "#/components/schemas/MaintenanceAnalyticsSample"
+                },
+                "type": "array"
+              },
+              "next_cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "items",
+              "total",
+              "has_more",
+              "next_cursor"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MaintenanceAnalyticsMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsDuration": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "NO_DATA",
+              "PARTIAL"
+            ]
+          },
+          "excluded_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "exclusions": {
+            "additionalProperties": false,
+            "properties": {
+              "INCONSISTENT_HISTORY": {
+                "type": "integer"
+              },
+              "MISSING_HISTORY": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "MISSING_HISTORY",
+              "INCONSISTENT_HISTORY"
+            ],
+            "type": "object"
+          },
+          "median": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "p90": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sample_count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "unit": {
+            "const": "seconds"
+          }
+        },
+        "required": [
+          "median",
+          "p90",
+          "sample_count",
+          "excluded_count",
+          "exclusions",
+          "availability",
+          "unit"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsMachinesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "has_more": {
+                "type": "boolean"
+              },
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "machine_id": {
+                      "type": "string"
+                    },
+                    "metrics": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "active_execution_time": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                        },
+                        "blocked_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "cancelled_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "closed_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "created_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "first_pass_verified_rate": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                        },
+                        "open_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "overdue_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "rework_decision_rate": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                        },
+                        "successful_verified_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        },
+                        "time_to_first_accept": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                        },
+                        "verification_wait_time": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                        },
+                        "waiting_verification_orders": {
+                          "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                        }
+                      },
+                      "required": [
+                        "open_orders",
+                        "overdue_orders",
+                        "blocked_orders",
+                        "waiting_verification_orders",
+                        "created_orders",
+                        "closed_orders",
+                        "cancelled_orders",
+                        "successful_verified_orders",
+                        "rework_decision_rate",
+                        "first_pass_verified_rate",
+                        "time_to_first_accept",
+                        "active_execution_time",
+                        "verification_wait_time"
+                      ],
+                      "type": "object"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "present_in_current_snapshot": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "machine_id",
+                    "name",
+                    "present_in_current_snapshot",
+                    "metrics"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "next_cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "items",
+              "total",
+              "has_more",
+              "next_cursor"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MaintenanceAnalyticsMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "comparison_period": {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "to": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "factory_id": {
+                    "type": "string"
+                  },
+                  "machine_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "factory_id",
+                  "machine_id"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric_definition_version": {
+            "const": "maintenance-analytics.v1"
+          },
+          "period": {
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "to": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from",
+                  "to"
+                ],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "read_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_at",
+          "metric_definition_version",
+          "filters",
+          "period",
+          "timezone",
+          "comparison_period"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "enum": [
+              "AVAILABLE",
+              "PARTIAL"
+            ]
+          },
+          "period": {
+            "additionalProperties": false,
+            "properties": {
+              "active_execution_time": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                  },
+                  "delta": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "median": {
+                        "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                      },
+                      "p90": {
+                        "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                      }
+                    },
+                    "required": [
+                      "median",
+                      "p90"
+                    ],
+                    "type": "object"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              },
+              "cancelled_orders": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  },
+                  "delta": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              },
+              "closed_orders": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  },
+                  "delta": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              },
+              "created_orders": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  },
+                  "delta": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              },
+              "first_pass_verified_rate": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                  },
+                  "delta_percentage_points": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta_percentage_points"
+                ],
+                "type": "object"
+              },
+              "rework_decision_rate": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                  },
+                  "delta_percentage_points": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta_percentage_points"
+                ],
+                "type": "object"
+              },
+              "successful_verified_orders": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  },
+                  "delta": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              },
+              "time_to_first_accept": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                  },
+                  "delta": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "median": {
+                        "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                      },
+                      "p90": {
+                        "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                      }
+                    },
+                    "required": [
+                      "median",
+                      "p90"
+                    ],
+                    "type": "object"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              },
+              "verification_wait_time": {
+                "additionalProperties": false,
+                "properties": {
+                  "current": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                  },
+                  "delta": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "median": {
+                        "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                      },
+                      "p90": {
+                        "$ref": "#/components/schemas/MaintenanceAnalyticsDelta"
+                      }
+                    },
+                    "required": [
+                      "median",
+                      "p90"
+                    ],
+                    "type": "object"
+                  },
+                  "previous": {
+                    "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                  }
+                },
+                "required": [
+                  "current",
+                  "previous",
+                  "delta"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "created_orders",
+              "closed_orders",
+              "cancelled_orders",
+              "successful_verified_orders",
+              "rework_decision_rate",
+              "first_pass_verified_rate",
+              "time_to_first_accept",
+              "active_execution_time",
+              "verification_wait_time"
+            ],
+            "type": "object"
+          },
+          "snapshot": {
+            "additionalProperties": false,
+            "properties": {
+              "blocked_orders": {
+                "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+              },
+              "open_orders": {
+                "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+              },
+              "overdue_orders": {
+                "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+              },
+              "waiting_verification_orders": {
+                "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+              }
+            },
+            "required": [
+              "open_orders",
+              "overdue_orders",
+              "blocked_orders",
+              "waiting_verification_orders"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "snapshot",
+          "period",
+          "coverage"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsOverviewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MaintenanceAnalyticsOverview"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MaintenanceAnalyticsMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsRate": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "NO_DATA"
+            ]
+          },
+          "denominator": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "numerator": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "value",
+          "numerator",
+          "denominator",
+          "availability"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsSample": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "type": "string"
+          },
+          "attempt": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "basis_snapshot_id": {
+            "type": "string"
+          },
+          "cohort_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "command": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completion_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contribution": {
+            "type": "number"
+          },
+          "duration_seconds": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "event_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exclusion_reason": {
+            "enum": [
+              null,
+              "MISSING_HISTORY",
+              "INCONSISTENT_HISTORY"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "factory_id": {
+            "type": "string"
+          },
+          "grain": {
+            "enum": [
+              "ORDER",
+              "ATTEMPT",
+              "DECISION"
+            ]
+          },
+          "machine_id": {
+            "type": "string"
+          },
+          "metric_key": {
+            "enum": [
+              "open_orders",
+              "overdue_orders",
+              "blocked_orders",
+              "waiting_verification_orders",
+              "created_orders",
+              "closed_orders",
+              "cancelled_orders",
+              "successful_verified_orders",
+              "rework_decision_rate",
+              "first_pass_verified_rate",
+              "time_to_first_accept",
+              "active_execution_time",
+              "verification_wait_time"
+            ]
+          },
+          "published_plan_version": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sample_id": {
+            "type": "string"
+          },
+          "schedule_id": {
+            "type": "string"
+          },
+          "schedule_revision": {
+            "type": "integer"
+          },
+          "source_case_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "verification_result": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "work_order_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "work_order_id",
+          "sample_id",
+          "event_id",
+          "completion_id",
+          "cohort_at",
+          "attempt",
+          "command",
+          "metric_key",
+          "contribution",
+          "duration_seconds",
+          "exclusion_reason",
+          "verification_result",
+          "reason",
+          "factory_id",
+          "machine_id",
+          "status",
+          "basis_snapshot_id",
+          "source_case_id",
+          "schedule_id",
+          "schedule_revision",
+          "assignment_id",
+          "published_plan_version",
+          "grain"
+        ],
+        "type": "object"
+      },
+      "MaintenanceAnalyticsTrendsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "end": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "metric": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/MaintenanceAnalyticsCount"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MaintenanceAnalyticsRate"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MaintenanceAnalyticsDuration"
+                    }
+                  ]
+                },
+                "start": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "start",
+                "end",
+                "metric"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MaintenanceAnalyticsMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
       "OperationsAssignmentStatus": {
         "enum": [
           "PROPOSED",
@@ -5704,6 +6715,75 @@
         ],
         "type": "object"
       },
+      "WorkOrderEligibleAssigneesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "user_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "user_id",
+                "username"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "has_more": {
+                "type": "boolean"
+              },
+              "next_after": {
+                "format": "uuid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "timezone": {
+                "enum": [
+                  "UTC"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "read_at",
+              "timezone",
+              "has_more",
+              "next_after"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
       "WorkOrderError": {
         "additionalProperties": false,
         "properties": {
@@ -6085,6 +7165,56 @@
         ],
         "type": "object"
       },
+      "WorkOrderOriginResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "additionalProperties": false,
+            "properties": {
+              "read_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "timezone": {
+                "enum": [
+                  "UTC"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "read_at",
+              "timezone"
+            ],
+            "type": "object"
+          },
+          "success": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
       "WorkOrderREASSIGNCommand": {
         "additionalProperties": false,
         "properties": {
@@ -6094,9 +7224,7 @@
           },
           "command": {
             "enum": [
-              "REASSIGN",
-              "MANAGER_HOLD",
-              "REASSIGN_FOR_REWORK"
+              "REASSIGN"
             ],
             "type": "string"
           },
@@ -9879,6 +11007,1049 @@
         }
       ]
     },
+    "/maintenance-analytics/definitions": {
+      "get": {
+        "description": "Active authenticated user; scoped factory authorization except definitions. See docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.",
+        "operationId": "maintenanceAnalyticsDefinitions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceAnalyticsDefinitionsResponse"
+                }
+              }
+            },
+            "description": "Consistent read; observation time is not telemetry freshness. No workflow writes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE; no fallback or fabricated zero",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read maintenance analytics definitions",
+        "tags": [
+          "Maintenance Analytics"
+        ]
+      }
+    },
+    "/maintenance-analytics/drilldown": {
+      "get": {
+        "description": "Active authenticated user; scoped factory authorization except definitions. See docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.",
+        "operationId": "maintenanceAnalyticsDrilldown",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timezone",
+            "required": false,
+            "schema": {
+              "default": "UTC",
+              "description": "IANA timezone; calendar weeks begin Monday",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Signed keyset bound to actor, source, scope, filters and definition version. Not a frozen cross-request snapshot.",
+              "maxLength": 8192,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_key",
+            "required": true,
+            "schema": {
+              "enum": [
+                "open_orders",
+                "overdue_orders",
+                "blocked_orders",
+                "waiting_verification_orders",
+                "created_orders",
+                "closed_orders",
+                "cancelled_orders",
+                "successful_verified_orders",
+                "rework_decision_rate",
+                "first_pass_verified_rate",
+                "time_to_first_accept",
+                "active_execution_time",
+                "verification_wait_time"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "population",
+            "required": false,
+            "schema": {
+              "description": "Required only for rate metrics",
+              "enum": [
+                "numerator",
+                "denominator"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceAnalyticsDrilldownResponse"
+                }
+              }
+            },
+            "description": "Consistent read; observation time is not telemetry freshness. No workflow writes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE; no fallback or fabricated zero",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read maintenance analytics drilldown",
+        "tags": [
+          "Maintenance Analytics"
+        ]
+      }
+    },
+    "/maintenance-analytics/machines": {
+      "get": {
+        "description": "Active authenticated user; scoped factory authorization except definitions. See docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.",
+        "operationId": "maintenanceAnalyticsMachines",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timezone",
+            "required": false,
+            "schema": {
+              "default": "UTC",
+              "description": "IANA timezone; calendar weeks begin Monday",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "description": "Signed keyset bound to actor, source, scope, filters and definition version. Not a frozen cross-request snapshot.",
+              "maxLength": 8192,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "overdue",
+              "enum": [
+                "overdue",
+                "blocked",
+                "open",
+                "rework_rate",
+                "active_p90"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceAnalyticsMachinesResponse"
+                }
+              }
+            },
+            "description": "Consistent read; observation time is not telemetry freshness. No workflow writes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE; no fallback or fabricated zero",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read maintenance analytics machines",
+        "tags": [
+          "Maintenance Analytics"
+        ]
+      }
+    },
+    "/maintenance-analytics/overview": {
+      "get": {
+        "description": "Active authenticated user; scoped factory authorization except definitions. See docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.",
+        "operationId": "maintenanceAnalyticsOverview",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timezone",
+            "required": false,
+            "schema": {
+              "default": "UTC",
+              "description": "IANA timezone; calendar weeks begin Monday",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceAnalyticsOverviewResponse"
+                }
+              }
+            },
+            "description": "Consistent read; observation time is not telemetry freshness. No workflow writes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE; no fallback or fabricated zero",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read maintenance analytics overview",
+        "tags": [
+          "Maintenance Analytics"
+        ]
+      }
+    },
+    "/maintenance-analytics/trends": {
+      "get": {
+        "description": "Active authenticated user; scoped factory authorization except definitions. See docs/maintenance-analytics.md for versioned cohorts, exclusions, comparison and pagination semantics.",
+        "operationId": "maintenanceAnalyticsTrends",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "RFC3339 offset required. from < to <= read_at; at most 366 days.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timezone",
+            "required": false,
+            "schema": {
+              "default": "UTC",
+              "description": "IANA timezone; calendar weeks begin Monday",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_key",
+            "required": true,
+            "schema": {
+              "enum": [
+                "created_orders",
+                "closed_orders",
+                "cancelled_orders",
+                "successful_verified_orders",
+                "rework_decision_rate",
+                "first_pass_verified_rate",
+                "time_to_first_accept",
+                "active_execution_time",
+                "verification_wait_time"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "bucket",
+            "required": false,
+            "schema": {
+              "default": "day",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceAnalyticsTrendsResponse"
+                }
+              }
+            },
+            "description": "Consistent read; observation time is not telemetry freshness. No workflow writes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR or INVALID_CURSOR; rejects unknown/repeated query parameters",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "FACTORY_NOT_FOUND or MAINTENANCE_ANALYTICS_MACHINE_NOT_FOUND",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "MAINTENANCE_ANALYTICS_INTEGRITY_ERROR or INTERNAL_ERROR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderError"
+                }
+              }
+            },
+            "description": "DB_UNAVAILABLE; no fallback or fabricated zero",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read maintenance analytics trends",
+        "tags": [
+          "Maintenance Analytics"
+        ]
+      }
+    },
     "/operations/overview": {
       "get": {
         "description": "Authenticated active database user; ADMIN or explicit factory grant, including VIEWER. Only factory_id is accepted. Cache-Control: no-store on success/errors. Head, immutable observation/publication references, SQL aggregates and review preview share one PostgreSQL RepeatableRead snapshot. Immutable artifacts are validated after closing the transaction. Preview reuses the sanitized case-list projection, LIVE/AWAITING_APPROVAL including stale, ordered created_at DESC, UUID DESC, fixed limit 6. has_more reports additional matches in that read snapshot; filters open GET /decision-cases (independent later read). Never returns raw artifacts, requests or notes.",
@@ -11238,6 +13409,131 @@
           }
         ],
         "summary": "Create explicitly from current committed maintenance assignment",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/by-origin": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "schedule_revision",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderOriginResponse"
+                }
+              }
+            },
+            "description": "Scoped authoritative result"
+          },
+          "403": {
+            "description": "Management role required for assignee discovery"
+          },
+          "404": {
+            "description": "Factory or origin unavailable"
+          }
+        },
+        "summary": "by-origin",
+        "tags": [
+          "Work Orders"
+        ]
+      }
+    },
+    "/work-orders/eligible-assignees": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "factory_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderEligibleAssigneesResponse"
+                }
+              }
+            },
+            "description": "Scoped authoritative result"
+          },
+          "403": {
+            "description": "Management role required for assignee discovery"
+          },
+          "404": {
+            "description": "Factory or origin unavailable"
+          }
+        },
+        "summary": "eligible-assignees",
         "tags": [
           "Work Orders"
         ]

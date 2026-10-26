@@ -6,7 +6,8 @@ const ROOT = path.resolve(__dirname, '../..');
 const PATHS = [
   '/incidents', '/incidents/summary', '/incidents/{id}', '/incidents/{id}/commands',
   '/incidents/{id}/events', '/incidents/{id}/occurrences', '/incidents/{id}/links', '/incidents/{id}/links/{link_id}',
-  '/work-orders', '/work-orders/summaries', '/work-orders/{id}', '/work-orders/{id}/commands', '/work-orders/{id}/events',
+  "/maintenance-analytics/overview", "/maintenance-analytics/definitions", "/maintenance-analytics/trends", "/maintenance-analytics/machines", "/maintenance-analytics/drilldown",
+  '/work-orders/eligible-assignees', '/work-orders/by-origin', '/work-orders', '/work-orders/summaries', '/work-orders/{id}', '/work-orders/{id}/commands', '/work-orders/{id}/events',
   '/factories', '/factories/{factory_id}', '/factories/{factory_id}/members', '/factories/{factory_id}/members/{user_id}',
   '/operations/overview', '/operations/snapshot', '/schedules/current', '/decision-cases',
   '/decision-cases/{id}', '/decision-cases/{id}/recommendation',

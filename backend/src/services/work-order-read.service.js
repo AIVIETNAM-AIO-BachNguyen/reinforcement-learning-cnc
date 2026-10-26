@@ -1,7 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const { createHmac, timingSafeEqual } = require('node:crypto');
 const { ApiError } = require('../lib/api-error');
-const { authorizeFactory, accessSource, identifier } = require('./factory-access.service');
+const { authorizeFactory, accessSource, environmentGrants, identifier } = require('./factory-access.service');
 const { z, uuid, states, terminal, parse, missing, available } = require('./work-order-policy');
 const userSelect = { id: true, username: true, active: true };
 const detailInclude = {
@@ -340,7 +340,31 @@ function publicEvent(p) {
   if (result.verification) result.verification = pick(result.verification, ['result', 'note']);
   return result;
 }
+async function eligibleAssignees(db, identity, raw) {
+  const q = parse(z.object({ factory_id: identifier, query: z.string().trim().max(100).default(''), after: uuid.optional(), limit: limit(100, 25) }).strict(), raw);
+  return db.$transaction(async tx => {
+    const actor = await authorizeFactory(tx, identity, q.factory_id);
+    if (!['ADMIN', 'ENGINEER'].includes(actor.role)) throw new ApiError(403, 'FORBIDDEN', 'Management role required');
+    const scope = accessSource() === 'environment'
+      ? { id: { in: environmentGrants()[q.factory_id] ?? [], ...(q.after ? { gt: q.after } : {}) } }
+      : { ...(q.after ? { id: { gt: q.after } } : {}), factoryMemberships: { some: { factoryId: q.factory_id, active: true } } };
+    const rows = await tx.user.findMany({ where: { ...scope, active: true, role: { in: ['OPERATOR', 'ENGINEER'] }, username: { contains: q.query, mode: 'insensitive' } }, orderBy: { id: 'asc' }, take: q.limit + 1, select: { id: true, username: true } });
+    const page = rows.slice(0, q.limit);
+    return { success: true, data: page.map(u => ({ user_id: u.id, username: u.username })), meta: { ...meta(await clock(tx)), has_more: rows.length > q.limit, next_after: rows.length > q.limit ? page.at(-1).id : null } };
+  }, { isolationLevel: 'RepeatableRead' });
+}
+async function byOrigin(db, user, raw) {
+  const q = parse(z.object({ factory_id: identifier, schedule_id: identifier, schedule_revision: z.string().regex(/^[1-9][0-9]*$/).transform(Number).pipe(z.number().int().max(2147483647)), assignment_id: identifier }).strict(), raw);
+  return db.$transaction(async tx => {
+    await authorizeFactory(tx, user, q.factory_id);
+    const row = await tx.workOrder.findFirst({ where: { factoryId: q.factory_id, scheduleId: q.schedule_id, scheduleRevision: q.schedule_revision, assignmentId: q.assignment_id }, select: { id: true } });
+    if (!row) throw missing();
+    return { success: true, data: { id: row.id }, meta: meta(await clock(tx)) };
+  }, { isolationLevel: 'RepeatableRead' });
+}
 module.exports = {
+  eligibleAssignees,
+  byOrigin,
   getWorkOrder,
   listWorkOrders,
   lookupWorkOrderSummaries,
