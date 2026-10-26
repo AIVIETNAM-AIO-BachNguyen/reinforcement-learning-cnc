@@ -361,7 +361,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(page).toHaveURL(/\/operations\/recommendations\?.*caseId=/);
   expect(submitted).toHaveLength(2);
   expect(submitted[1]).toEqual(submitted[0]);
-  expect(await databaseQuery('SELECT count(*)::int AS count FROM decision_cases')).toEqual([{ count: 1 }]);
+  expect(await databaseQuery('SELECT count(*)::int AS count FROM decision_cases WHERE factory_id = $1', factoryId)).toEqual([{ count: 1 }]);
   await page.unroute(`${apiBase}/api/v1/decision-cases`);
   const caseId = new URL(page.url()).searchParams.get("caseId");
   expect(caseId).toBeTruthy();
@@ -561,7 +561,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   expect(published.schedule).toEqual(approvedCandidate.schedule);
   expect(record(published.commit).actor_id).toBe(actorId);
   expect(record(published.commit).decision_case_id).toBe(caseId);
-  expect(await databaseQuery('SELECT count(*)::int AS count FROM decision_commits')).toEqual([{ count: 1 }]);
+  expect(await databaseQuery('SELECT count(*)::int AS count FROM decision_commits WHERE factory_id = $1', factoryId)).toEqual([{ count: 1 }]);
   for (const command of ["APPROVE", "COMMIT"]) {
     const pair = decisionSubmissions.filter(item => item.command === command);
     expect(pair).toHaveLength(2);
@@ -599,7 +599,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(page.getByRole("button", { name: "Assign", exact: true })).toBeEnabled();
   expect(workOrderCreates).toHaveLength(2);
   expect(workOrderCreates[1]).toEqual(workOrderCreates[0]);
-  expect(await databaseQuery("SELECT count(*)::int AS count FROM work_orders")).toEqual([{ count: 1 }]);
+  expect(await databaseQuery("SELECT count(*)::int AS count FROM work_orders WHERE factory_id=$1", factoryId)).toEqual([{ count: 1 }]);
   const workOrderPayload = JSON.parse(workOrderCreates[0].body!) as JsonObject;
   expect(record(workOrderPayload.source)).toMatchObject({ decision_case_id: caseId, schedule_id: record(published.schedule).schedule_id, schedule_hash: record(published.commit).schedule_hash });
   const sourceAssignment = array(record(published.schedule).assignments).map(record).find(item => item.assignment_id === record(workOrderPayload.source).assignment_id);

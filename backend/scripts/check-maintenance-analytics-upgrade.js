@@ -73,8 +73,15 @@ async function main() {
     const before = await fingerprint();
     deploy(path.join(root, 'prisma'));
     const after = await fingerprint();
-    if (JSON.stringify(before) !== JSON.stringify(after))
-      throw Error('Populated upgrade changed source/history data');
+    for (const [table, fingerprint] of Object.entries(before)) {
+      if (JSON.stringify(fingerprint) !== JSON.stringify(after[table]))
+        throw Error('Populated upgrade changed source/history table: ' + table);
+    }
+    // New additive modules can create empty tables without changing history.
+    for (const [table, fingerprint] of Object.entries(after)) {
+      if (!(table in before) && fingerprint.count !== 0)
+        throw Error('Populated upgrade unexpectedly populated new table: ' + table);
+    }
     console.log(JSON.stringify({ base: BASE, schema, unchanged: true, tables: after }));
   } finally {
     await f?.close();

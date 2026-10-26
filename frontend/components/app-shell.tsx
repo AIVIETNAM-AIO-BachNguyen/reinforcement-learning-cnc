@@ -99,6 +99,7 @@ export function AppShell({ children, title = "Production DSS", factoryId, demo =
           <p className="px-3 pb-2 pt-4 text-[10px] uppercase tracking-widest text-slate-400">Operations</p>
           <NavItem href={href("/overview")} label="Overview" icon={LayoutDashboard} activePaths={["/overview"]} />
           <NavItem href={href("/operations/cases")} label="Decision Center" icon={ClipboardCheck} activePaths={["/operations/cases", "/operations/recommendations"]} />
+          <NavItem href={href("/operations/incidents")} label="Incident Center" icon={ClipboardCheck} />
           <NavItem href={href("/operations/work-orders")} label="Work Orders" icon={ClipboardCheck} activePaths={["/operations/work-orders"]} />
           <div className="pt-8"><p className="px-3 pb-2 text-[10px] uppercase tracking-widest text-slate-400">Research / administration</p></div>
           <NavItem href="/experiments" label="Experiments · research v2" icon={FlaskConical} />

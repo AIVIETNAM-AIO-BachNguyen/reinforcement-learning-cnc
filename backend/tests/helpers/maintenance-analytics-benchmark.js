@@ -194,6 +194,7 @@ async function benchmark(db, f, dataset) {
   const plan = await db.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe("SET LOCAL work_mem = '32MB'");
+      await tx.$executeRawUnsafe('SET LOCAL jit = off');
       return tx.$queryRaw(Prisma.sql`EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON) ${projection(q, new Date().toISOString())}
     SELECT metric_key,${aggregateColumns()} FROM samples
       WHERE cohort_at>=(SELECT ${q.from}::timestamptz) AND cohort_at<(SELECT ${q.to}::timestamptz) GROUP BY metric_key`);
@@ -216,7 +217,7 @@ async function benchmark(db, f, dataset) {
     },
     results,
     explain_description:
-      'Shared sample aggregation; same transaction-local work_mem as HTTP. UTC bounds are InitPlans, not repeated text casts per row.',
+      'Shared sample aggregation; same transaction-local work_mem and jit policy as HTTP. UTC bounds are InitPlans, not repeated text casts per row.',
     plan,
   };
 }

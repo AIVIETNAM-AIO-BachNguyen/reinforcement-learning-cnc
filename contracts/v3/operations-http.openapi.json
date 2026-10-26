@@ -1,5 +1,123 @@
 {
   "components": {
+    "parameters": {
+      "IncidentAfter": {
+        "in": "query",
+        "name": "after_sequence",
+        "schema": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "IncidentFactory": {
+        "in": "query",
+        "name": "factory_id",
+        "required": true,
+        "schema": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "IncidentHistoryLimit": {
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "IncidentId": {
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "IncidentKey": {
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": true,
+        "schema": {
+          "pattern": "^[!-~]{1,128}$",
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "Incident": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/IncidentEnvelope"
+            }
+          }
+        },
+        "description": "Incident projection; replay returns historical body. Refetch before the next command.",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "const": "no-store"
+            }
+          },
+          "Idempotency-Replayed": {
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "IncidentError": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "properties": {
+                "error": {
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "requestId": {
+                  "type": "string"
+                },
+                "success": {
+                  "const": false
+                }
+              },
+              "required": [
+                "success",
+                "error",
+                "requestId"
+              ],
+              "type": "object"
+            }
+          }
+        },
+        "description": "400 validation; 401 inactive/unauthenticated; 403 role; scoped 404; 409 revision/state/source/key conflict; 500 integrity; 503 DB/linked target unavailable. No raw evidence or diagnostics.",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "const": "no-store"
+            }
+          }
+        }
+      }
+    },
     "schemas": {
       "CaseContractAssignmentStatus": {
         "enum": [
@@ -2523,6 +2641,1019 @@
         "required": [
           "success",
           "data"
+        ],
+        "type": "object"
+      },
+      "IncidentActorTime": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id",
+          "occurred_at"
+        ],
+        "type": "object"
+      },
+      "IncidentCaseHealthAlertEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "basis_snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "case_created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "case_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "health_samples": {
+            "description": "Only matching machine samples in the immutable basis; empty when absent. These are evidence samples, not a sensor-history series.",
+            "items": {
+              "$ref": "#/components/schemas/IncidentHealthEvidence"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "const": "case_health_alert"
+          },
+          "machine_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "trigger": {
+            "additionalProperties": false,
+            "description": "Validated trigger probability meets its threshold. No inferred severity. Product request does not persist canonical event_id/occurred_at; never fabricate them from case creation time.",
+            "properties": {
+              "alert_threshold": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "failure_probability": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "type": {
+                "const": "HEALTH_ALERT"
+              }
+            },
+            "required": [
+              "type",
+              "failure_probability",
+              "alert_threshold"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "case_id",
+          "factory_id",
+          "basis_snapshot_id",
+          "case_created_at",
+          "machine_id",
+          "trigger",
+          "health_samples"
+        ],
+        "type": "object"
+      },
+      "IncidentCategory": {
+        "enum": [
+          "EQUIPMENT",
+          "PROCESS",
+          "SAFETY",
+          "OTHER"
+        ],
+        "type": "string"
+      },
+      "IncidentCommand": {
+        "oneOf": [
+          {
+            "properties": {
+              "command": {
+                "const": "ASSIGN"
+              },
+              "owner_user_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "owner_user_id"
+            ]
+          },
+          {
+            "properties": {
+              "command": {
+                "const": "REASSIGN"
+              },
+              "owner_user_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/IncidentNote"
+              }
+            },
+            "required": [
+              "owner_user_id",
+              "reason"
+            ]
+          },
+          {
+            "properties": {
+              "command": {
+                "enum": [
+                  "ACKNOWLEDGE",
+                  "START_INVESTIGATION"
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "command": {
+                "const": "CHANGE_SEVERITY"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/IncidentNote"
+              },
+              "severity": {
+                "$ref": "#/components/schemas/IncidentSeverity"
+              }
+            },
+            "required": [
+              "severity",
+              "reason"
+            ]
+          },
+          {
+            "properties": {
+              "command": {
+                "const": "MARK_RESOLVED"
+              },
+              "resolution": {
+                "$ref": "#/components/schemas/IncidentResolution"
+              },
+              "work_order_override_reason": {
+                "$ref": "#/components/schemas/IncidentNote"
+              }
+            },
+            "required": [
+              "resolution"
+            ]
+          },
+          {
+            "properties": {
+              "command": {
+                "const": "CLOSE"
+              },
+              "verification": {
+                "$ref": "#/components/schemas/IncidentVerification"
+              },
+              "work_order_override_reason": {
+                "$ref": "#/components/schemas/IncidentNote"
+              }
+            },
+            "required": [
+              "verification"
+            ]
+          },
+          {
+            "properties": {
+              "command": {
+                "const": "REOPEN"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/IncidentNote"
+              }
+            },
+            "required": [
+              "reason"
+            ]
+          },
+          {
+            "properties": {
+              "command": {
+                "const": "APPEND_OCCURRENCE"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/IncidentNote"
+              },
+              "source": {
+                "$ref": "#/components/schemas/IncidentSource"
+              }
+            },
+            "required": [
+              "source",
+              "reason"
+            ]
+          }
+        ],
+        "properties": {
+          "expected_revision": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "command",
+          "expected_revision"
+        ],
+        "type": "object",
+        "unevaluatedProperties": false
+      },
+      "IncidentEnvelope": {
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "acknowledgment": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/IncidentActorTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "available_commands": {
+                "items": {
+                  "enum": [
+                    "ASSIGN",
+                    "REASSIGN",
+                    "ACKNOWLEDGE",
+                    "START_INVESTIGATION",
+                    "MARK_RESOLVED",
+                    "CLOSE",
+                    "REOPEN",
+                    "CHANGE_SEVERITY",
+                    "APPEND_OCCURRENCE"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "closure": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "actor_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "occurred_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "verification": {
+                        "$ref": "#/components/schemas/IncidentVerification"
+                      }
+                    },
+                    "required": [
+                      "actor_id",
+                      "occurred_at",
+                      "verification"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "incident": {
+                "$ref": "#/components/schemas/IncidentSummary"
+              },
+              "links": {
+                "items": {
+                  "$ref": "#/components/schemas/IncidentLink"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              "resolution": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "actor_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "occurred_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "report": {
+                        "$ref": "#/components/schemas/IncidentResolution"
+                      }
+                    },
+                    "required": [
+                      "actor_id",
+                      "occurred_at",
+                      "report"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "work_orders": {
+                "items": {
+                  "$ref": "#/components/schemas/WorkOrderSummary"
+                },
+                "maxItems": 50,
+                "type": "array"
+              }
+            },
+            "required": [
+              "incident",
+              "description",
+              "acknowledgment",
+              "resolution",
+              "closure",
+              "links",
+              "available_commands"
+            ],
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/IncidentReadMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "IncidentEventPage": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "actor_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "incident_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "occurred_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "payload": {
+                  "description": "Allowlisted per command; no raw source/target request or private artifact.",
+                  "type": "object"
+                },
+                "sequence": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "incident_id",
+                "sequence",
+                "command",
+                "actor_id",
+                "occurred_at",
+                "payload"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/IncidentHistoryMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "IncidentEvidence": {
+        "discriminator": {
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/IncidentManualIncidentEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/IncidentCaseHealthAlertEvidence"
+          }
+        ]
+      },
+      "IncidentHealthEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "type": "string"
+          },
+          "failure_probability": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "failure_probability_horizon_minutes": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "health_index": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "health_snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "machine_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source_model_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "health_snapshot_id",
+          "machine_id",
+          "observed_at",
+          "health_index",
+          "failure_probability_horizon_minutes",
+          "failure_probability",
+          "confidence",
+          "source_model_version"
+        ],
+        "type": "object"
+      },
+      "IncidentHistoryMeta": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_after_sequence": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "read_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_at",
+          "has_more",
+          "next_after_sequence"
+        ],
+        "type": "object"
+      },
+      "IncidentLink": {
+        "additionalProperties": false,
+        "description": "Active link identity only. Target summary comes from authorized producer contract; not invented here. Maximum50 active links per incident.",
+        "properties": {
+          "association_scope": {
+            "enum": [
+              "case",
+              "machine"
+            ],
+            "type": "string"
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "not_found"
+            ],
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "case",
+              "work_order"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "target_id",
+          "association_scope",
+          "created_by",
+          "created_at",
+          "availability"
+        ],
+        "type": "object"
+      },
+      "IncidentMachine": {
+        "additionalProperties": false,
+        "properties": {
+          "basis_snapshot_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "machine_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "machine_id",
+          "basis_snapshot_id"
+        ],
+        "type": "object"
+      },
+      "IncidentManualIncidentEvidence": {
+        "additionalProperties": false,
+        "description": "Human report only; no claim of measured health or physical recovery.",
+        "properties": {
+          "kind": {
+            "const": "manual"
+          },
+          "report_text": {
+            "$ref": "#/components/schemas/IncidentNote"
+          }
+        },
+        "required": [
+          "kind",
+          "report_text"
+        ],
+        "type": "object"
+      },
+      "IncidentNote": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "pattern": "\\S",
+        "type": "string"
+      },
+      "IncidentOccurrencePage": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "actor_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "evidence": {
+                  "$ref": "#/components/schemas/IncidentEvidence"
+                },
+                "factory_id": {
+                  "type": "string"
+                },
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "incident_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "machine": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/IncidentMachine"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "recorded_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "sequence": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "source": {
+                  "$ref": "#/components/schemas/IncidentSource"
+                }
+              },
+              "required": [
+                "id",
+                "incident_id",
+                "sequence",
+                "factory_id",
+                "source",
+                "machine",
+                "actor_id",
+                "recorded_at",
+                "evidence"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/IncidentHistoryMeta"
+          },
+          "success": {
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "IncidentPageMeta": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "read_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_at",
+          "limit",
+          "has_more",
+          "next_cursor"
+        ],
+        "type": "object"
+      },
+      "IncidentReadMeta": {
+        "properties": {
+          "read_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_at"
+        ],
+        "type": "object"
+      },
+      "IncidentReport": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "source": {
+                  "properties": {
+                    "type": {
+                      "const": "case_health_alert"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "required": [
+                  "machine"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Official severity only ADMIN/ENGINEER; otherwise null until confirmation. From-case machine/evidence derived server-side. Unknown fields rejected.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/IncidentCategory"
+          },
+          "description": {
+            "$ref": "#/components/schemas/IncidentNote"
+          },
+          "factory_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "machine": {
+            "$ref": "#/components/schemas/IncidentMachine"
+          },
+          "proposed_severity": {
+            "$ref": "#/components/schemas/IncidentSeverity"
+          },
+          "related_incident_reason": {
+            "$ref": "#/components/schemas/IncidentNote"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/IncidentSeverity"
+          },
+          "source": {
+            "$ref": "#/components/schemas/IncidentSource"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          }
+        },
+        "required": [
+          "factory_id",
+          "source",
+          "title",
+          "description",
+          "category"
+        ],
+        "type": "object"
+      },
+      "IncidentResolution": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "FIXED",
+              "FALSE_POSITIVE",
+              "NO_ACTION_REQUIRED"
+            ],
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/IncidentNote"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/IncidentNote"
+          }
+        },
+        "required": [
+          "code",
+          "summary",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "IncidentSeverity": {
+        "enum": [
+          "INFO",
+          "WARNING",
+          "CRITICAL"
+        ],
+        "type": "string"
+      },
+      "IncidentSource": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "source_event_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": {
+                "const": "manual"
+              }
+            },
+            "required": [
+              "type",
+              "source_event_id"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "case_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": {
+                "const": "case_health_alert"
+              }
+            },
+            "required": [
+              "type",
+              "case_id"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "IncidentStatus": {
+        "enum": [
+          "OPEN",
+          "ACKNOWLEDGED",
+          "INVESTIGATING",
+          "RESOLVED",
+          "CLOSED"
+        ],
+        "type": "string"
+      },
+      "IncidentSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/IncidentCategory"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "factory_id": {
+            "type": "string"
+          },
+          "first_occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "last_occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "machine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentMachine"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "occurrence_count": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "owner_user_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "proposed_severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentSeverity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentSeverity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "enum": [
+              "manual",
+              "case_health_alert"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IncidentStatus"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "factory_id",
+          "title",
+          "category",
+          "machine",
+          "source",
+          "severity",
+          "proposed_severity",
+          "status",
+          "owner_user_id",
+          "revision",
+          "first_occurred_at",
+          "last_occurred_at",
+          "occurrence_count",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "IncidentVerification": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "$ref": "#/components/schemas/IncidentNote"
+          },
+          "resolution_code": {
+            "enum": [
+              "FIXED",
+              "FALSE_POSITIVE",
+              "NO_ACTION_REQUIRED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution_code",
+          "note"
         ],
         "type": "object"
       },
@@ -9365,6 +10496,516 @@
           "Factories"
         ]
       }
+    },
+    "/incidents": {
+      "get": {
+        "operationId": "listIncidents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentFactory"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "$ref": "#/components/schemas/IncidentStatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "schema": {
+              "enum": [
+                "INFO",
+                "WARNING",
+                "CRITICAL",
+                "UNCONFIRMED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner_user_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "machine_id",
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "maxLength": 4096,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/IncidentSummary"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/IncidentPageMeta"
+                    },
+                    "success": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Authorized AND-filtered page; created_at DESC, UUID DESC. Not a cross-page snapshot."
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      },
+      "post": {
+        "operationId": "reportIncident",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentEnvelope"
+                }
+              }
+            },
+            "description": "Existing source identity returned without another occurrence; same Incident envelope."
+          },
+          "201": {
+            "$ref": "#/components/responses/Incident"
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      }
+    },
+    "/incidents/summary": {
+      "get": {
+        "operationId": "getIncidentCounts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentFactory"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaiting_verification": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "by_severity": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "CRITICAL": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "INFO": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "WARNING": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "INFO",
+                            "WARNING",
+                            "CRITICAL"
+                          ],
+                          "type": "object"
+                        },
+                        "by_status": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "ACKNOWLEDGED": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "CLOSED": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "INVESTIGATING": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "OPEN": {
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "RESOLVED": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "OPEN",
+                            "ACKNOWLEDGED",
+                            "INVESTIGATING",
+                            "RESOLVED",
+                            "CLOSED"
+                          ],
+                          "type": "object"
+                        },
+                        "factory_id": {
+                          "type": "string"
+                        },
+                        "total": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unassigned": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unconfirmed_severity": {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "factory_id",
+                        "total",
+                        "by_status",
+                        "by_severity",
+                        "unconfirmed_severity",
+                        "unassigned",
+                        "awaiting_verification"
+                      ],
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/IncidentReadMeta"
+                    },
+                    "success": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entire factory, independent of list pagination. No SLA or overdue policy."
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      }
+    },
+    "/incidents/{id}": {
+      "get": {
+        "operationId": "getIncident",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Incident"
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/IncidentId"
+        }
+      ]
+    },
+    "/incidents/{id}/commands": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/IncidentId"
+        }
+      ],
+      "post": {
+        "operationId": "commandIncident",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Incident"
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      }
+    },
+    "/incidents/{id}/events": {
+      "get": {
+        "operationId": "listIncidentEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentAfter"
+          },
+          {
+            "$ref": "#/components/parameters/IncidentHistoryLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentEventPage"
+                }
+              }
+            },
+            "description": "Append-only sanitized history, ordered by sequence ascending."
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/IncidentId"
+        }
+      ]
+    },
+    "/incidents/{id}/links": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/IncidentId"
+        }
+      ],
+      "post": {
+        "operationId": "linkIncidentTarget",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_revision": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "target": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": {
+                        "enum": [
+                          "case",
+                          "work_order"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "id"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "target"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Incident"
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      }
+    },
+    "/incidents/{id}/links/{link_id}": {
+      "delete": {
+        "operationId": "unlinkIncidentTarget",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_revision": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "$ref": "#/components/schemas/IncidentNote"
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Incident"
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/IncidentId"
+        },
+        {
+          "in": "path",
+          "name": "link_id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/incidents/{id}/occurrences": {
+      "get": {
+        "operationId": "listIncidentOccurrences",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IncidentAfter"
+          },
+          {
+            "$ref": "#/components/parameters/IncidentHistoryLimit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentOccurrencePage"
+                }
+              }
+            },
+            "description": "Immutable, authorized source references in sequence order; no raw case request."
+          },
+          "default": {
+            "$ref": "#/components/responses/IncidentError"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/IncidentId"
+        }
+      ]
     },
     "/maintenance-analytics/definitions": {
       "get": {

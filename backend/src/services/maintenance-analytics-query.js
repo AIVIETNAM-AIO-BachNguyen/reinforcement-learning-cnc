@@ -19,10 +19,18 @@ function projection(q, at, orderIds) {
       CASE WHEN e.payload_json->>'attempt' ~ '^[1-9][0-9]{0,8}$'
       THEN (e.payload_json->>'attempt')::int END AS attempt
     FROM work_order_events e JOIN orders w ON w.id=e.work_order_id
+  ), adjacent_events AS (
+    SELECT e.*,
+      lead(occurred_at) OVER next_event AS following_at,
+      lead(sequence) OVER next_event AS following_sequence,
+      lead(attempt) OVER next_event AS following_attempt
+    FROM events e WINDOW next_event AS (PARTITION BY work_order_id ORDER BY sequence)
   ), intervals AS MATERIALIZED (
-    SELECT e.work_order_id,e.sequence,e.command,e.occurred_at,e.attempt,e.to_status,
-      n.occurred_at AS next_at,n.sequence AS next_sequence,n.attempt AS next_attempt
-    FROM events e LEFT JOIN events n ON n.work_order_id=e.work_order_id AND n.sequence=e.sequence+1
+    SELECT work_order_id,sequence,command,occurred_at,attempt,to_status,
+      CASE WHEN following_sequence=sequence+1 THEN following_at END AS next_at,
+      CASE WHEN following_sequence=sequence+1 THEN following_sequence END AS next_sequence,
+      CASE WHEN following_sequence=sequence+1 THEN following_attempt END AS next_attempt
+    FROM adjacent_events
   ), history AS MATERIALIZED (
     SELECT work_order_id, min(occurred_at) FILTER (WHERE command='CREATE') AS created_at,
       count(*) FILTER (WHERE command='CREATE') AS creates,
