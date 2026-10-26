@@ -599,7 +599,7 @@ test("real snapshot flows through browser, worker and FastAPI with safe negative
   await expect(page.getByRole("button", { name: "Assign", exact: true })).toBeEnabled();
   expect(workOrderCreates).toHaveLength(2);
   expect(workOrderCreates[1]).toEqual(workOrderCreates[0]);
-  expect(await databaseQuery("SELECT count(*)::int AS count FROM work_orders")).toEqual([{ count: 1 }]);
+  expect(await databaseQuery("SELECT count(*)::int AS count FROM work_orders WHERE factory_id=$1", factoryId)).toEqual([{ count: 1 }]);
   const workOrderPayload = JSON.parse(workOrderCreates[0].body!) as JsonObject;
   expect(record(workOrderPayload.source)).toMatchObject({ decision_case_id: caseId, schedule_id: record(published.schedule).schedule_id, schedule_hash: record(published.commit).schedule_hash });
   const sourceAssignment = array(record(published.schedule).assignments).map(record).find(item => item.assignment_id === record(workOrderPayload.source).assignment_id);
