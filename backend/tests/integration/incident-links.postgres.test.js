@@ -90,8 +90,13 @@ test('linked order survives both access-loss recoveries, S2/P2, reopen and indep
   const expected = await Promise.all(paths.map(async path => data(await f.http(path))));
   // Reports live at the detail root, not inside the incident summary.
   const expectRetainedReports = (actual) => {
-    expect(closed.resolution).not.toBeNull();
-    expect(closed.closure).not.toBeNull();
+    expect(closed.resolution).toEqual(expect.objectContaining({
+      actor_id: f.users.MANAGER.id, report: resolution,
+    }));
+    expect(closed.closure).toEqual(expect.objectContaining({
+      actor_id: f.users.ADMIN.id,
+      verification: { resolution_code: 'FIXED', note: 'Independent incident verification' },
+    }));
     expect(actual.resolution).toEqual(closed.resolution);
     expect(actual.closure).toEqual(closed.closure);
   };
