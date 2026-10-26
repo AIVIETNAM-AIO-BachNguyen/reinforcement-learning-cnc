@@ -115,7 +115,8 @@ async function link(page: Page, type: string, id: string) {
 }
 test("real incident desktop lifecycle, lost-response reload, roles and immutable history", async ({ browser }) => {
   test.setTimeout(240_000);
-  const users = JSON.parse(await readFile(process.env.OPERATIONS_E2E_USERS_FILE!, "utf8"));
+  const seeded = JSON.parse(await readFile(process.env.OPERATIONS_E2E_USERS_FILE!, "utf8"));
+  const users = { ...seeded, engineer: seeded.incidentEngineer, operator: seeded.incidentOperator };
   const contexts: BrowserContext[] = [];
   const passed: string[] = [];
   try {

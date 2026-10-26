@@ -88,8 +88,20 @@ test('linked order survives both access-loss recoveries, S2/P2, reopen and indep
   row = data(await command(row, 'REOPEN', { reason: 'A new human observation needs investigation' }, f.users.ADMIN)).incident;
   const paths = ['/incidents/' + row.id, '/incidents/' + row.id + '/events', '/incidents/' + row.id + '/occurrences', '/work-orders/' + order.id, '/work-orders/' + order.id + '/events'];
   const expected = await Promise.all(paths.map(async path => data(await f.http(path))));
-  expect(expected[0].incident.resolution).toEqual(closed.incident.resolution);
-  expect(expected[0].incident.verification).toEqual(closed.incident.verification);
+  // Reports live at the detail root, not inside the incident summary.
+  const expectRetainedReports = (actual) => {
+    expect(closed.resolution).not.toBeNull();
+    expect(closed.closure).not.toBeNull();
+    expect(actual.resolution).toEqual(closed.resolution);
+    expect(actual.closure).toEqual(closed.closure);
+  };
+  expectRetainedReports(expected[0]);
+  // Prove these assertions detect missing reports and altered verification.
+  expect(() => expectRetainedReports({ ...expected[0], resolution: null })).toThrow();
+  expect(() => expectRetainedReports({ ...expected[0], closure: null })).toThrow();
+  expect(() => expectRetainedReports({
+    ...expected[0], closure: { ...expected[0].closure, actor_id: f.users.MANAGER.id },
+  })).toThrow();
   expect(expected[0].work_orders[0]).toMatchObject({ id: order.id, status: 'CLOSED', source_is_current: false });
   for (let restart = 0; restart < 2; restart++) {
     const api = await startApi();
@@ -99,6 +111,7 @@ test('linked order survives both access-loss recoveries, S2/P2, reopen and indep
         expect(response.status).toBe(200);
         expect(response.cache).toBe('no-store');
         expect(response.body.data).toEqual(expected[i]);
+        if (i === 0) expectRetainedReports(response.body.data);
       }
       expect((await api.http('/incidents/' + row.id, f.users.OPERATOR)).status).toBe(404);
     } finally { await api.stop(); }

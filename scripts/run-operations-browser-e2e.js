@@ -320,7 +320,7 @@ async function runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, 
     const testUsers = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
     commonEnv.OPERATIONS_FACTORY_ACCESS = JSON.stringify({
       'factory-demo-01': [testUsers.viewer.id, testUsers.operator.id, testUsers.replacement.id, testUsers.engineer.id],
-      'factory-incident-demo': [testUsers.viewer.id, testUsers.engineer.id, testUsers.operator.id],
+      'factory-incident-demo': [testUsers.viewer.id, testUsers.incidentEngineer.id, testUsers.incidentOperator.id],
     });
 
     fastapi = await startFastApi(commonEnv, runDir);
