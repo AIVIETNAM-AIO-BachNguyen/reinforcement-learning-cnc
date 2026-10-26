@@ -452,3 +452,24 @@ test('fixed completed cohort paginates equal timestamps and distinct microsecond
   expect(items.filter((r) => r.cohort_at === '2026-09-22T04:03:21.000002Z')).toHaveLength(2);
   expect(items.filter((r) => r.cohort_at === '2026-09-22T04:03:21.000001Z')).toHaveLength(1);
 });
+
+test('event adjacency never bridges a missing sequence when measuring execution time', async () => {
+  const { Prisma } = require('@prisma/client');
+  const { projection } = require('../../src/services/maintenance-analytics-query');
+  const order = await db.workOrder.findFirstOrThrow({ where: { factoryId: p.body.factory_id } });
+  const before = await db.workOrderEvent.count({ where: { workOrderId: order.id } });
+  const rollback = new Error('Rollback isolated missing-history fixture');
+  await expect(db.$transaction(async (tx) => {
+    // Corrupt only this transaction's fixture, then roll back both DDL and data.
+    await tx.$executeRawUnsafe('ALTER TABLE work_order_events DISABLE TRIGGER work_order_events_immutable');
+    await tx.$executeRaw`DELETE FROM work_order_events WHERE work_order_id=${order.id}::uuid AND sequence=5`;
+    const rows = await tx.$queryRaw(Prisma.sql`${projection({ factory_id: p.body.factory_id }, new Date(), [order.id])}
+      SELECT duration_seconds,exclusion_reason FROM samples
+      WHERE metric_key='active_execution_time' AND attempt=1`);
+    // START #4 must not run until RESUME #6 across the missing BLOCK #5.
+    // Only the intact RESUME -> COMPLETE interval contributes 30 seconds.
+    expect(rows).toEqual([{ duration_seconds: 30, exclusion_reason: 'INCONSISTENT_HISTORY' }]);
+    throw rollback;
+  }, { timeout: 30000 })).rejects.toBe(rollback);
+  expect(await db.workOrderEvent.count({ where: { workOrderId: order.id } })).toBe(before);
+});
