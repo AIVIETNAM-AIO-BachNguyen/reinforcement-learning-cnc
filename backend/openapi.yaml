@@ -13,7 +13,7 @@ info:
     underscores, colons, or hyphens. The API echoes it in the response; when
     omitted or invalid, the API generates a UUID request id.
 servers:
-  - url: 'http://localhost:5000/api/v1'
+  - url: http://localhost:5000/api/v1
     description: Local backend
 tags:
   - name: Policies
