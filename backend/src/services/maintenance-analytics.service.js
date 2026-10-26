@@ -271,6 +271,10 @@ async function read(db, user, endpoint, raw) {
       // Bound transaction-local working memory for event windows/percentiles. The
       // 110k-event EXPLAIN spilled at the 4MB server default; no session/global change.
       await tx.$executeRawUnsafe("SET LOCAL work_mem = '32MB'");
+      // These bounded read queries finish before JIT compilation amortizes its
+      // cost. Keep this transaction-local; other application queries retain
+      // their configured PostgreSQL JIT policy.
+      await tx.$executeRawUnsafe('SET LOCAL jit = off');
       user =
         endpoint === 'definitions'
           ? await currentUser(tx, user)
