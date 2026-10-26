@@ -139,6 +139,7 @@ function startProcess(name, commandName, args, { cwd, env, logFile, stdin = 'ign
     detached: process.platform !== 'win32',
     stdio: [stdin, 'pipe', 'pipe'],
   });
+  console.log(`[operations browser e2e] started ${name} pid=${child.pid}`);
   child.e2eName = name;
   child.e2eLog = log;
   tee(child.stdout, log, process.stdout);
@@ -318,7 +319,7 @@ async function runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, 
     });
     const testUsers = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
     commonEnv.OPERATIONS_FACTORY_ACCESS = JSON.stringify({
-      'factory-demo-01': [testUsers.viewer.id],
+      'factory-demo-01': [testUsers.viewer.id, testUsers.operator.id, testUsers.replacement.id, testUsers.engineer.id],
       'factory-incident-demo': [testUsers.viewer.id, testUsers.engineer.id, testUsers.operator.id],
     });
 
@@ -431,7 +432,14 @@ async function runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, 
     incidentEvidence.assertions_passed.push('incident_detail_occurrences_audit_survive_api_restart');
     fs.writeFileSync(path.join(runDir, 'incident-evidence.json'), JSON.stringify(incidentEvidence, null, 2) + '\n');
     if (process.argv.includes('--incidents')) return incidentEvidence;
-    return { ...JSON.parse(fs.readFileSync(path.join(runDir, 'evidence.json'), 'utf8')), incidents: incidentEvidence };
+    const evidence = JSON.parse(fs.readFileSync(path.join(runDir, 'evidence.json'), 'utf8'));
+    evidence.maintenance_lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'maintenance-lifecycle.json'), 'utf8'));
+    if (evidence.maintenance_lifecycle.git_sha !== sha || evidence.maintenance_lifecycle.orders.length !== 3) throw new Error('Maintenance lifecycle evidence does not match this integration SHA');
+    evidence.work_orders_workspace.complete_lifecycle_recovery = 'passed';
+    evidence.work_orders_workspace.pending = [];
+    evidence.work_orders_workspace.milestone = 'Full maintenance UI lifecycle run';
+    fs.writeFileSync(path.join(runDir, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
+    return { ...evidence, incidents: incidentEvidence };
   } finally {
     let ownedProcessesStopped = true;
     let ownedPortsClosed = true;
@@ -468,6 +476,11 @@ async function main() {
   const sourceDirty = Boolean(sourceStatus.stdout.trim());
   if (process.argv.includes('--acceptance') && sourceDirty) throw new Error('Acceptance requires a clean committed source tree');
   const repeat = repeatCount();
+  if (process.argv.includes('--acceptance')) {
+    if (repeat !== 3) throw new Error('Acceptance requires exactly three consecutive clean-schema runs');
+    const status = spawnSync('git', ['status', '--porcelain'], {cwd: root, encoding: 'utf8', windowsHide: true});
+    if (status.status !== 0 || status.stdout.trim()) throw new Error('Acceptance requires a clean committed integration SHA');
+  }
   const artifactRoot = path.resolve(process.env.OPERATIONS_E2E_ARTIFACT_DIR
     || path.join(root, 'artifacts', 'operations-e2e', sha));
   const journal = path.resolve(process.env.OPERATIONS_SCHEMA_JOURNAL
@@ -508,6 +521,7 @@ async function main() {
     incident_deterministic_replay: repeat > 1 ? 'passed' : 'single_run_only',
     completed_at: new Date().toISOString(),
     run_count: repeat,
+    maintenance_lifecycle_three_runs: repeat === 3 && evidence.every(item => item.maintenance_lifecycle?.git_sha === sha && item.work_orders_workspace.complete_lifecycle_recovery === 'passed'),
     deterministic_replay: fingerprints.length === 1,
     recommendation_fingerprint: fingerprints[0],
     runs: evidence,

@@ -9,6 +9,7 @@ export interface ScheduleGanttProps {
   label: string;
   machineFilter?: string;
   assignmentTypeFilter?: string;
+  highlightedAssignmentId?: string;
 }
 
 const blockTone: Record<ScheduleAssignment["assignment_type"], string> = {
@@ -31,7 +32,7 @@ function assignmentContext(assignment: ScheduleAssignment, snapshot: FactorySnap
   };
 }
 
-export function ScheduleGantt({ schedule, snapshot, riskReports = [], label, machineFilter = "", assignmentTypeFilter = "" }: ScheduleGanttProps) {
+export function ScheduleGantt({ schedule, snapshot, riskReports = [], label, machineFilter = "", assignmentTypeFilter = "", highlightedAssignmentId }: ScheduleGanttProps) {
   const start = new Date(schedule.planning_window.start_at).getTime();
   const end = new Date(schedule.planning_window.end_at).getTime();
   const span = Math.max(1, end - start);
@@ -54,7 +55,8 @@ export function ScheduleGantt({ schedule, snapshot, riskReports = [], label, mac
           return (
             <div
               key={`${key}:${assignment.assignment_id}`}
-              className={`absolute top-2 h-10 overflow-hidden rounded-md border px-2 py-1 text-[11px] shadow-sm ${blockTone[assignment.assignment_type]} ${assignment.status === "PROPOSED" ? "border-dashed ring-1 ring-inset ring-white" : ""}`}
+              data-source-assignment={assignment.assignment_id === highlightedAssignmentId ? "selected" : undefined}
+              className={`absolute top-2 h-10 overflow-hidden rounded-md border px-2 py-1 text-[11px] shadow-sm ${blockTone[assignment.assignment_type]} ${assignment.status === "PROPOSED" ? "border-dashed ring-1 ring-inset ring-white" : ""} ${assignment.assignment_id === highlightedAssignmentId ? "outline outline-2 outline-offset-2 outline-blue-700" : ""}`}
               style={{ left: `${left}%`, width: `${Math.max(3, right - left)}%` }}
               title={`${context.task} · ${formatTime(assignment.start_at)}–${formatTime(assignment.end_at)} · ${assignment.status} · priority ${context.priority} · risk ${context.risk} · dependencies ${context.dependencies} · revision ${schedule.revision}`}
             >
