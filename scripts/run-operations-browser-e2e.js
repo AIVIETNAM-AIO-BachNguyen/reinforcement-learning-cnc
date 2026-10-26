@@ -7,6 +7,7 @@ const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const { createInterface } = require('node:readline');
 const { setTimeout: delay } = require('node:timers/promises');
+const { verifyPlannerReplay } = require('../backend/tests/helpers/incident-planner-evidence');
 const { deepStrictEqual, strictEqual } = require('node:assert');
 
 const root = path.resolve(__dirname, '..');
@@ -387,6 +388,17 @@ async function runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, 
       treeOnAbort: true,
     });
     const incidentEvidence = JSON.parse(fs.readFileSync(path.join(runDir, 'incident-evidence.json'), 'utf8'));
+    const { PrismaClient } = require('../backend/node_modules/@prisma/client');
+    const evidenceDb = new PrismaClient({ datasources: { db: { url: isolatedUrl.toString() } } });
+    try {
+      const stored = await evidenceDb.decisionRecommendationArtifact.findUniqueOrThrow({
+        where: { caseId: incidentEvidence.decision_case_id }, select: { payloadJson: true },
+      });
+      incidentEvidence.planner_replay = await verifyPlannerReplay({
+        aiUrl: serviceEnv.AI_SERVICE_URL, caseId: incidentEvidence.decision_case_id,
+        storedRecommendation: stored.payloadJson,
+      });
+    } finally { await evidenceDb.$disconnect(); }
     // Verify durable state through a new authenticated API process, not merely a
     // browser reload against the same process. Do not save session cookies.
     async function readIncidentHistory() {
@@ -487,7 +499,7 @@ async function main() {
     controller.signal.throwIfAborted();
     evidence.push(await runOnce({ baseUrl, sha, sourceDirty, run, artifactRoot, journal, operationsPython }));
   }
-  const incidentFingerprints = evidence.map(item => (process.argv.includes('--incidents') ? item : item.incidents).recommendation_fingerprint);
+  const incidentFingerprints = evidence.map(item => (process.argv.includes('--incidents') ? item : item.incidents).planner_replay.candidate_schedule_fingerprint);
   if (incidentFingerprints.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))) throw new Error('Incident linked planner fingerprint was not asserted');
   if (repeat > 1 && new Set(incidentFingerprints).size !== 1) throw new Error('Incident planner deterministic replay failed');
   if (process.argv.includes('--incidents')) {
