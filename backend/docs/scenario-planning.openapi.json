@@ -765,6 +765,237 @@
         }
       }
     },
+    "/scenario-workspaces/{workspace_id}/baseline-entities": {
+      "get": {
+        "tags": [
+          "Scenario Planning"
+        ],
+        "summary": "GET /scenario-workspaces/{workspace_id}/baseline-entities",
+        "description": "Fresh active user/factory access; missing and inaccessible IDs have identical 404. Read-only. Immutable editor projection from the hash-verified pinned workspace snapshot, never current head. No query parameters. Array order preserves source order; the complete pinned target set is returned. snapshot_hash identifies the full source, not this projection. No feasibility verdict or hypothetical transform.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authoritative persisted result",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BaselineEntities"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR / SCENARIO_INVALID_TARGET / SCENARIO_INVALID_WINDOW / INVALID_CURSOR",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED: invalid token or inactive user",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: ADMIN or ENGINEER required for writes",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SCENARIO_NOT_FOUND: missing or inaccessible scope",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SCENARIO_REVISION_CONFLICT / IDEMPOTENCY_KEY_REUSED / SCENARIO_HEAD_CONFLICT / SCENARIO_RUN_NOT_READY / SCENARIO_LIVE_MAPPING_UNSUPPORTED / SCENARIO_ENGINE_VERSION_CONFLICT",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DB_UNAVAILABLE / SCENARIO_ENGINE_UNAVAILABLE / SCENARIO_ENGINE_CONTRACT_UNAVAILABLE (no fallback)",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Idempotency-Replayed": {
+                "description": "true only when the stored response is replayed after fresh authorization",
+                "schema": {
+                  "const": "true"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/scenario-workspaces/{workspace_id}/scenarios": {
       "post": {
         "tags": [
@@ -4704,6 +4935,144 @@
           "created_at",
           "current_head",
           "stale"
+        ]
+      },
+      "BaselineEntities": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/Baseline"
+          },
+          "planning_window": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "end_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "start_at",
+              "end_at"
+            ]
+          },
+          "technicians": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "technician_id": {
+                  "type": "string"
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "availability": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "start_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "end_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "start_at",
+                      "end_at"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "technician_id",
+                "display_name",
+                "availability"
+              ]
+            }
+          },
+          "maintenance_requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maintenance_request_id": {
+                  "type": "string"
+                },
+                "machine_id": {
+                  "type": "string"
+                },
+                "expected_duration_minutes": {
+                  "type": "number"
+                },
+                "earliest_start_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "latest_start_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "mandatory": {
+                  "type": "boolean"
+                },
+                "priority": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "maintenance_request_id",
+                "machine_id",
+                "expected_duration_minutes",
+                "earliest_start_at",
+                "latest_start_at",
+                "mandatory",
+                "priority",
+                "status"
+              ]
+            }
+          }
+        },
+        "required": [
+          "workspace_id",
+          "baseline",
+          "planning_window",
+          "technicians",
+          "maintenance_requests"
         ]
       },
       "Draft": {

@@ -25,6 +25,13 @@ schemas.Baseline = object({ factory_id: string, snapshot_id: string, snapshot_ha
 schemas.Workspace = object({ workspace_id: uuid, name: string, baseline: ref('Baseline'), planning_config: ref('PlanningConfig'),
   engine_version: string, contract_version: string, created_by: uuid, created_at: time,
   current_head: nullable(ref('Head')), stale: { type: 'boolean' } });
+schemas.BaselineEntities = object({ workspace_id: uuid, baseline: ref('Baseline'),
+  planning_window: object({ start_at: time, end_at: time }),
+  technicians: { type: 'array', items: object({ technician_id: string, display_name: string,
+    availability: { type: 'array', items: object({ start_at: time, end_at: time }) } }) },
+  maintenance_requests: { type: 'array', items: object({ maintenance_request_id: string, machine_id: string,
+    expected_duration_minutes: { type: 'number' }, earliest_start_at: nullable(time), latest_start_at: nullable(time),
+    mandatory: { type: 'boolean' }, priority: string, status: string }) } });
 schemas.Draft = object({ ...schemas.CreateDraft.properties, workspace_id: uuid, scenario_id: uuid,
   revision: { type: 'integer', minimum: 1 }, created_at: time, updated_at: time });
 schemas.Job = object({ workspace_id: uuid, job_id: uuid, kind: { enum: ['RUN', 'SENSITIVITY'] },
@@ -68,6 +75,8 @@ const root = '/scenario-workspaces', workspace = `${root}/{workspace_id}`;
 operation(root, 'post', 'CreateWorkspace', envelope(ref('Workspace')), 201);
 operation(root, 'get', null, page('Workspace'), 200, [query('factory_id', { type: 'string', maxLength: 128 }, true), ...pagination]);
 operation(workspace, 'get', null, envelope(ref('Workspace')));
+operation(`${workspace}/baseline-entities`, 'get', null, envelope(ref('BaselineEntities')));
+paths[`${workspace}/baseline-entities`].get.description += ' Immutable editor projection from the hash-verified pinned workspace snapshot, never current head. No query parameters. Array order preserves source order; the complete pinned target set is returned. snapshot_hash identifies the full source, not this projection. No feasibility verdict or hypothetical transform.';
 operation(`${workspace}/scenarios`, 'post', 'CreateDraft', envelope(ref('Draft')), 201);
 operation(`${workspace}/scenarios`, 'get', null, page('Draft'), 200, pagination);
 operation(`${workspace}/scenarios/{scenario_id}`, 'get', null, envelope(ref('Draft')));

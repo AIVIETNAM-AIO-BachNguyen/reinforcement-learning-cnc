@@ -82,6 +82,24 @@ expired/previous owners. Claims expire after a bounded lease; jobs retain their 
 300-second deadline and stop after three attempts. Planner calls must stay outside these
 short transactions. This lifecycle repository is not an executable engine worker yet.
 
+`GET /api/v1/scenario-workspaces/{workspace_id}/baseline-entities` supplies the historical
+editor target set without consulting the current snapshot. It returns `workspace_id`,
+`baseline` identity, `planning_window`, technician IDs/display names/availability and
+maintenance IDs/machine IDs/duration/start bounds/mandatory/priority/status. This is an
+allowlisted projection; `baseline.snapshot_hash` identifies the full immutable source,
+not the projection. The complete arrays retain source order. No query parameters are
+accepted. Fresh scoped authorization and hash validation run in one RepeatableRead
+transaction. Missing/inaccessible workspace IDs return the same 404; inactive users
+return 401. Success/errors use no-store and the existing Scenario envelope. No engine
+availability is required and no case, schedule, head, draft or receipt is changed.
+Frontend #57 must regenerate its proposal types and adapt the editor entity adapter;
+this DTO is intentionally not a complete canonical FactorySnapshot or feasibility result.
+
+Example (authenticated shell; token comes from the caller's session):
+```sh
+curl -H "Authorization: Bearer $TOKEN" "$API/api/v1/scenario-workspaces/$WORKSPACE_ID/baseline-entities"
+```
+
 Weights-only LIVE handoff now creates a fresh pending LIVE case using the shared case creation
 boundary, with atomic case event, immutable `scenario_live_evaluations` provenance, Scenario
 event and receipt. Canonical validation runs outside the transaction; the final transaction

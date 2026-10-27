@@ -167,6 +167,22 @@ async function get(db, identity, workspaceId, scenarioId) {
     return { success: true, data };
   }, { isolationLevel: 'RepeatableRead' });
 }
+async function baselineEntities(db, identity, workspaceId) {
+  return db.$transaction(async tx => {
+    const workspace = await accessible(tx, identity, workspaceId);
+    const snapshot = workspace.baseline_json;
+    if (contentHash(snapshot) !== workspace.snapshot_hash || snapshot.factory_id !== workspace.factory_id || snapshot.snapshot_id !== workspace.snapshot_id)
+      throw new ApiError(500, 'SCENARIO_SOURCE_INTEGRITY_ERROR', 'Pinned snapshot integrity validation failed');
+    return { success: true, data: { workspace_id: workspace.id, baseline: workspaceDto(workspace, null).baseline,
+      planning_window: { start_at: snapshot.planning_window.start_at, end_at: snapshot.planning_window.end_at },
+      technicians: snapshot.technicians.map(row => ({ technician_id: row.technician_id, display_name: row.display_name,
+        availability: row.availability.map(interval => ({ start_at: interval.start_at, end_at: interval.end_at })) })),
+      maintenance_requests: snapshot.maintenance_requests.map(row => ({ maintenance_request_id: row.maintenance_request_id,
+        machine_id: row.machine_id, expected_duration_minutes: row.expected_duration_minutes,
+        earliest_start_at: row.earliest_start_at ?? null, latest_start_at: row.latest_start_at ?? null,
+        mandatory: row.mandatory, priority: row.priority, status: row.status })) } };
+  }, { isolationLevel: 'RepeatableRead' });
+}
 async function list(db, identity, rawQuery, workspaceId) {
   const query = policy.parse(workspaceId ? policy.page : policy.listWorkspaces, rawQuery);
   return db.$transaction(async tx => {
@@ -199,4 +215,4 @@ async function list(db, identity, rawQuery, workspaceId) {
     return { success: true, data: { items, next_cursor: rows.length > query.limit ? encodeCursor(scope, selected.at(-1)) : null } };
   }, { isolationLevel: 'RepeatableRead' });
 }
-module.exports = { write, get, list, accessible, workspaceRow, draftRow, authorizeWrite, event, checkHead, engineIdentity, workspaceDto, draftDto, notFound, encodeCursor, decodeCursor };
+module.exports = { write, get, baselineEntities, list, accessible, workspaceRow, draftRow, authorizeWrite, event, checkHead, engineIdentity, workspaceDto, draftDto, notFound, encodeCursor, decodeCursor };

@@ -13,6 +13,10 @@ router.get('/:workspace_id', async (req, res) => {
   res.json(await service.get(db, req.user, req.params.workspace_id));
 });
 router.get('/:workspace_id/scenarios', async (req, res) => res.json(await service.list(db, req.user, req.query, req.params.workspace_id)));
+router.get('/:workspace_id/baseline-entities', async (req, res) => {
+  policy.parse(policy.empty, req.query);
+  res.json(await service.baselineEntities(db, req.user, req.params.workspace_id));
+});
 router.get('/:workspace_id/scenarios/:scenario_id', async (req, res) => {
   policy.parse(policy.empty, req.query);
   res.json(await service.get(db, req.user, req.params.workspace_id, req.params.scenario_id));

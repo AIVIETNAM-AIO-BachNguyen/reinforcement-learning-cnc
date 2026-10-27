@@ -63,6 +63,36 @@ test('factory-scoped detail/list/draft prevent guessed IDs and unknown query fie
   expect((await f.http(`/scenario-workspaces?factory_id=${a.factory_id}&factory_id=${b.factory_id}`)).status).toBe(400);
   expect((await f.http(`${path(w)}?debug=true`)).status).toBe(400);
 });
+test('historical baseline entity read stays pinned after ingestion and enforces fresh scope', async () => {
+  const source = await f.factory(), w = await create(source);
+  const url = `${path(w)}/baseline-entities`;
+  const original = await f.http(url, { user: f.users.VIEWER });
+  expect(original.status).toBe(200); expect(original.cache).toBe('no-store');
+  expect(original.body.data.baseline).toEqual(w.baseline);
+  expect(original.body.data.planning_window).toEqual(source.planning_window);
+  expect(original.body.data.technicians[0]).toEqual({ technician_id: source.technicians[0].technician_id,
+    display_name: source.technicians[0].display_name, availability: source.technicians[0].availability });
+  expect(original.body.data.maintenance_requests[0].expected_duration_minutes).toBe(source.maintenance_requests[0].expected_duration_minutes);
+  expect(Object.keys(original.body.data).sort()).toEqual(['baseline', 'maintenance_requests', 'planning_window', 'technicians', 'workspace_id']);
+  const head = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
+  const next = structuredClone(source); next.snapshot_id = 'entities-S2-' + randomUUID();
+  next.technicians[0].display_name = 'Changed current name';
+  next.maintenance_requests[0].expected_duration_minutes += 1;
+  await require('../../src/services/operations-snapshot.service').ingestFactorySnapshot({ factoryId: source.factory_id,
+    expectedHeadRevision: head.revision, snapshot: next, sourceId: 'historical-entities-test' }, db);
+  const current = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
+  for (const user of [f.users.ADMIN, f.users.MANAGER, f.users.OPERATOR, f.users.VIEWER])
+    expect((await f.http(url, { user })).body).toEqual(original.body);
+  expect((await f.http(url, { user: f.users.OUTSIDER })).status).toBe(404);
+  expect((await f.http(url, { user: f.users.INACTIVE })).status).toBe(401);
+  expect((await f.http(url + '?factory_id=other')).status).toBe(400);
+  expect((await f.http(`/scenario-workspaces/${randomUUID()}/baseline-entities`)).status).toBe(404);
+  expect((await f.member(source.factory_id, f.users.VIEWER, 'DELETE')).status).toBe(200);
+  expect((await f.http(url, { user: f.users.VIEWER })).status).toBe(404);
+  expect(await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } })).toEqual(current);
+  expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(0);
+});
+
 test('lost-response replay returns original identity, different body conflicts, revoke blocks replay', async () => {
   const key = randomUUID(), body = await request();
   const options = { method: 'POST', user: f.users.OTHER, body, key };

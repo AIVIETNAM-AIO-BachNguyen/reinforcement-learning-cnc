@@ -23,6 +23,14 @@ export interface PlanningConfig {
   allowed_strategy_ids: string[];
 }
 export interface HeadFence { snapshot_id: string; plan_version: number; revision: number }
+export interface BaselineEntities {
+  workspace_id: UUID;
+  baseline: BaselineIdentity;
+  planning_window: { start_at: Timestamp; end_at: Timestamp };
+  technicians: { technician_id: string; display_name: string; availability: { start_at: Timestamp; end_at: Timestamp }[] }[];
+  maintenance_requests: { maintenance_request_id: string; machine_id: string; expected_duration_minutes: number;
+    earliest_start_at: Timestamp | null; latest_start_at: Timestamp | null; mandatory: boolean; priority: string; status: string }[];
+}
 export interface CreateWorkspace {
   factory_id: string;
   name: string;
