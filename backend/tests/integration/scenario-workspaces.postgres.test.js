@@ -355,6 +355,52 @@ test('weights-only LIVE handoff creates a new pending case with immutable proven
   expect(await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } })).toEqual(before);
   await expect(db.$executeRaw`DELETE FROM scenario_live_evaluations WHERE case_id=${created.id}::uuid`).rejects.toThrow();
 });
+test.each([
+  ['revoke before new handoff', false, false],
+  ['revoke before LIVE replay', false, true],
+  ['LIVE replay before revoke', true, true],
+])('coordinated %s checks access before returning a LIVE receipt', async (_name, writeFirst, replay) => {
+  const { source, w, job } = await completedBoundaryRun();
+  const head = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
+  const options = { method: 'POST', user: f.users.OTHER, key: randomUUID(), body: {
+    source_run_id: job.job_id, confirmation: true,
+    expected_head: { snapshot_id: head.snapshotId, plan_version: head.planVersion, revision: head.revision },
+  } };
+  const handoff = () => f.http(`${path(w)}/live-evaluations`, options);
+  const revoke = () => f.member(source.factory_id, f.users.OTHER, 'DELETE');
+  const original = replay ? await handoff() : null;
+  if (original) expect(original.status).toBe(201);
+  let unlock, ready;
+  const released = new Promise(resolve => { unlock = resolve; });
+  const acquired = new Promise(resolve => { ready = resolve; });
+  const gate = db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${source.factory_id},0))::text`;
+    ready();
+    await released;
+  }, { timeout: 20000 });
+  let first, second;
+  try {
+    await Promise.race([acquired, gate]);
+    first = writeFirst ? handoff() : revoke();
+    await waitForFactoryWaiters(source.factory_id, 1);
+    second = writeFirst ? revoke() : handoff();
+    await waitForFactoryWaiters(source.factory_id, 2);
+  } finally { unlock(); await gate; }
+  const responses = await Promise.all([first, second]);
+  expect(responses[writeFirst ? 1 : 0].status).toBe(200);
+  const result = responses[writeFirst ? 0 : 1];
+  expect(result.status).toBe(writeFirst ? 201 : 404);
+  if (writeFirst) { expect(result.body).toEqual(original.body); expect(result.replay).toBe('true'); }
+  expect((await handoff()).status).toBe(404);
+  expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(replay ? 1 : 0);
+  const [counts] = await db.$queryRaw`SELECT
+    (SELECT count(*)::int FROM scenario_live_evaluations WHERE workspace_id=${w.workspace_id}::uuid) AS links,
+    (SELECT count(*)::int FROM scenario_events WHERE workspace_id=${w.workspace_id}::uuid AND type='LIVE_EVALUATION_CREATED') AS events,
+    (SELECT count(*)::int FROM scenario_command_receipts WHERE workspace_id=${w.workspace_id}::uuid AND key=${options.key}) AS receipts`;
+  expect(counts).toEqual({ links: replay ? 1 : 0, events: replay ? 1 : 0, receipts: replay ? 1 : 0 });
+  expect(await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } })).toEqual(head);
+});
+
 test('LIVE handoff rejects stale context, incomplete runs, foreign IDs, absent confirmation and forbidden roles', async () => {
   const { source, w, job } = await completedBoundaryRun();
   const head = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
