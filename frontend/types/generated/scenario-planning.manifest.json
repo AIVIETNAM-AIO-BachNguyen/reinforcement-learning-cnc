@@ -1,0 +1,10 @@
+{
+  "status": "PROPOSAL_NOT_API_READY",
+  "producer_sha": "aa56ecfceb85b6d6f78158ac34d37440103942a4",
+  "source_sha256": "5cec46e4c7e8777b42252e0d783c2a5889dd1e18784bab0a0578c9c4034677af",
+  "engine_result": "PENDING_FLEX",
+  "comparison": "PENDING_FLEX",
+  "runnable": false,
+  "sensitivity": false,
+  "live_handoff": false
+}
