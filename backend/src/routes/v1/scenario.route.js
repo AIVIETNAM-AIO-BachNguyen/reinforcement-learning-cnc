@@ -4,6 +4,7 @@ const { requireAuth } = require('../../middlewares/auth.middleware');
 const { accessError } = require('../../services/factory-access.service');
 const policy = require('../../services/scenario-policy');
 const service = require('../../services/scenario-workspace.service');
+const jobs = require('../../services/scenario-job.service');
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 router.use(requireAuth);
 router.get('/', async (req, res) => res.json(await service.list(db, req.user, req.query)));
@@ -16,8 +17,13 @@ router.get('/:workspace_id/scenarios/:scenario_id', async (req, res) => {
   policy.parse(policy.empty, req.query);
   res.json(await service.get(db, req.user, req.params.workspace_id, req.params.scenario_id));
 });
+router.get('/:workspace_id/runs', async (req, res) => res.json(await jobs.list(db, req.user, req.params.workspace_id, req.query)));
+router.get('/:workspace_id/runs/:run_id', async (req, res) => {
+  policy.parse(policy.empty, req.query);
+  res.json(await jobs.get(db, req.user, req.params.workspace_id, req.params.run_id));
+});
 for (const [method, path, command] of [['post', '/', 'create'], ['post', '/:workspace_id/scenarios', 'createDraft'],
-  ['patch', '/:workspace_id/scenarios/:scenario_id', 'updateDraft']]) {
+  ['patch', '/:workspace_id/scenarios/:scenario_id', 'updateDraft'], ['post', '/:workspace_id/runs', 'enqueueRun']]) {
   router[method](path, async (req, res) => {
     policy.parse(policy.empty, req.query);
     const result = await service.write(db, req.user, command, req.params.workspace_id, req.body, req.get('Idempotency-Key'), req.params.scenario_id);

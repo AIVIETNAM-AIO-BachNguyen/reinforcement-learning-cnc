@@ -42,6 +42,35 @@ export interface LiveEvaluation { source_run_id: UUID; confirmation: true; expec
 export type JobStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
 export type PointStatus = 'QUEUED' | 'RUNNING' | 'FEASIBLE' | 'NO_FEASIBLE_PLAN' | 'FAILED' | 'TIMEOUT';
 export type SweepOutcome = 'COMPLETE' | 'PARTIAL_FAILED' | 'FAILED';
+/** Pending joint Flex schema; consumers must not infer metric/scoring fields. */
+export type UnfrozenEngineResult = Record<string, unknown>;
+export interface Point {
+  point_index: number;
+  value: number | null;
+  status: PointStatus;
+  error_code: string | null;
+  result: UnfrozenEngineResult | null;
+}
+export interface Job {
+  workspace_id: UUID;
+  job_id: UUID;
+  kind: 'RUN' | 'SENSITIVITY';
+  status: JobStatus;
+  input_hash: Hash;
+  source_scenario_id: UUID | null;
+  source_revision: number | null;
+  source_run_id: UUID | null;
+  engine_version: string;
+  contract_version: string;
+  attempt: number;
+  created_at: Timestamp;
+  started_at: Timestamp | null;
+  completed_at: Timestamp | null;
+  deadline_at: Timestamp;
+  error_code: string | null;
+  result: UnfrozenEngineResult | null;
+  points: Point[];
+}
 export interface BaselineIdentity {
   factory_id: string;
   snapshot_id: string;

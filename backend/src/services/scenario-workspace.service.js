@@ -103,7 +103,7 @@ async function saveDraft(tx, actor, workspace, body, id) {
   await event(tx, workspace, actor.id, previous ? 'DRAFT_REVISED' : 'DRAFT_CREATED', { scenario_id: id, revision, content_hash: contentHash(payload) });
   return { workspace, status: previous ? 200 : 201, data: draftDto(await draftRow(tx, workspace, id)) };
 }
-const commands = { create: policy.createWorkspace, createDraft: policy.createDraft, updateDraft: policy.updateDraft };
+const commands = { create: policy.createWorkspace, createDraft: policy.createDraft, updateDraft: policy.updateDraft, enqueueRun: policy.enqueueRun };
 async function write(db, identity, command, workspaceId, rawBody, rawKey, resourceId) {
   const body = policy.parse(commands[command], rawBody), key = policy.parse(policy.key, rawKey);
   if (body.overrides) body.overrides = policy.canonicalOverrides(body.overrides);
@@ -119,7 +119,8 @@ async function write(db, identity, command, workspaceId, rawBody, rawKey, resour
       return { body: receipt.response_json, status: receipt.response_status, replayed: true };
     }
     const result = command === 'create' ? await create(tx, actor, body)
-      : await saveDraft(tx, actor, workspace, body, command === 'updateDraft' ? resourceId : undefined);
+      : command === 'enqueueRun' ? await require('./scenario-job.service').enqueueRun(tx, actor, workspace, body)
+        : await saveDraft(tx, actor, workspace, body, command === 'updateDraft' ? resourceId : undefined);
     const response = { success: true, data: result.data };
     await tx.$executeRaw`INSERT INTO scenario_command_receipts(factory_id,actor_id,key,workspace_id,request_hash,response_json,response_status)
       VALUES(${factoryId},${actor.id}::uuid,${key},${result.workspace.id}::uuid,${requestHash},${json(response)}::jsonb,${result.status})`;
@@ -187,4 +188,4 @@ async function list(db, identity, rawQuery, workspaceId) {
     return { success: true, data: { items, next_cursor: rows.length > query.limit ? encodeCursor(scope, selected.at(-1)) : null } };
   }, { isolationLevel: 'RepeatableRead' });
 }
-module.exports = { write, get, list, accessible, workspaceRow, draftRow, authorizeWrite, event, checkHead, engineIdentity, workspaceDto, draftDto, notFound };
+module.exports = { write, get, list, accessible, workspaceRow, draftRow, authorizeWrite, event, checkHead, engineIdentity, workspaceDto, draftDto, notFound, encodeCursor, decodeCursor };

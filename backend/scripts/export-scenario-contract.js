@@ -46,7 +46,7 @@ const response = (description, schema) => ({ description, headers, content: { 'a
 const errors = { 400: 'VALIDATION_ERROR / SCENARIO_INVALID_TARGET / SCENARIO_INVALID_WINDOW / INVALID_CURSOR',
   401: 'UNAUTHORIZED: invalid token or inactive user', 403: 'FORBIDDEN: ADMIN or ENGINEER required for writes',
   404: 'SCENARIO_NOT_FOUND: missing or inaccessible scope',
-  409: 'SCENARIO_REVISION_CONFLICT / IDEMPOTENCY_KEY_REUSED / SCENARIO_HEAD_CONFLICT / SCENARIO_RUN_NOT_READY / SCENARIO_LIVE_MAPPING_UNSUPPORTED',
+  409: 'SCENARIO_REVISION_CONFLICT / IDEMPOTENCY_KEY_REUSED / SCENARIO_HEAD_CONFLICT / SCENARIO_RUN_NOT_READY / SCENARIO_LIVE_MAPPING_UNSUPPORTED / SCENARIO_ENGINE_VERSION_CONFLICT',
   503: 'DB_UNAVAILABLE / SCENARIO_ENGINE_UNAVAILABLE / SCENARIO_ENGINE_CONTRACT_UNAVAILABLE (no fallback)' };
 const query = (name, schema, required = false) => ({ name, in: 'query', required, schema });
 const pagination = [query('limit', { type: 'integer', minimum: 1, maximum: 100, default: 20 }), query('cursor', { type: 'string', maxLength: 2048 })];
@@ -74,6 +74,7 @@ operation(`${workspace}/scenarios/{scenario_id}`, 'get', null, envelope(ref('Dra
 operation(`${workspace}/scenarios/{scenario_id}`, 'patch', 'UpdateDraft', envelope(ref('Draft')));
 operation(`${workspace}/runs`, 'post', 'EnqueueRun', envelope(ref('Job')), 202);
 operation(`${workspace}/runs`, 'get', null, page('Job'), 200, pagination);
+paths[`${workspace}/runs`].get.description += ' List is a summary projection: result is null and points is empty; fetch run detail for persisted results and point progress.';
 operation(`${workspace}/runs/{run_id}`, 'get', null, envelope(ref('Job')));
 operation(`${workspace}/compare`, 'get', null, envelope(ref('Comparison')), 200,
   [query('run_ids', { type: 'array', minItems: 2, maxItems: 4, uniqueItems: true, items: uuid }, true)]);

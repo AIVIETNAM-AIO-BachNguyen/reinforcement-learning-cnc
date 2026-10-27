@@ -72,13 +72,32 @@ uses a deferred FK to an append-only revision; an incomplete revision transactio
 commit. A partial unique index permits at most one RUNNING job per factory. Application
 lease-token/expiry fencing is still required; that index alone does not fence late output.
 
-Initial implementation routes are workspace create/list/detail and draft create/list/detail/
-revision PATCH. They use authenticated HTTP, fresh transaction-bound factory/role checks,
-actor-bound receipts and signed cursors. Enqueue/engine/compare/sensitivity/LIVE routes are
-not implemented yet. Do not treat the currently exposed subset as M1 or feature completion.
+Implemented routes are workspace create/list/detail, draft create/list/detail/revision PATCH
+and run enqueue/list/detail. They use authenticated HTTP, fresh transaction-bound factory/role
+checks, actor-bound receipts and signed cursors. Run enqueue freezes the exact snapshot,
+reference publication, draft revision, config and sampling metadata; baseline evaluation has
+no overrides and otherwise uses the same inputs. Lease/reclaim/heartbeat/release persist
+attempt history, limit concurrency to one job per factory, retain frozen inputs and reject
+expired/previous owners. Claims expire after a bounded lease; jobs retain their original
+300-second deadline and stop after three attempts. Planner calls must stay outside these
+short transactions. This lifecycle repository is not an executable engine worker yet.
+
+Engine execution/result validation, compare, sensitivity and LIVE handoff remain unimplemented.
+Do not treat the currently exposed subset as M1 or feature completion.
 Workspace creation requires explicit `SCENARIO_ENGINE_VERSION`, `SCENARIO_CONTRACT_VERSION`
 and `SCENARIO_SAMPLING_VERSION`; missing versions return 503 rather than inventing an engine.
 These names alone do not prove engine compatibility; joint schema/capability verification
 remains a prerequisite for enqueueing real work.
+
+Prisma models map all eight added storage tables and their scoped foreign keys. SQL remains
+authoritative for immutable/transition guards, deferred current-revision FK and partial
+worker indexes that Prisma cannot express. Use migration deploy, not db push. The populated
+upgrade runner `node scripts/check-scenario-upgrade.js` requires an explicit test DB,
+deploys migrations from exact base c926d5d, seeds two factories plus committed workflow and
+S2/P1 historical basis, then fingerprints every existing table before/after the upgrade.
+`node tests/integration/run-integration-tests.js --scenario` runs fresh migration and
+storage/HTTP/lease/upgrade checks in owned disposable schemas. Set `TEST_DATABASE_URL`,
+`OPERATIONS_PYTHON` and `OPERATIONS_SCHEMA_JOURNAL`; use the same test URL/journal with
+`--cleanup` after interruption. Existing database contents are never swept.
 
 Required evidence: authenticated HTTP/PostgreSQL two-factory/all-role checks, revision/enqueue races, revoke/replay, worker lease expiry/fencing/restart, malformed outputs, partial timeout, rollback, historical baseline preservation and LIVE boundaries. Real Flex baseline→override→5-point physical sweep→5-point weight sweep→compare/replay is mandatory. Three clean-schema joint browser runs and full CI at one integrated SHA remain prerequisites for VERIFIED_DONE. Mocks cannot satisfy these gates.
