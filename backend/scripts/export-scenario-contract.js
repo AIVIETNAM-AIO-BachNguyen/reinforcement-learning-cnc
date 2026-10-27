@@ -90,6 +90,6 @@ const document = { openapi: '3.1.0', info: { title: 'Scenario Planning M0 propos
 const target = path.resolve(__dirname, '../docs/scenario-planning.openapi.json');
 const output = JSON.stringify(document, null, 2) + '\n';
 if (process.argv.includes('--check')) {
-  if (fs.readFileSync(target, 'utf8') !== output) throw new Error('Scenario proposal drift: run export-scenario-contract.js');
+  if (fs.readFileSync(target, 'utf8').replace(/\r\n/g, '\n') !== output) throw new Error('Scenario proposal drift: run export-scenario-contract.js');
 } else fs.writeFileSync(target, output);
 module.exports = { document };

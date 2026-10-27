@@ -64,4 +64,21 @@ LIVE handoff requires a saved completed run, explicit confirmation and the expec
 
 Reserve a new migration under `20261027010000_scenario_planning`; verify collision again before publication. Add tables/indexes/constraints without rewriting existing canonical JSON, receipts, publication versions or history. Validate fresh schema and populated upgrade from the exact base, plus the actual integrated branch when Flex/Frontend dependencies exist.
 
+The initial physical implementation stores immutable RunInput fields on `scenario_jobs`
+and immutable per-point results on `scenario_points` (rather than extra one-to-one tables).
+Accepted aggregate results are write-once job fields. SQL triggers reject changes to
+frozen inputs, accepted outputs, baseline copies, receipts and events. The draft pointer
+uses a deferred FK to an append-only revision; an incomplete revision transaction cannot
+commit. A partial unique index permits at most one RUNNING job per factory. Application
+lease-token/expiry fencing is still required; that index alone does not fence late output.
+
+Initial implementation routes are workspace create/list/detail and draft create/list/detail/
+revision PATCH. They use authenticated HTTP, fresh transaction-bound factory/role checks,
+actor-bound receipts and signed cursors. Enqueue/engine/compare/sensitivity/LIVE routes are
+not implemented yet. Do not treat the currently exposed subset as M1 or feature completion.
+Workspace creation requires explicit `SCENARIO_ENGINE_VERSION`, `SCENARIO_CONTRACT_VERSION`
+and `SCENARIO_SAMPLING_VERSION`; missing versions return 503 rather than inventing an engine.
+These names alone do not prove engine compatibility; joint schema/capability verification
+remains a prerequisite for enqueueing real work.
+
 Required evidence: authenticated HTTP/PostgreSQL two-factory/all-role checks, revision/enqueue races, revoke/replay, worker lease expiry/fencing/restart, malformed outputs, partial timeout, rollback, historical baseline preservation and LIVE boundaries. Real Flex baseline→override→5-point physical sweep→5-point weight sweep→compare/replay is mandatory. Three clean-schema joint browser runs and full CI at one integrated SHA remain prerequisites for VERIFIED_DONE. Mocks cannot satisfy these gates.
