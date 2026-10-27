@@ -3,7 +3,7 @@ const { Prisma } = require('@prisma/client');
 const { ApiError } = require('../lib/api-error');
 const access = require('./factory-access.service');
 const policy = require('./scenario-policy');
-const { contentHash } = require('./operations-contract.service');
+const { contentHash, validatePayload } = require('./operations-contract.service');
 const notFound = () => new ApiError(404, 'SCENARIO_NOT_FOUND', 'Scenario resource was not found');
 const conflict = () => new ApiError(409, 'SCENARIO_REVISION_CONFLICT', 'Draft revision changed; reload before editing or enqueueing.');
 const json = value => JSON.stringify(value);
@@ -103,12 +103,12 @@ async function saveDraft(tx, actor, workspace, body, id) {
   await event(tx, workspace, actor.id, previous ? 'DRAFT_REVISED' : 'DRAFT_CREATED', { scenario_id: id, revision, content_hash: contentHash(payload) });
   return { workspace, status: previous ? 200 : 201, data: draftDto(await draftRow(tx, workspace, id)) };
 }
-const commands = { create: policy.createWorkspace, createDraft: policy.createDraft, updateDraft: policy.updateDraft, enqueueRun: policy.enqueueRun };
-async function write(db, identity, command, workspaceId, rawBody, rawKey, resourceId) {
+const commands = { create: policy.createWorkspace, createDraft: policy.createDraft, updateDraft: policy.updateDraft, enqueueRun: policy.enqueueRun, liveEvaluation: policy.liveEvaluation };
+async function write(db, identity, command, workspaceId, rawBody, rawKey, resourceId, prepared) {
   const body = policy.parse(commands[command], rawBody), key = policy.parse(policy.key, rawKey);
   if (body.overrides) body.overrides = policy.canonicalOverrides(body.overrides);
   const requestHash = contentHash({ command, workspace_id: workspaceId ?? null, resource_id: resourceId ?? null, body });
-  return db.$transaction(async tx => {
+  const written = await db.$transaction(async tx => {
     // Role denial must not reveal whether a guessed workspace exists. This is
     // only an early guard; authorizeWrite rechecks after factory/user locks.
     await access.currentUser(tx, identity, ['ADMIN', 'ENGINEER']);
@@ -121,14 +121,22 @@ async function write(db, identity, command, workspaceId, rawBody, rawKey, resour
       if (receipt.request_hash !== requestHash) throw new ApiError(409, 'IDEMPOTENCY_KEY_REUSED', 'Idempotency key was used with a different request');
       return { body: receipt.response_json, status: receipt.response_status, replayed: true };
     }
+    if (command === 'liveEvaluation' && !prepared)
+      return { preparation: await require('./scenario-live.service').prepare(tx, actor, workspace, body) };
     const result = command === 'create' ? await create(tx, actor, body)
       : command === 'enqueueRun' ? await require('./scenario-job.service').enqueueRun(tx, actor, workspace, body)
+        : command === 'liveEvaluation' ? await require('./scenario-live.service').create(tx, actor, workspace, body, prepared)
         : await saveDraft(tx, actor, workspace, body, command === 'updateDraft' ? resourceId : undefined);
     const response = { success: true, data: result.data };
     await tx.$executeRaw`INSERT INTO scenario_command_receipts(factory_id,actor_id,key,workspace_id,request_hash,response_json,response_status)
       VALUES(${factoryId},${actor.id}::uuid,${key},${result.workspace.id}::uuid,${requestHash},${json(response)}::jsonb,${result.status})`;
     return { body: response, status: result.status, replayed: false };
   }, { timeout: 15000 });
+  if (!written.preparation) return written;
+  // Canonical Python validation runs outside a DB transaction. The second
+  // transaction repeats authorization, receipt lookup and the current-head fence.
+  const request = await validatePayload(written.preparation.request, 'case-request');
+  return write(db, identity, command, workspaceId, rawBody, rawKey, resourceId, { ...written.preparation, request });
 }
 function cursorSignature(payload) {
   if (!process.env.JWT_SECRET) throw new ApiError(503, 'SCENARIO_CURSOR_UNAVAILABLE', 'Cursor signing is unavailable');

@@ -82,14 +82,25 @@ expired/previous owners. Claims expire after a bounded lease; jobs retain their 
 300-second deadline and stop after three attempts. Planner calls must stay outside these
 short transactions. This lifecycle repository is not an executable engine worker yet.
 
-Engine execution/result validation, compare, sensitivity and LIVE handoff remain unimplemented.
+Weights-only LIVE handoff now creates a fresh pending LIVE case using the shared case creation
+boundary, with atomic case event, immutable `scenario_live_evaluations` provenance, Scenario
+event and receipt. Canonical validation runs outside the transaction; the final transaction
+rechecks authorization, source input/result hashes and the explicit current-head fence.
+Receipt replay runs before validation, so a lost response can be replayed even during validator
+outage. A historical workspace cannot be silently rebased, including when the caller supplies
+the new current head. The case timeline exposes only typed source workspace/run/hash fields.
+No simulation schedule, candidate, approval or publication is copied. DEFER remains unsupported
+until a reviewed LIVE extension exists; availability/duration require separately updated facts.
+Boundary tests use explicitly labelled persisted fixtures and are not real-engine acceptance.
+
+Engine execution/result validation, compare, sensitivity and real-engine LIVE acceptance remain unimplemented.
 Do not treat the currently exposed subset as M1 or feature completion.
 Workspace creation requires explicit `SCENARIO_ENGINE_VERSION`, `SCENARIO_CONTRACT_VERSION`
 and `SCENARIO_SAMPLING_VERSION`; missing versions return 503 rather than inventing an engine.
 These names alone do not prove engine compatibility; joint schema/capability verification
 remains a prerequisite for enqueueing real work.
 
-Prisma models map all eight added storage tables and their scoped foreign keys. SQL remains
+Prisma models map all nine added storage tables and their scoped foreign keys. SQL remains
 authoritative for immutable/transition guards, deferred current-revision FK and partial
 worker indexes that Prisma cannot express. Use migration deploy, not db push. The populated
 upgrade runner `node scripts/check-scenario-upgrade.js` requires an explicit test DB,

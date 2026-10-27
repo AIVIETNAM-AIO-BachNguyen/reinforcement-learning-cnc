@@ -4,6 +4,7 @@ const app = require('../../src/app');
 const { fixture } = require('../helpers/work-order-fixtures');
 const example = require('../../../contracts/v3/examples/demo-scenario.json');
 const { setTimeout: delay } = require('node:timers/promises');
+const { contentHash } = require('../../src/services/operations-contract.service');
 const saved = Object.fromEntries(['FACTORY_ACCESS_SOURCE', 'SCENARIO_ENGINE_VERSION', 'SCENARIO_CONTRACT_VERSION', 'SCENARIO_SAMPLING_VERSION'].map(key => [key, process.env[key]]));
 let f, a, b;
 beforeAll(async () => {
@@ -291,3 +292,123 @@ test.each(['VIEWER', 'INACTIVE'])('write boundary rechecks user changed to %s wh
     expect(await db.$queryRaw`SELECT id FROM scenario_jobs WHERE workspace_id=${w.workspace_id}::uuid`).toHaveLength(0);
   } finally { await db.user.update({ where: { id: target.id }, data: { role: 'ENGINEER', active: true } }); }
 }, 30000);
+
+// Boundary-only fixture. It does NOT execute an engine or count toward real-engine acceptance.
+async function completedBoundaryRun(overrides = []) {
+  const source = await f.factory(), previousVersion = process.env.SCENARIO_ENGINE_VERSION;
+  if (typeof overrides === 'function') overrides = overrides(source);
+  process.env.SCENARIO_ENGINE_VERSION = 'boundary-' + randomUUID();
+  let w, job;
+  try {
+    w = await create(source);
+    const created = await f.http(`${path(w)}/scenarios`, { method: 'POST', body: { ...draft(source), overrides } });
+    expect(created.status).toBe(201);
+    const response = await f.http(`${path(w)}/runs`, { method: 'POST', body: { kind: 'SCENARIO',
+      scenario_id: created.body.data.scenario_id, expected_revision: 1 } });
+    expect(response.status).toBe(202); job = response.body.data;
+  } finally { process.env.SCENARIO_ENGINE_VERSION = previousVersion; }
+  const leases = require('../../src/services/scenario-lease.service');
+  const claim = await leases.claimNext(db, { workerId: 'boundary-fixture', engineVersion: job.engine_version, contractVersion: job.contract_version });
+  expect(claim.id).toBe(job.job_id);
+  const result = { boundary_test_only: true }, hash = contentHash(result);
+  await leases.fenced(db, claim, async tx => {
+    await tx.$executeRaw`UPDATE scenario_points SET status='FEASIBLE',result_json=${JSON.stringify(result)}::jsonb,
+      result_hash=${hash},completed_at=clock_timestamp() WHERE job_id=${job.job_id}::uuid`;
+    await tx.$executeRaw`UPDATE scenario_attempts SET status='SUCCEEDED',completed_at=clock_timestamp()
+      WHERE job_id=${job.job_id}::uuid AND attempt=${claim.attempt}`;
+    await tx.$executeRaw`UPDATE scenario_jobs SET status='SUCCEEDED',result_json=${JSON.stringify(result)}::jsonb,
+      result_hash=${hash},completed_at=clock_timestamp(),updated_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,worker_id=NULL
+      WHERE id=${job.job_id}::uuid`;
+  });
+  return { source, w, job };
+}
+test('weights-only LIVE handoff creates a new pending case with immutable provenance, no recommendation or publication', async () => {
+  const { source, w, job } = await completedBoundaryRun();
+  const before = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
+  const key = randomUUID(), body = { source_run_id: job.job_id, confirmation: true,
+    expected_head: { snapshot_id: before.snapshotId, plan_version: before.planVersion, revision: before.revision } };
+  const options = { method: 'POST', key, user: f.users.MANAGER, body };
+  const response = await f.http(`${path(w)}/live-evaluations`, options);
+  expect(response.status).toBe(201);
+  expect(response.body.data.decision_case_id).not.toBe(job.job_id);
+  const created = await db.decisionCase.findUnique({ where: { id: response.body.data.decision_case_id }, include: { recommendation: true, humanDecision: true, commit: true } });
+  expect(created).toMatchObject({ mode: 'LIVE', status: 'CREATED', processingStatus: 'PENDING', actorId: f.users.MANAGER.id,
+    recommendation: null, humanDecision: null, commit: null, snapshotId: before.snapshotId, basePlanVersion: before.planVersion });
+  expect(created.requestJson.request.trigger.type).toBe('MANUAL_REPLAN');
+  expect(created.requestJson.request.planning_config.objective_weights).toEqual(example.planning_config.objective_weights);
+  const [link] = await db.$queryRaw`SELECT * FROM scenario_live_evaluations WHERE case_id=${created.id}::uuid`;
+  expect(link.run_id).toBe(job.job_id);
+  expect(link.input_hash).toBe(job.input_hash);
+  const event = await db.decisionCaseEvent.findFirst({ where: { caseId: created.id, sequence: 1 } });
+  expect(event.payloadJson.source_scenario.run_id).toBe(job.job_id);
+  const events = await f.http(`/decision-cases/${created.id}/events`, { user: f.users.VIEWER });
+  expect(events.status).toBe(200);
+  expect(events.body.data[0].payload.source_scenario).toEqual(event.payloadJson.source_scenario);
+  // Replay does not depend on Python/engine availability and creates no second case.
+  const python = process.env.OPERATIONS_PYTHON;
+  try {
+    process.env.OPERATIONS_PYTHON = 'nonexistent-scenario-validator';
+    const replay = await f.http(`${path(w)}/live-evaluations`, options);
+    expect(replay.body).toEqual(response.body); expect(replay.replay).toBe('true');
+  } finally { process.env.OPERATIONS_PYTHON = python; }
+  expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(1);
+  expect(await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } })).toEqual(before);
+  await expect(db.$executeRaw`DELETE FROM scenario_live_evaluations WHERE case_id=${created.id}::uuid`).rejects.toThrow();
+});
+test('LIVE handoff rejects stale context, incomplete runs, foreign IDs, absent confirmation and forbidden roles', async () => {
+  const { source, w, job } = await completedBoundaryRun();
+  const head = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
+  const body = { source_run_id: job.job_id, confirmation: true,
+    expected_head: { snapshot_id: head.snapshotId, plan_version: head.planVersion, revision: head.revision } };
+  const post = (value, user = f.users.MANAGER) => f.http(`${path(w)}/live-evaluations`, { method: 'POST', body: value, user });
+  expect((await post({ ...body, confirmation: false })).status).toBe(400);
+  expect((await post(body, f.users.OPERATOR)).status).toBe(403);
+  expect((await post({ ...body, source_run_id: randomUUID() })).status).toBe(404);
+  let queued;
+  const version = process.env.SCENARIO_ENGINE_VERSION;
+  try {
+    process.env.SCENARIO_ENGINE_VERSION = job.engine_version;
+    queued = await f.http(`${path(w)}/runs`, { method: 'POST', body: { kind: 'BASELINE' } });
+    expect(queued.status).toBe(202);
+  } finally { process.env.SCENARIO_ENGINE_VERSION = version; }
+  expect((await post({ ...body, source_run_id: queued.body.data.job_id })).body.error.code).toBe('SCENARIO_RUN_NOT_READY');
+  const observed = { ...structuredClone(source), snapshot_id: 'live-S2-' + randomUUID() };
+  await require('../../src/services/operations-snapshot.service').ingestFactorySnapshot({ factoryId: source.factory_id,
+    expectedHeadRevision: head.revision, snapshot: observed, sourceId: 'live-handoff-stale-test' }, db);
+  expect((await post(body)).body.error.code).toBe('SCENARIO_HEAD_CONFLICT');
+  const current = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } });
+  expect((await post({ ...body, expected_head: { snapshot_id: current.snapshotId, plan_version: current.planVersion, revision: current.revision } })).body.error.code).toBe('SCENARIO_HEAD_CONFLICT');
+  expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(0);
+});
+
+test.each(['MAINTENANCE_DURATION', 'TECHNICIAN_UNAVAILABLE', 'DEFER_MAINTENANCE'])('LIVE rejects unsupported %s without writing a case or receipt', async type => {
+  const { source, w, job } = await completedBoundaryRun(snapshot => type === 'TECHNICIAN_UNAVAILABLE'
+    ? [{ type, technician_id: snapshot.technicians[0].technician_id, start_at: snapshot.planning_window.start_at, end_at: snapshot.planning_window.end_at }]
+    : [{ type, maintenance_request_id: snapshot.maintenance_requests[0].maintenance_request_id,
+      ...(type === 'MAINTENANCE_DURATION' ? { expected_duration_minutes: 90 } : { earliest_start_at: snapshot.planning_window.start_at }) }]);
+  const head = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } }), key = randomUUID();
+  const response = await f.http(`${path(w)}/live-evaluations`, { method: 'POST', key, body: { source_run_id: job.job_id, confirmation: true,
+    expected_head: { snapshot_id: head.snapshotId, plan_version: head.planVersion, revision: head.revision } } });
+  expect(response.status).toBe(409);
+  expect(response.body.error.code).toBe('SCENARIO_LIVE_MAPPING_UNSUPPORTED');
+  expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(0);
+  expect(await db.$queryRaw`SELECT key FROM scenario_command_receipts WHERE workspace_id=${w.workspace_id}::uuid AND key=${key}`).toHaveLength(0);
+});
+
+test('LIVE case, provenance and receipt roll back if the audit write fails', async () => {
+  const { source, w, job } = await completedBoundaryRun();
+  const head = await db.operationsHead.findUnique({ where: { factoryId: source.factory_id } }), key = randomUUID();
+  await db.$executeRawUnsafe("CREATE FUNCTION scenario_test_fail_live_event() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'forced LIVE audit failure'; END $$");
+  await db.$executeRawUnsafe("CREATE TRIGGER scenario_test_fail_live_event BEFORE INSERT ON scenario_events FOR EACH ROW WHEN (NEW.type='LIVE_EVALUATION_CREATED') EXECUTE FUNCTION scenario_test_fail_live_event()");
+  try {
+    const response = await f.http(`${path(w)}/live-evaluations`, { method: 'POST', key, body: { source_run_id: job.job_id, confirmation: true,
+      expected_head: { snapshot_id: head.snapshotId, plan_version: head.planVersion, revision: head.revision } } });
+    expect(response.status).toBe(500);
+    expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(0);
+    expect(await db.$queryRaw`SELECT case_id FROM scenario_live_evaluations WHERE workspace_id=${w.workspace_id}::uuid`).toHaveLength(0);
+    expect(await db.$queryRaw`SELECT key FROM scenario_command_receipts WHERE workspace_id=${w.workspace_id}::uuid AND key=${key}`).toHaveLength(0);
+  } finally {
+    await db.$executeRawUnsafe('DROP TRIGGER scenario_test_fail_live_event ON scenario_events');
+    await db.$executeRawUnsafe('DROP FUNCTION scenario_test_fail_live_event()');
+  }
+});

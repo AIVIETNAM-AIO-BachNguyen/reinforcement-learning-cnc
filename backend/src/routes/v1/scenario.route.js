@@ -23,7 +23,8 @@ router.get('/:workspace_id/runs/:run_id', async (req, res) => {
   res.json(await jobs.get(db, req.user, req.params.workspace_id, req.params.run_id));
 });
 for (const [method, path, command] of [['post', '/', 'create'], ['post', '/:workspace_id/scenarios', 'createDraft'],
-  ['patch', '/:workspace_id/scenarios/:scenario_id', 'updateDraft'], ['post', '/:workspace_id/runs', 'enqueueRun']]) {
+  ['patch', '/:workspace_id/scenarios/:scenario_id', 'updateDraft'], ['post', '/:workspace_id/runs', 'enqueueRun'],
+  ['post', '/:workspace_id/live-evaluations', 'liveEvaluation']]) {
   router[method](path, async (req, res) => {
     policy.parse(policy.empty, req.query);
     const result = await service.write(db, req.user, command, req.params.workspace_id, req.body, req.get('Idempotency-Key'), req.params.scenario_id);

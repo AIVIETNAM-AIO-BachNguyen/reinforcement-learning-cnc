@@ -194,6 +194,7 @@ datasource db {
 }
 
 model DecisionCase {
+  scenarioLiveEvaluations ScenarioLiveEvaluation[]
   incidentLinks IncidentCaseLink[]
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   factoryId String @map("factory_id")
@@ -452,6 +453,7 @@ model StepResult {
 }
 
 model User {
+  scenarioLiveEvaluations ScenarioLiveEvaluation[]
   scenario_command_receipts     ScenarioCommandReceipt[]
   scenario_draft_revisions      ScenarioDraftRevision[]
   scenario_drafts               ScenarioDraft[]
@@ -772,6 +774,7 @@ model ScenarioDraftRevision {
 }
 
 model ScenarioJob {
+  liveEvaluations ScenarioLiveEvaluation[]
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   factoryId String @map("factory_id")
   workspaceId String @db.Uuid @map("workspace_id")
@@ -881,4 +884,21 @@ model ScenarioEvent {
 
   @@index([factoryId, workspaceId, sequence], map: "scenario_events_workspace_sequence_idx")
   @@map("scenario_events")
+}
+
+model ScenarioLiveEvaluation {
+  caseId String @id @map("case_id") @db.Uuid
+  factoryId String @map("factory_id")
+  workspaceId String @map("workspace_id") @db.Uuid
+  runId String @map("run_id") @db.Uuid
+  actorId String @map("actor_id") @db.Uuid
+  inputHash String @map("input_hash") @db.Char(64)
+  resultHash String @map("result_hash") @db.Char(64)
+  headRevision Int @map("head_revision")
+  createdAt DateTime @default(dbgenerated("clock_timestamp()")) @map("created_at") @db.Timestamptz(6)
+  decisionCase DecisionCase @relation(fields: [caseId, factoryId], references: [id, factoryId], onDelete: Restrict, onUpdate: Restrict)
+  run ScenarioJob @relation(fields: [factoryId, workspaceId, runId], references: [factoryId, workspaceId, id], onDelete: Restrict, onUpdate: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([factoryId, workspaceId, runId, createdAt, caseId], map: "scenario_live_evaluations_run_idx")
+  @@map("scenario_live_evaluations")
 }
