@@ -109,6 +109,9 @@ async function write(db, identity, command, workspaceId, rawBody, rawKey, resour
   if (body.overrides) body.overrides = policy.canonicalOverrides(body.overrides);
   const requestHash = contentHash({ command, workspace_id: workspaceId ?? null, resource_id: resourceId ?? null, body });
   return db.$transaction(async tx => {
+    // Role denial must not reveal whether a guessed workspace exists. This is
+    // only an early guard; authorizeWrite rechecks after factory/user locks.
+    await access.currentUser(tx, identity, ['ADMIN', 'ENGINEER']);
     const workspace = command === 'create' ? null : await workspaceRow(tx, workspaceId);
     const factoryId = workspace?.factory_id ?? body.factory_id;
     const actor = await authorizeWrite(tx, identity, factoryId);

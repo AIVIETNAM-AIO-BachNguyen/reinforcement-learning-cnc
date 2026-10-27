@@ -3,6 +3,7 @@ const db = require('../../src/config/prisma');
 const app = require('../../src/app');
 const { fixture } = require('../helpers/work-order-fixtures');
 const example = require('../../../contracts/v3/examples/demo-scenario.json');
+const { setTimeout: delay } = require('node:timers/promises');
 const saved = Object.fromEntries(['FACTORY_ACCESS_SOURCE', 'SCENARIO_ENGINE_VERSION', 'SCENARIO_CONTRACT_VERSION', 'SCENARIO_SAMPLING_VERSION'].map(key => [key, process.env[key]]));
 let f, a, b;
 beforeAll(async () => {
@@ -43,6 +44,10 @@ test('ADMIN/ENGINEER can write; VIEWER/OPERATOR read but cannot write; inactive/
     expect((await f.http(path(w), { user })).status).toBe(200);
   for (const user of [f.users.VIEWER, f.users.OPERATOR])
     expect((await f.http('/scenario-workspaces', { user, method: 'POST', body: await request() })).status).toBe(403);
+  for (const user of [f.users.VIEWER, f.users.OPERATOR]) {
+    for (const workspaceId of [w.workspace_id, randomUUID()])
+      expect((await f.http(`/scenario-workspaces/${workspaceId}/runs`, { user, method: 'POST', body: { kind: 'BASELINE' } })).status).toBe(403);
+  }
   for (const user of [f.users.INACTIVE, null]) expect((await f.http(path(w), { user })).status).toBe(401);
 });
 test('factory-scoped detail/list/draft prevent guessed IDs and unknown query fields', async () => {
@@ -203,3 +208,86 @@ test('S1/P1 workspace and frozen publication remain historical after ingesting S
   expect(currentWorkspace.baseline.snapshot_id).toBe(observed.snapshot_id);
   expect(currentWorkspace.baseline.publication.schedule_id).toBe(w.baseline.publication.schedule_id);
 });
+
+async function waitForFactoryWaiters(factoryId, expected) {
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    const [{ count }] = await db.$queryRaw`SELECT count(*)::int AS count FROM pg_locks
+      WHERE locktype='advisory' AND NOT granted AND database=(SELECT oid FROM pg_database WHERE datname=current_database())
+        AND classid::bigint=((hashtextextended(${factoryId},0)>>32)&4294967295)
+        AND objid::bigint=(hashtextextended(${factoryId},0)&4294967295)`;
+    if (count >= expected) return;
+    await delay(20);
+  }
+  throw Error('Expected HTTP requests did not reach the factory lock queue');
+}
+
+test.each([
+  ['revoke first', false, false], ['enqueue first', true, false],
+  ['revoke before replay', false, true], ['replay before revoke', true, true],
+])('coordinated %s honors serialization and authorization before receipts', async (_name, writeFirst, replay) => {
+  const source = await f.factory(), w = await create(source), key = randomUUID();
+  const options = { method: 'POST', user: f.users.OTHER, key, body: { kind: 'BASELINE' } };
+  const enqueue = () => f.http(`${path(w)}/runs`, options);
+  const revoke = () => f.member(source.factory_id, f.users.OTHER, 'DELETE');
+  if (replay) expect((await enqueue()).status).toBe(202);
+  let unlock, ready;
+  const released = new Promise(resolve => { unlock = resolve; });
+  const acquired = new Promise(resolve => { ready = resolve; });
+  const gate = db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${source.factory_id},0))::text`;
+    ready();
+    await released;
+  }, { timeout: 20000 });
+  let first, second;
+  try {
+    await Promise.race([acquired, gate]);
+    first = writeFirst ? enqueue() : revoke();
+    await waitForFactoryWaiters(source.factory_id, 1);
+    second = writeFirst ? revoke() : enqueue();
+    await waitForFactoryWaiters(source.factory_id, 2);
+  } finally { unlock(); await gate; }
+  const responses = await Promise.all([first, second]);
+  const written = responses[writeFirst ? 0 : 1], revoked = responses[writeFirst ? 1 : 0];
+  expect(revoked.status).toBe(200);
+  expect(written.status).toBe(writeFirst ? 202 : 404);
+  if (writeFirst && replay) expect(written.replay).toBe('true');
+  const [{ count }] = await db.$queryRaw`SELECT count(*)::int AS count FROM scenario_jobs WHERE workspace_id=${w.workspace_id}::uuid`;
+  expect(count).toBe(replay || writeFirst ? 1 : 0);
+  const [{ events }] = await db.$queryRaw`SELECT count(*)::int AS events FROM scenario_events
+    WHERE workspace_id=${w.workspace_id}::uuid AND type='RUN_ENQUEUED'`;
+  expect(events).toBe(count);
+  expect((await enqueue()).status).toBe(404);
+}, 30000);
+
+test.each(['VIEWER', 'INACTIVE'])('write boundary rechecks user changed to %s while waiting for row lock', async change => {
+  const source = await f.factory(), w = await create(source);
+  const target = f.users.OTHER;
+  let release, ready;
+  const released = new Promise(resolve => { release = resolve; });
+  const acquired = new Promise(resolve => { ready = resolve; });
+  let pid;
+  const administration = db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM users WHERE id=${target.id}::uuid FOR UPDATE`;
+    pid = (await tx.$queryRaw`SELECT pg_backend_pid() AS pid`)[0].pid;
+    ready(); await released;
+    await tx.user.update({ where: { id: target.id }, data: change === 'VIEWER' ? { role: 'VIEWER' } : { active: false } });
+  }, { timeout: 20000 });
+  let request;
+  try {
+    await Promise.race([acquired, administration]);
+    request = f.http(`${path(w)}/runs`, { method: 'POST', user: target, body: { kind: 'BASELINE' } });
+    const deadline = Date.now() + 8000;
+    let blocked = false;
+    while (Date.now() < deadline) {
+      const [{ count }] = await db.$queryRaw`SELECT count(*)::int AS count FROM pg_stat_activity WHERE ${pid}::int=ANY(pg_blocking_pids(pid))`;
+      if (count > 0) { blocked = true; break; }
+      await delay(20);
+    }
+    expect(blocked).toBe(true);
+  } finally { release(); await administration; }
+  try {
+    expect((await request).status).toBe(change === 'VIEWER' ? 403 : 401);
+    expect(await db.$queryRaw`SELECT id FROM scenario_jobs WHERE workspace_id=${w.workspace_id}::uuid`).toHaveLength(0);
+  } finally { await db.user.update({ where: { id: target.id }, data: { role: 'ENGINEER', active: true } }); }
+}, 30000);
