@@ -32,6 +32,7 @@ def main() -> None:
     if not node:
         raise SystemExit("node is required")
     run(node, "backend/scripts/export-operations-http-contract.js", "--check")
+    run(node, "backend/scripts/export-scenario-contract.js", "--check")
     run(npm, "run", "contracts:check", cwd=ROOT / "frontend")
     run(npm, "run", "typecheck", cwd=ROOT / "frontend")
     run(npm, "exec", "--", "vitest", "run", "tests/operations-api-client.test.ts", cwd=ROOT / "frontend")
