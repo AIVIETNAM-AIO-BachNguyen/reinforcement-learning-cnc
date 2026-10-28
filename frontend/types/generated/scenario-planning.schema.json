@@ -1,0 +1,1649 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "CreateWorkspace": {
+      "type": "object",
+      "properties": {
+        "factory_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "expected_head": {
+          "type": "object",
+          "properties": {
+            "snapshot_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            },
+            "plan_version": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "required": [
+            "snapshot_id",
+            "plan_version",
+            "revision"
+          ],
+          "additionalProperties": false
+        },
+        "planning_config": {
+          "type": "object",
+          "properties": {
+            "horizon_minutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 43200
+            },
+            "candidate_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3
+            },
+            "solver_timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "simulation_runs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "base_seed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "objective_weights": {
+              "type": "object",
+              "properties": {
+                "production": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                "reliability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                "maintenance": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                "workforce": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                "schedule_stability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000
+                }
+              },
+              "required": [
+                "production",
+                "reliability",
+                "maintenance",
+                "workforce",
+                "schedule_stability"
+              ],
+              "additionalProperties": false
+            },
+            "allowed_strategy_ids": {
+              "minItems": 1,
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "PRODUCTION_PRIORITY",
+                  "BALANCED",
+                  "RELIABILITY_PRIORITY"
+                ]
+              }
+            }
+          },
+          "required": [
+            "horizon_minutes",
+            "candidate_limit",
+            "solver_timeout_seconds",
+            "simulation_runs",
+            "base_seed",
+            "objective_weights",
+            "allowed_strategy_ids"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "factory_id",
+        "name",
+        "expected_head",
+        "planning_config"
+      ],
+      "additionalProperties": false
+    },
+    "CreateDraft": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "overrides": {
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "TECHNICIAN_UNAVAILABLE"
+                  },
+                  "technician_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "start_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "end_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "type",
+                  "technician_id",
+                  "start_at",
+                  "end_at"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "MAINTENANCE_DURATION"
+                  },
+                  "maintenance_request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "expected_duration_minutes": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 43200
+                  }
+                },
+                "required": [
+                  "type",
+                  "maintenance_request_id",
+                  "expected_duration_minutes"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "DEFER_MAINTENANCE"
+                  },
+                  "maintenance_request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "earliest_start_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "type",
+                  "maintenance_request_id",
+                  "earliest_start_at"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "objective_weights": {
+          "type": "object",
+          "properties": {
+            "production": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "reliability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "maintenance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "workforce": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "schedule_stability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "production",
+            "reliability",
+            "maintenance",
+            "workforce",
+            "schedule_stability"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name",
+        "note",
+        "overrides",
+        "objective_weights"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateDraft": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "overrides": {
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "TECHNICIAN_UNAVAILABLE"
+                  },
+                  "technician_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "start_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "end_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "type",
+                  "technician_id",
+                  "start_at",
+                  "end_at"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "MAINTENANCE_DURATION"
+                  },
+                  "maintenance_request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "expected_duration_minutes": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 43200
+                  }
+                },
+                "required": [
+                  "type",
+                  "maintenance_request_id",
+                  "expected_duration_minutes"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "DEFER_MAINTENANCE"
+                  },
+                  "maintenance_request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "earliest_start_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "type",
+                  "maintenance_request_id",
+                  "earliest_start_at"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "objective_weights": {
+          "type": "object",
+          "properties": {
+            "production": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "reliability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "maintenance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "workforce": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "schedule_stability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "production",
+            "reliability",
+            "maintenance",
+            "workforce",
+            "schedule_stability"
+          ],
+          "additionalProperties": false
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "name",
+        "note",
+        "overrides",
+        "objective_weights",
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "EnqueueRun": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "BASELINE"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "SCENARIO"
+            },
+            "scenario_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "expected_revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "required": [
+            "kind",
+            "scenario_id",
+            "expected_revision"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "EnqueueSensitivity": {
+      "type": "object",
+      "properties": {
+        "source_run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "axis": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "MAINTENANCE_DURATION"
+                },
+                "maintenance_request_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                },
+                "values": {
+                  "minItems": 1,
+                  "maxItems": 7,
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 43200
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "maintenance_request_id",
+                "values"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "OBJECTIVE_WEIGHT"
+                },
+                "weight": {
+                  "type": "string",
+                  "enum": [
+                    "production",
+                    "reliability",
+                    "maintenance",
+                    "workforce",
+                    "schedule_stability"
+                  ]
+                },
+                "values": {
+                  "minItems": 1,
+                  "maxItems": 7,
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "values"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "source_run_id",
+        "axis"
+      ],
+      "additionalProperties": false
+    },
+    "LiveEvaluation": {
+      "type": "object",
+      "properties": {
+        "source_run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "confirmation": {
+          "type": "boolean",
+          "const": true
+        },
+        "expected_head": {
+          "type": "object",
+          "properties": {
+            "snapshot_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            },
+            "plan_version": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "required": [
+            "snapshot_id",
+            "plan_version",
+            "revision"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "source_run_id",
+        "confirmation",
+        "expected_head"
+      ],
+      "additionalProperties": false
+    },
+    "PlanningConfig": {
+      "type": "object",
+      "properties": {
+        "horizon_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 43200
+        },
+        "candidate_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "solver_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "simulation_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "base_seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "objective_weights": {
+          "type": "object",
+          "properties": {
+            "production": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "reliability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "maintenance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "workforce": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "schedule_stability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "production",
+            "reliability",
+            "maintenance",
+            "workforce",
+            "schedule_stability"
+          ],
+          "additionalProperties": false
+        },
+        "allowed_strategy_ids": {
+          "minItems": 1,
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "PRODUCTION_PRIORITY",
+              "BALANCED",
+              "RELIABILITY_PRIORITY"
+            ]
+          }
+        }
+      },
+      "required": [
+        "horizon_minutes",
+        "candidate_limit",
+        "solver_timeout_seconds",
+        "simulation_runs",
+        "base_seed",
+        "objective_weights",
+        "allowed_strategy_ids"
+      ],
+      "additionalProperties": false
+    },
+    "Head": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "plan_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "plan_version",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": false
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "success",
+        "error",
+        "requestId"
+      ]
+    },
+    "Baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "factory_id": {
+          "type": "string"
+        },
+        "snapshot_id": {
+          "type": "string"
+        },
+        "snapshot_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "plan_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publication": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "schedule_id": {
+                  "type": "string"
+                },
+                "schedule_revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "schedule_hash": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "schedule_id",
+                "schedule_revision",
+                "schedule_hash"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "factory_id",
+        "snapshot_id",
+        "snapshot_hash",
+        "plan_version",
+        "publication"
+      ]
+    },
+    "Workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "baseline": {
+          "$ref": "#/definitions/Baseline"
+        },
+        "planning_config": {
+          "$ref": "#/definitions/PlanningConfig"
+        },
+        "engine_version": {
+          "type": "string"
+        },
+        "contract_version": {
+          "type": "string"
+        },
+        "created_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "current_head": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Head"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stale": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "name",
+        "baseline",
+        "planning_config",
+        "engine_version",
+        "contract_version",
+        "created_by",
+        "created_at",
+        "current_head",
+        "stale"
+      ]
+    },
+    "Draft": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "overrides": {
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "TECHNICIAN_UNAVAILABLE"
+                  },
+                  "technician_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "start_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "end_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "type",
+                  "technician_id",
+                  "start_at",
+                  "end_at"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "MAINTENANCE_DURATION"
+                  },
+                  "maintenance_request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "expected_duration_minutes": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 43200
+                  }
+                },
+                "required": [
+                  "type",
+                  "maintenance_request_id",
+                  "expected_duration_minutes"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "DEFER_MAINTENANCE"
+                  },
+                  "maintenance_request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "earliest_start_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "type",
+                  "maintenance_request_id",
+                  "earliest_start_at"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "objective_weights": {
+          "type": "object",
+          "properties": {
+            "production": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "reliability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "maintenance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "workforce": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "schedule_stability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "production",
+            "reliability",
+            "maintenance",
+            "workforce",
+            "schedule_stability"
+          ],
+          "additionalProperties": false
+        },
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "scenario_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "name",
+        "note",
+        "overrides",
+        "objective_weights",
+        "workspace_id",
+        "scenario_id",
+        "revision",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "Job": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "job_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "enum": [
+            "RUN",
+            "SENSITIVITY"
+          ]
+        },
+        "status": {
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "SUCCEEDED",
+            "FAILED"
+          ]
+        },
+        "input_hash": {
+          "type": "string"
+        },
+        "source_scenario_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_run_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "engine_version": {
+          "type": "string"
+        },
+        "contract_version": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deadline_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EngineResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Point"
+          }
+        }
+      },
+      "required": [
+        "workspace_id",
+        "job_id",
+        "kind",
+        "status",
+        "input_hash",
+        "source_scenario_id",
+        "source_revision",
+        "source_run_id",
+        "engine_version",
+        "contract_version",
+        "attempt",
+        "created_at",
+        "started_at",
+        "completed_at",
+        "deadline_at",
+        "error_code",
+        "result",
+        "points"
+      ]
+    },
+    "Point": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "point_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "FEASIBLE",
+            "NO_FEASIBLE_PLAN",
+            "FAILED",
+            "TIMEOUT"
+          ]
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EngineResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "point_index",
+        "value",
+        "status",
+        "error_code",
+        "result"
+      ]
+    },
+    "EngineResult": {
+      "type": "object",
+      "description": "UNFROZEN dependency: exact versioned Flex result schema must replace this proposal before consumer integration. No backend-defined scoring or acceptance claim.",
+      "x-contract-status": "PENDING_FLEX"
+    },
+    "Comparison": {
+      "type": "object",
+      "description": "UNFROZEN dependency: Flex authoritative metric/unit/null-reason/delta/normalization/tie-break DTO; Node never recomputes scoring.",
+      "x-contract-status": "PENDING_FLEX"
+    },
+    "LiveCreated": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decision_case_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "mode": {
+          "const": "LIVE"
+        },
+        "current_head": {
+          "$ref": "#/definitions/Head"
+        }
+      },
+      "required": [
+        "workspace_id",
+        "source_run_id",
+        "decision_case_id",
+        "mode",
+        "current_head"
+      ]
+    },
+    "post_scenario_workspaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Workspace"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Workspace"
+              }
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "next_cursor"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Workspace"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "post_scenario_workspaces_by_workspace_id_scenarios": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Draft"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_scenarios": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Draft"
+              }
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "next_cursor"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_scenarios_by_scenario_id": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Draft"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "patch_scenario_workspaces_by_workspace_id_scenarios_by_scenario_id": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Draft"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "post_scenario_workspaces_by_workspace_id_runs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Job"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_runs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Job"
+              }
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "next_cursor"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_runs_by_run_id": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Job"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Comparison"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "post_scenario_workspaces_by_workspace_id_sensitivity_jobs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Job"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_sensitivity_jobs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Job"
+              }
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "items",
+            "next_cursor"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "get_scenario_workspaces_by_workspace_id_sensitivity_jobs_by_job_id": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/Job"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "post_scenario_workspaces_by_workspace_id_live_evaluations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "const": true
+        },
+        "data": {
+          "$ref": "#/definitions/LiveCreated"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  }
+}
