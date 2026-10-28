@@ -26,8 +26,21 @@ router.get('/:workspace_id/runs/:run_id', async (req, res) => {
   policy.parse(policy.empty, req.query);
   res.json(await jobs.get(db, req.user, req.params.workspace_id, req.params.run_id));
 });
+router.get('/:workspace_id/sensitivity-jobs', async (req, res) => res.json(await jobs.list(db, req.user, req.params.workspace_id, req.query, 'SENSITIVITY')));
+router.get('/:workspace_id/sensitivity-jobs/:job_id', async (req, res) => {
+  policy.parse(policy.empty, req.query);
+  res.json(await jobs.get(db, req.user, req.params.workspace_id, req.params.job_id, 'SENSITIVITY'));
+});
+router.get('/:workspace_id/compare', async (req, res) => {
+  const controller = new AbortController();
+  const abort = () => { if (!res.writableEnded) controller.abort(); };
+  res.once('close', abort);
+  try { res.json(await jobs.compare(db, req.user, req.params.workspace_id, req.query, { signal: controller.signal })); }
+  finally { res.removeListener('close', abort); }
+});
 for (const [method, path, command] of [['post', '/', 'create'], ['post', '/:workspace_id/scenarios', 'createDraft'],
   ['patch', '/:workspace_id/scenarios/:scenario_id', 'updateDraft'], ['post', '/:workspace_id/runs', 'enqueueRun'],
+  ['post', '/:workspace_id/sensitivity-jobs', 'enqueueSensitivity'],
   ['post', '/:workspace_id/live-evaluations', 'liveEvaluation']]) {
   router[method](path, async (req, res) => {
     policy.parse(policy.empty, req.query);

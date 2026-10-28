@@ -317,7 +317,7 @@ describe("workspace/read/result boundaries", () => {
         kpis: { makespan_minutes: 987654 },
         score: 0.95,
         recommended_strategy: "invented",
-      },
+      } as unknown as NonNullable<ReturnType<typeof scenarioJob>["result"]>,
     });
     const enqueue = vi.spyOn(api, "enqueueRun");
     const live = vi.spyOn(api, "evaluateLive");
@@ -342,7 +342,7 @@ describe("workspace/read/result boundaries", () => {
     expect(screen.queryByText("0.95")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Run saved scenario" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(enqueue).not.toHaveBeenCalled();
     expect(live).not.toHaveBeenCalled();
   });
@@ -431,7 +431,7 @@ describe("workspace/read/result boundaries", () => {
         status: status as (typeof job.points)[number]["status"],
         value: point_index * 30,
         error_code: null,
-        result: status === "FEASIBLE" ? { kpis: { invented: 987654 } } : null,
+        result: status === "FEASIBLE" ? { kpis: { invented: 987654 } } as unknown as NonNullable<(typeof job.points)[number]["result"]> : null,
       }),
     );
     render(<RunInspector job={job} />);
@@ -479,8 +479,8 @@ describe("workspace/read/result boundaries", () => {
       screen.getByText(/Requested values: 0, 0.5, 1, 2, 4/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Start sensitivity job" }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: "Start sensitivity job" }),
+    ).not.toBeInTheDocument();
   });
   it("LIVE review shows S1/P1 vs S2/P2, requires supported frozen mapping and never commits simulation", async () => {
     const user = userEvent.setup();

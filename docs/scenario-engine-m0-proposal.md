@@ -6,6 +6,15 @@ joint integration acceptance remain pending. Prepared against main
 `397246f` (updated after the initial `9214371` proposal). This is a review artifact, not
 evidence that Scenario evaluation or the joint product is complete.
 
+Implementation update (2026-10-28): the user subsequently expanded ownership to
+include the missing Backend worker/job and joint Frontend integration. Backend
+#56 and Frontend #57 are merged into this working branch. The engine DTO/schema,
+worker, result persistence, compare/sensitivity routes and typed LIVE defer
+extension are implemented. See `scenario-engine-runbook.md` for the executable
+flow and acceptance procedure. The sections below preserve the approved design
+and original dependency findings; current validation evidence is recorded by the
+runbook's scripts, not inferred from this proposal.
+
 Flex owns the Python transform/evaluation/ranking/sensitivity boundary. Backend
 owns persisted workspaces/jobs/attempts, authorization, fencing and HTTP product
 APIs. Frontend owns the workspace UI. No outgoing coordination messages have been

@@ -3,6 +3,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 
 const aiRoot = path.resolve(__dirname, '../../../ai_services');
+const { pythonExecutable } = require('./operations-contract.service');
 const fail = (code, retryable = false) => Object.assign(new Error(code), { code, retryable });
 
 // Use the authoritative Python DTO/validator, also exported as generated JSON
@@ -56,7 +57,7 @@ async function readResult(response) {
 }
 
 class ScenarioEngineClient {
-  constructor({ baseUrl = process.env.AI_SERVICE_URL, python = process.env.OPERATIONS_PYTHON,
+  constructor({ baseUrl = process.env.AI_SERVICE_URL, python = pythonExecutable(),
     fetcher = fetch, transportAllowanceMs = 2000 } = {}) {
     try {
       this.url = new URL(baseUrl);
@@ -113,4 +114,8 @@ class ScenarioEngineClient {
   }
 }
 
-module.exports = { ScenarioEngineClient };
+async function validateScenarioResult(request, result, { signal = AbortSignal.timeout(15000), python = pythonExecutable() } = {}) {
+  if (!python) throw fail('INVALID_SCENARIO_CONFIGURATION');
+  return validate({ request, result }, python, signal, 'INVALID_SCENARIO_RESPONSE');
+}
+module.exports = { ScenarioEngineClient, validateScenarioResult };

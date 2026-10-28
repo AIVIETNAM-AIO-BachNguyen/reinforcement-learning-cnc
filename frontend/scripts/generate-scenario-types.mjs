@@ -1,44 +1,11 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { compile } from "json-schema-to-typescript";
 
-const dependency = "aa56ecfceb85b6d6f78158ac34d37440103942a4";
+const dependency = "scenario-engine:1.0";
 const root = new URL("../", import.meta.url);
-const source = new URL(
-  "contracts/scenario-planning.proposal.openapi.json",
-  root,
-);
-if (process.argv.includes("--import-proposal")) {
-  // Consumer snapshot only: never checkout/modify Backend or shared producers.
-  const content = execFileSync(
-    "git",
-    [
-      "-c",
-      `safe.directory=${fileURLToPath(new URL("../../", import.meta.url))
-        .replaceAll("\\", "/")
-        .replace(/\/$/, "")}`,
-      "show",
-      `${dependency}:backend/docs/scenario-planning.openapi.json`,
-    ],
-    {
-      cwd: new URL("../../", import.meta.url),
-      encoding: "utf8",
-      windowsHide: true,
-    },
-  );
-  await mkdir(new URL("contracts/", root), { recursive: true });
-  await writeFile(source, content.replace(/\r\n/g, "\n"));
-}
+const source = new URL("../backend/docs/scenario-planning.openapi.json", root);
 const raw = (await readFile(source, "utf8")).replace(/\r\n/g, "\n");
-if (
-  createHash("sha256").update(raw).digest("hex") !==
-  "5cec46e4c7e8777b42252e0d783c2a5889dd1e18784bab0a0578c9c4034677af"
-)
-  throw new Error(
-    "Pinned producer proposal changed; review dependency SHA and hash together before updating the consumer",
-  );
 const contract = JSON.parse(raw);
 const definitions = { ...contract.components.schemas };
 for (const [path, methods] of Object.entries(contract.paths))
@@ -59,20 +26,20 @@ const schema = JSON.parse(
   }).replaceAll("#/components/schemas/", "#/definitions/"),
 );
 const types = await compile(schema, "ScenarioProposalCatalog", {
-  bannerComment: `/* Generated consumer of Backend PROPOSAL ${dependency}. Engine results remain UNFROZEN; do not infer fields. */`,
+  bannerComment: `/* Generated from Backend + canonical Python ${dependency}. Do not edit. */`,
   unreachableDefinitions: true,
   maxItems: -1,
   unknownAny: true,
 });
 const manifest = {
-  status: "PROPOSAL_NOT_API_READY",
+  status: "INTEGRATED_CONTRACT",
   producer_sha: dependency,
   source_sha256: createHash("sha256").update(raw).digest("hex"),
-  engine_result: "PENDING_FLEX",
-  comparison: "PENDING_FLEX",
-  runnable: false,
-  sensitivity: false,
-  live_handoff: false,
+  engine_result: "scenario-engine:1.0",
+  comparison: "scenario-engine:1.0",
+  runnable: true,
+  sensitivity: true,
+  live_handoff: true,
 };
 await mkdir(new URL("types/generated/", root), { recursive: true });
 for (const [file, value] of [

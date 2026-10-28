@@ -72,8 +72,8 @@ async function create(tx, actor, body) {
   if (contentHash(snapshot.payloadJson) !== snapshot.contentHash || (head.schedule && contentHash(head.schedule.payloadJson) !== head.schedule.contentHash))
     throw new ApiError(500, 'SCENARIO_SOURCE_INTEGRITY_ERROR', 'Immutable source hash validation failed');
   const windowMinutes = (Date.parse(snapshot.payloadJson.planning_window.end_at) - Date.parse(snapshot.payloadJson.planning_window.start_at)) / 60000;
-  if (body.planning_config.horizon_minutes > windowMinutes)
-    throw new ApiError(400, 'SCENARIO_INVALID_WINDOW', 'Planning horizon exceeds the pinned snapshot window');
+  if (body.planning_config.horizon_minutes !== windowMinutes)
+    throw new ApiError(400, 'SCENARIO_INVALID_WINDOW', 'Planning horizon must equal the pinned snapshot window');
   const id = randomUUID();
   const sampling = { version: identity.sampling_version, base_seed: body.planning_config.base_seed, sample_count: body.planning_config.simulation_runs };
   const [row] = await tx.$queryRaw`INSERT INTO scenario_workspaces
@@ -103,7 +103,7 @@ async function saveDraft(tx, actor, workspace, body, id) {
   await event(tx, workspace, actor.id, previous ? 'DRAFT_REVISED' : 'DRAFT_CREATED', { scenario_id: id, revision, content_hash: contentHash(payload) });
   return { workspace, status: previous ? 200 : 201, data: draftDto(await draftRow(tx, workspace, id)) };
 }
-const commands = { create: policy.createWorkspace, createDraft: policy.createDraft, updateDraft: policy.updateDraft, enqueueRun: policy.enqueueRun, liveEvaluation: policy.liveEvaluation };
+const commands = { create: policy.createWorkspace, createDraft: policy.createDraft, updateDraft: policy.updateDraft, enqueueRun: policy.enqueueRun, enqueueSensitivity: policy.enqueueSensitivity, liveEvaluation: policy.liveEvaluation };
 async function write(db, identity, command, workspaceId, rawBody, rawKey, resourceId, prepared) {
   const body = policy.parse(commands[command], rawBody), key = policy.parse(policy.key, rawKey);
   if (body.overrides) body.overrides = policy.canonicalOverrides(body.overrides);
@@ -125,6 +125,7 @@ async function write(db, identity, command, workspaceId, rawBody, rawKey, resour
       return { preparation: await require('./scenario-live.service').prepare(tx, actor, workspace, body) };
     const result = command === 'create' ? await create(tx, actor, body)
       : command === 'enqueueRun' ? await require('./scenario-job.service').enqueueRun(tx, actor, workspace, body)
+        : command === 'enqueueSensitivity' ? await require('./scenario-job.service').enqueueSensitivity(tx, actor, workspace, body)
         : command === 'liveEvaluation' ? await require('./scenario-live.service').create(tx, actor, workspace, body, prepared)
         : await saveDraft(tx, actor, workspace, body, command === 'updateDraft' ? resourceId : undefined);
     const response = { success: true, data: result.data };

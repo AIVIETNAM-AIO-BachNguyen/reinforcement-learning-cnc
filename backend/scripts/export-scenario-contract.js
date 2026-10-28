@@ -41,9 +41,16 @@ schemas.Job = object({ workspace_id: uuid, job_id: uuid, kind: { enum: ['RUN', '
   created_at: time, started_at: nullable(time), completed_at: nullable(time), deadline_at: time,
   error_code: nullable(string), result: nullable(ref('EngineResult')), points: { type: 'array', items: ref('Point') } });
 schemas.Point = object({ point_index: { type: 'integer', minimum: 0 }, value: nullable({ type: 'number' }),
-  status: { enum: policy.pointStatuses }, error_code: nullable(string), result: nullable(ref('EngineResult')) });
-schemas.EngineResult = { type: 'object', description: 'UNFROZEN dependency: exact versioned Flex result schema must replace this proposal before consumer integration. No backend-defined scoring or acceptance claim.', 'x-contract-status': 'PENDING_FLEX' };
-schemas.Comparison = { type: 'object', description: 'UNFROZEN dependency: Flex authoritative metric/unit/null-reason/delta/normalization/tie-break DTO; Node never recomputes scoring.', 'x-contract-status': 'PENDING_FLEX' };
+  status: { enum: policy.pointStatuses }, error_code: nullable(string), result: nullable(ref('ScenarioEngine_Evaluation')) });
+for (const name of ['EvaluationResult', 'SensitivityResult', 'CompareResult']) {
+  const raw = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../contracts/scenario/v1/${name}.schema.json`), 'utf8'));
+  const generated = JSON.parse(JSON.stringify(raw).replaceAll('#/$defs/', '#/components/schemas/ScenarioEngine_'));
+  for (const [key, value] of Object.entries(generated.$defs)) schemas[`ScenarioEngine_${key}`] = value;
+  delete generated.$defs; delete generated.$schema;
+  schemas[`ScenarioEngine_${name}`] = generated;
+}
+schemas.EngineResult = { anyOf: [ref('ScenarioEngine_EvaluationResult'), ref('ScenarioEngine_SensitivityResult')] };
+schemas.Comparison = ref('ScenarioEngine_CompareResult');
 schemas.LiveCreated = object({ workspace_id: uuid, source_run_id: uuid, decision_case_id: uuid,
   mode: { const: 'LIVE' }, current_head: ref('Head') });
 const page = item => envelope(object({ items: { type: 'array', items: ref(item) }, next_cursor: nullable(string) }));

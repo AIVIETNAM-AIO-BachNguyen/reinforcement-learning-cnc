@@ -474,32 +474,56 @@ export function createScenarioClient({
       return response.snapshot;
     },
     async enqueueRun(
-      _workspace: string,
-      _body: DTO.EnqueueRun,
-      _options: WriteOptions,
+      workspace: string,
+      body: DTO.EnqueueRun,
+      options: WriteOptions,
     ): Promise<DTO.Job> {
-      throw new ScenarioError(503, "DEPENDENCY_PENDING");
+      const result = await request<DTO.PostScenarioWorkspacesByWorkspaceIdRuns>(`${path(workspace)}/runs`,
+        "post_scenario_workspaces_by_workspace_id_runs", options,
+        { method: "POST", body, key: options.key, schema: "EnqueueRun" });
+      assertJob(result.data, workspace);
+      return result.data;
     },
     async compare(
-      _workspace: string,
-      _ids: string[],
-      _options?: ReadOptions,
-    ): Promise<DTO.Comparison> {
-      throw new ScenarioError(503, "DEPENDENCY_PENDING");
+      workspace: string,
+      ids: string[],
+      options?: ReadOptions,
+    ): Promise<DTO.CompareResult> {
+      const result = await request<DTO.GetScenarioWorkspacesByWorkspaceIdCompare>(
+        `${path(workspace)}/compare?${query({run_ids: ids.map(id).join(",")})}`,
+        "get_scenario_workspaces_by_workspace_id_compare", options);
+      if (result.data.reference_identity.workspace_id !== workspace || result.data.reference_identity.run_id !== ids[0]
+        || result.data.runs.some((run, index) => run.identity.workspace_id !== workspace || run.identity.run_id !== ids[index + 1]))
+        throw new ScenarioError(502, "INVALID_RESPONSE");
+      return result.data;
     },
     async enqueueSensitivity(
-      _workspace: string,
-      _body: DTO.EnqueueSensitivity,
-      _options: WriteOptions,
+      workspace: string,
+      body: DTO.EnqueueSensitivity,
+      options: WriteOptions,
     ): Promise<DTO.Job> {
-      throw new ScenarioError(503, "DEPENDENCY_PENDING");
+      const result = await request<DTO.PostScenarioWorkspacesByWorkspaceIdSensitivityJobs>(`${path(workspace)}/sensitivity-jobs`,
+        "post_scenario_workspaces_by_workspace_id_sensitivity_jobs", options,
+        { method: "POST", body, key: options.key, schema: "EnqueueSensitivity" });
+      assertJob(result.data, workspace);
+      return result.data;
+    },
+    async sensitivity(workspace: string, job: string, options?: ReadOptions): Promise<DTO.Job> {
+      const result = await request<DTO.GetScenarioWorkspacesByWorkspaceIdSensitivityJobsByJobId>(`${path(workspace)}/sensitivity-jobs/${id(job)}`,
+        "get_scenario_workspaces_by_workspace_id_sensitivity_jobs_by_job_id", options);
+      assertJob(result.data, workspace, job);
+      return result.data;
     },
     async evaluateLive(
-      _workspace: string,
-      _body: DTO.LiveEvaluation,
-      _options: WriteOptions,
+      workspace: string,
+      body: DTO.LiveEvaluation,
+      options: WriteOptions,
     ): Promise<DTO.LiveCreated> {
-      throw new ScenarioError(503, "DEPENDENCY_PENDING");
+      const result = await request<DTO.PostScenarioWorkspacesByWorkspaceIdLiveEvaluations>(`${path(workspace)}/live-evaluations`,
+        "post_scenario_workspaces_by_workspace_id_live_evaluations", options,
+        { method: "POST", body, key: options.key, schema: "LiveEvaluation" });
+      if (result.data.workspace_id !== workspace || result.data.source_run_id !== body.source_run_id) throw new ScenarioError(502, "INVALID_RESPONSE");
+      return result.data;
     },
   };
 }

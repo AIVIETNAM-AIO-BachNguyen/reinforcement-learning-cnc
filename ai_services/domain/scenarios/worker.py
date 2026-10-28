@@ -11,6 +11,9 @@ from domain.scenarios.sensitivity import SensitivityEvaluator
 
 
 def main():
+    if '--parent-pid' in sys.argv:
+        from domain.scenarios.process_guard import watch_parent
+        watch_parent(int(sys.argv[sys.argv.index('--parent-pid') + 1]))
     try:
         payload = json.load(sys.stdin)
         if payload.get("operation") == "EVALUATE":

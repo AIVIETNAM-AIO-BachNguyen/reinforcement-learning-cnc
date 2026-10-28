@@ -13,7 +13,7 @@ async function source(tx, workspace, body) {
     run.input_json.baseline.snapshot_hash !== workspace.snapshot_hash)
     throw new ApiError(500, 'SCENARIO_SOURCE_INTEGRITY_ERROR', 'Completed run integrity validation failed');
   const overrides = policy.canonicalOverrides(run.input_json.overrides);
-  if (overrides.length) {
+  if (overrides.some(override => override.type !== 'DEFER_MAINTENANCE')) {
     const physical = overrides.some(override => ['TECHNICIAN_UNAVAILABLE', 'MAINTENANCE_DURATION'].includes(override.type));
     throw new ApiError(409, 'SCENARIO_LIVE_MAPPING_UNSUPPORTED', physical
       ? 'Availability and duration are hypothetical. Update actual data through authorized ingestion and evaluate a new scenario before LIVE handoff.'
@@ -27,9 +27,13 @@ async function source(tx, workspace, body) {
 }
 async function prepare(tx, actor, workspace, body) {
   const { run } = await source(tx, workspace, body);
+  if (run.result_json.scenario?.outcome !== 'FEASIBLE' || run.result_json.live_mapping?.supported !== true)
+    throw new ApiError(409, 'SCENARIO_LIVE_MAPPING_UNSUPPORTED', 'Saved run is not feasible or has no supported LIVE mapping');
+  const config = require('./scenario-engine.adapter').evaluationRequest(run, 30000).planning_config;
+  const bounds = policy.canonicalOverrides(run.input_json.overrides).map(({maintenance_request_id, earliest_start_at}) => ({maintenance_request_id, earliest_start_at}));
   return { source_hash: run.input_hash, actor_id: actor.id, request: { mode: 'LIVE', trigger: { type: 'MANUAL_REPLAN',
-    reason: `Evaluate saved scenario run ${run.id} under current LIVE context; a new recommendation and human review are required.` },
-    planning_config: policy.parse(policy.planningConfig, run.input_json.planning_config) } };
+    reason: `Evaluate saved scenario run ${run.id} under current LIVE context; a new recommendation and human review are required.`,
+    ...(bounds.length ? {maintenance_start_constraints: bounds} : {}) }, planning_config: config } };
 }
 async function create(tx, actor, workspace, body, prepared) {
   const { run, head } = await source(tx, workspace, body);
@@ -43,7 +47,7 @@ async function create(tx, actor, workspace, body, prepared) {
   await tx.$executeRaw`INSERT INTO scenario_live_evaluations(case_id,factory_id,workspace_id,run_id,actor_id,input_hash,result_hash,head_revision)
     VALUES(${row.id}::uuid,${workspace.factory_id},${workspace.id}::uuid,${run.id}::uuid,${actor.id}::uuid,${run.input_hash},${run.result_hash},${head.revision})`;
   await workspaceService.event(tx, workspace, actor.id, 'LIVE_EVALUATION_CREATED', { ...provenance, decision_case_id: row.id,
-    expected_head: body.expected_head, mapping: 'OBJECTIVE_WEIGHTS_ONLY' }, run.id);
+    expected_head: body.expected_head, mapping: prepared.request.trigger.maintenance_start_constraints?.length ? 'OBJECTIVE_WEIGHTS_AND_DEFER_BOUNDS' : 'OBJECTIVE_WEIGHTS_ONLY' }, run.id);
   return { workspace, status: 201, data: { workspace_id: workspace.id, source_run_id: run.id,
     decision_case_id: row.id, mode: 'LIVE', current_head: body.expected_head } };
 }

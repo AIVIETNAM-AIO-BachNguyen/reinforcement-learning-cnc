@@ -160,10 +160,9 @@ class ScenarioEvaluator:
         # The canonical LIVE extension is not advertised until its producer and
         # consumer are integrated; physical Scenario evaluation works independently.
         reasons = ["AUTHORIZED_INGESTION_REQUIRED:" + kind for kind in sorted(set(unsupported))]
-        if any(isinstance(o, DeferMaintenance) for o in request.overrides):
-            reasons.append("LIVE_MAPPING_UNSUPPORTED:DEFER_MAINTENANCE")
         return EvaluationResult(identity=request.identity, semantic_input_hash=semantic_hash, sampling=draws.metadata(),
             effective=effective, baseline=baseline, scenario=scenario, comparison=compare(baseline, scenario),
             live_mapping=LiveMapping(supported=not reasons and scenario.outcome == "FEASIBLE",
                 mapped_weights=request.planning_config.objective_weights if not reasons and scenario.outcome == "FEASIBLE" else None,
-                mapped_defer_bounds=[], reasons=reasons if scenario.outcome == "FEASIBLE" else [*reasons, "SOURCE_NOT_FEASIBLE"]))
+                mapped_defer_bounds=[o for o in request.overrides if isinstance(o, DeferMaintenance)] if not reasons and scenario.outcome == "FEASIBLE" else [],
+                reasons=reasons if scenario.outcome == "FEASIBLE" else [*reasons, "SOURCE_NOT_FEASIBLE"]))

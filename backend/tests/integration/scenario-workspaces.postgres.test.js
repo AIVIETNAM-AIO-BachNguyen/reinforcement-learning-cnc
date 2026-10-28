@@ -323,7 +323,8 @@ test.each(['VIEWER', 'INACTIVE'])('write boundary rechecks user changed to %s wh
   } finally { await db.user.update({ where: { id: target.id }, data: { role: 'ENGINEER', active: true } }); }
 }, 30000);
 
-// Boundary-only fixture. It does NOT execute an engine or count toward real-engine acceptance.
+// Authorization/serialization fixture uses the real callable and fenced
+// persistence. HTTP engine/worker acceptance is a separate planning suite.
 async function completedBoundaryRun(overrides = []) {
   const source = await f.factory(), previousVersion = process.env.SCENARIO_ENGINE_VERSION;
   if (typeof overrides === 'function') overrides = overrides(source);
@@ -340,15 +341,24 @@ async function completedBoundaryRun(overrides = []) {
   const leases = require('../../src/services/scenario-lease.service');
   const claim = await leases.claimNext(db, { workerId: 'boundary-fixture', engineVersion: job.engine_version, contractVersion: job.contract_version });
   expect(claim.id).toBe(job.job_id);
-  const result = { boundary_test_only: true }, hash = contentHash(result);
+  // Preserve the intentionally distinct storage-only version so unrelated
+  // queued authorization fixtures cannot be claimed. The callable receives its
+  // actual engine pins; this fixture is not a production compatibility test.
+  const input = require('../../src/services/scenario-engine.adapter').requestForJob(claim, 30000);
+  input.contract_version = 'scenario-engine:1.0'; input.engine_version = 'scenario-evaluator:1.0.0'; input.sampling.version = 'scenario-crn:1';
+  const { execFileSync } = require('node:child_process');
+  const result = JSON.parse(execFileSync(require('../../src/services/operations-contract.service').pythonExecutable(),
+    ['-m', 'domain.scenarios.worker'], {cwd: require('node:path').resolve(__dirname, '../../../ai_services'),
+      input: JSON.stringify(input), encoding: 'utf8', windowsHide: true, timeout: 30000}));
+  const hash = contentHash(result);
   await leases.fenced(db, claim, async tx => {
-    await tx.$executeRaw`UPDATE scenario_points SET status='FEASIBLE',result_json=${JSON.stringify(result)}::jsonb,
-      result_hash=${hash},completed_at=clock_timestamp() WHERE job_id=${job.job_id}::uuid`;
-    await tx.$executeRaw`UPDATE scenario_attempts SET status='SUCCEEDED',completed_at=clock_timestamp()
-      WHERE job_id=${job.job_id}::uuid AND attempt=${claim.attempt}`;
+    for (const [index, evaluated] of [result.baseline, result.scenario].entries()) {
+      await tx.$executeRaw`UPDATE scenario_points SET status=${evaluated.outcome},result_json=${JSON.stringify(evaluated)}::jsonb,
+        result_hash=${contentHash(evaluated)},completed_at=clock_timestamp() WHERE job_id=${job.job_id}::uuid AND point_index=${index}`;
+    }
+    await tx.$executeRaw`UPDATE scenario_attempts SET status='SUCCEEDED',completed_at=clock_timestamp() WHERE job_id=${job.job_id}::uuid AND attempt=${claim.attempt}`;
     await tx.$executeRaw`UPDATE scenario_jobs SET status='SUCCEEDED',result_json=${JSON.stringify(result)}::jsonb,
-      result_hash=${hash},completed_at=clock_timestamp(),updated_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,worker_id=NULL
-      WHERE id=${job.job_id}::uuid`;
+      result_hash=${hash},completed_at=clock_timestamp(),updated_at=clock_timestamp(),lease_token=NULL,lease_expires_at=NULL,worker_id=NULL WHERE id=${job.job_id}::uuid`;
   });
   return { source, w, job };
 }
@@ -457,7 +467,7 @@ test('LIVE handoff rejects stale context, incomplete runs, foreign IDs, absent c
   expect(await db.decisionCase.count({ where: { factoryId: source.factory_id } })).toBe(0);
 });
 
-test.each(['MAINTENANCE_DURATION', 'TECHNICIAN_UNAVAILABLE', 'DEFER_MAINTENANCE'])('LIVE rejects unsupported %s without writing a case or receipt', async type => {
+test.each(['MAINTENANCE_DURATION', 'TECHNICIAN_UNAVAILABLE'])('LIVE rejects unsupported %s without writing a case or receipt', async type => {
   const { source, w, job } = await completedBoundaryRun(snapshot => type === 'TECHNICIAN_UNAVAILABLE'
     ? [{ type, technician_id: snapshot.technicians[0].technician_id, start_at: snapshot.planning_window.start_at, end_at: snapshot.planning_window.end_at }]
     : [{ type, maintenance_request_id: snapshot.maintenance_requests[0].maintenance_request_id,

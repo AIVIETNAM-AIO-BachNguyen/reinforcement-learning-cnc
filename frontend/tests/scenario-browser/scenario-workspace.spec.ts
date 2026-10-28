@@ -230,7 +230,7 @@ test("list/create baseline and selected editor review use exact contract fields;
   expect(api.writes).toHaveLength(2);
   await expect(
     page.getByRole("button", { name: "Run saved scenario" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
 });
 
 test("lost-save recovery preserves key/body and 409 requires explicit review", async ({
@@ -271,28 +271,23 @@ test("historical S1 stays pinned without reading S2 entities; untyped results ne
 }, info) => {
   const api = await contractHarness(page);
   api.state.historical = true;
-  api.job.result = { kpis: { makespan_minutes: 987654 }, score: 0.95 };
   await page.goto(
     `/operations/scenarios/${workspaceId}?factory_id=${factory}&scenario_id=${draftId}&run_id=${runId}`,
   );
   await expect(
     page.getByRole("heading", { name: "Saved historical draft" }),
   ).toBeVisible();
+  await capture(page, info, "historical-baseline");
+  api.job.result = { kpis: { makespan_minutes: 987654 }, score: 0.95 } as unknown as NonNullable<typeof api.job.result>;
+  await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Scenario run" }),
+    page.getByRole("heading", { name: "Scenario data unavailable" }),
   ).toBeVisible();
   expect(api.reads).not.toContain("snapshot");
   await expect(page.getByText("987654", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /commit/i })).toHaveCount(0);
-  await capture(page, info, "historical-baseline");
-  await page
-    .getByRole("region", { name: "Selected run" })
-    .scrollIntoViewIfNeeded();
   await capture(page, info, "unfrozen-result");
-  await page.getByRole("button", { name: "Review LIVE handoff" }).click();
-  await expect(
-    page.getByRole("button", { name: "Evaluate LIVE", exact: true }),
-  ).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Review LIVE handoff" })).toHaveCount(0);
   expect(api.writes).toHaveLength(0);
 });
 

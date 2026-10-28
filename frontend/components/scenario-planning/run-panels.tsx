@@ -1,5 +1,8 @@
 "use client";
 import { useState } from "react";
+import { EngineResultView } from "./engine-result";
+import { useScenarioIntent } from "@/lib/scenario-planning/hooks";
+import type { EnqueueRun } from "@/types/generated/scenario-planning";
 import type { TokenUser } from "@/lib/auth";
 import type { FactorySnapshot } from "@/types/generated/operations";
 import type {
@@ -128,7 +131,7 @@ export function RunInspector({ job }: { job: Job }) {
                   </td>
                   <td className="p-3 text-xs text-slate-500">
                     {point.result
-                      ? "Persisted result — reviewed schema unavailable"
+                      ? "Persisted engine result"
                       : "No result supplied"}
                   </td>
                 </tr>
@@ -142,11 +145,11 @@ export function RunInspector({ job }: { job: Job }) {
           </p>
         </div>
       ) : null}
-      <Dependency title="Evaluated result unavailable">
+      {job.result ? <EngineResultView result={job.result} /> : <Dependency title="Evaluated result unavailable">
         A supported planning result has not been provided. KPI, constraints,
         ranking explanation, candidate schedule, model assumptions and sampling
         uncertainty are unavailable.
-      </Dependency>
+      </Dependency>}
       <IdentityDetails
         values={{
           "Job ID": job.job_id,
@@ -166,11 +169,13 @@ export function RunReview({
   snapshot,
   workspace,
   management,
+  api, actor, onAccepted,
 }: {
   draft?: Draft;
   snapshot?: FactorySnapshot;
   workspace: Workspace;
   management: boolean;
+  api?: ScenarioClient; actor?: TokenUser; onAccepted?: (job: Job) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -191,12 +196,7 @@ export function RunReview({
         </button>
         {management ? (
           <>
-            <button className="dss-secondary" disabled>
-              Run baseline
-            </button>
-            <button className="dss-primary" disabled>
-              Run saved scenario
-            </button>
+            {api && actor && onAccepted ? <RunActions api={api} actor={actor} workspace={workspace} draft={draft} onAccepted={onAccepted} /> : <span>Run service unavailable</span>}
           </>
         ) : (
           <span className="text-sm text-slate-500">Read-only role</span>
@@ -205,23 +205,37 @@ export function RunReview({
       {open && draft && snapshot ? (
         <DraftReview draft={draft} snapshot={snapshot} workspace={workspace} />
       ) : null}
-      <Dependency title="Run execution unavailable">
+      {!api && <Dependency title="Run execution unavailable">
         The planning service is not ready to execute Scenario jobs. You can save
         and review assumptions; no run is submitted. Refreshing or reloading
         only reads saved records.
-      </Dependency>
+      </Dependency>}
     </section>
   );
+}
+
+function RunActions({ api, actor, workspace, draft, onAccepted }: { api: ScenarioClient; actor: TokenUser; workspace: Workspace; draft?: Draft; onAccepted: (job: Job) => void }) {
+  const intent = useScenarioIntent<EnqueueRun, Job>({ api, actor, scope: `enqueue:${workspace.workspace_id}`,
+    send: (body, options) => api.enqueueRun(workspace.workspace_id, body, options), onAccepted });
+  return <div className="flex flex-wrap gap-3">
+    <button className="dss-secondary" disabled={intent.unresolved} onClick={() => intent.start({kind: "BASELINE"})}>Run baseline</button>
+    <button className="dss-primary" disabled={!draft || intent.unresolved} onClick={() => draft && intent.start({kind: "SCENARIO", scenario_id: draft.scenario_id, expected_revision: draft.revision})}>Run saved scenario</button>
+    {intent.state.error ? <ScenarioFailure error={intent.state.error} /> : null}
+    {intent.state.kind === "uncertain" ? <button onClick={intent.retry}>Retry same run request</button> : null}
+    {intent.state.kind === "rejected" ? <button onClick={intent.reviewed}>Review new run request</button> : null}
+  </div>;
 }
 
 export function SensitivityInputs({
   workspace,
   source,
   snapshot,
+  api, actor, onAccepted,
 }: {
   workspace: Workspace;
   source?: Job;
   snapshot?: FactorySnapshot;
+  api?: ScenarioClient; actor?: TokenUser; onAccepted?: (job: Job) => void;
 }) {
   const [type, setType] = useState<EnqueueSensitivity["axis"]["type"]>(
     "MAINTENANCE_DURATION",
@@ -393,9 +407,8 @@ export function SensitivityInputs({
           >
             Review sweep inputs
           </button>
-          <button className="dss-primary" type="button" disabled>
-            Start sensitivity job
-          </button>
+          {api && actor && onAccepted && source && review ? <SweepAction api={api} actor={actor} workspace={workspace} source={source} onAccepted={onAccepted}
+            axis={type === "MAINTENANCE_DURATION" ? {type, maintenance_request_id: target, values: values as [number, ...number[]]} : {type, weight, values: values as [number, ...number[]]}} /> : null}
         </div>
       </form>
       {error ? <ScenarioFailure error={error} /> : null}
@@ -429,6 +442,15 @@ export function SensitivityInputs({
       </Dependency>
     </section>
   );
+}
+
+function SweepAction({api, actor, workspace, source, axis, onAccepted}: {api: ScenarioClient; actor: TokenUser; workspace: Workspace; source: Job; axis: EnqueueSensitivity["axis"]; onAccepted: (job: Job) => void}) {
+  const intent = useScenarioIntent<EnqueueSensitivity, Job>({api, actor, scope: `sweep:${workspace.workspace_id}:${source.job_id}`,
+    send: (body, options) => api.enqueueSensitivity(workspace.workspace_id, body, options), onAccepted});
+  return <div><button type="button" className="dss-primary" disabled={intent.unresolved || !["ADMIN", "ENGINEER"].includes(actor.role)} onClick={() => intent.start({source_run_id: source.job_id, axis})}>Start sensitivity job</button>
+    {intent.state.error ? <ScenarioFailure error={intent.state.error} /> : null}
+    {intent.state.kind === "uncertain" ? <button type="button" onClick={intent.retry}>Retry same sensitivity request</button> : null}
+    {intent.state.kind === "rejected" ? <button type="button" onClick={intent.reviewed}>Review new sensitivity request</button> : null}</div>;
 }
 
 export function LiveHandoffReview({
@@ -478,13 +500,8 @@ export function LiveHandoffReview({
           actor={actor}
         />
       ) : null}
-      <Dependency title="LIVE handoff not yet enabled">
-        The proposal only maps objective weights. DEFER_MAINTENANCE needs a
-        reviewed canonical LIVE extension; technician availability and
-        maintenance duration require authorized ingestion of real facts.
-        Frozen-source eligibility and supported-mapping metadata are not
-        provided. No LIVE request is sent from this scaffold.
-      </Dependency>
+      {source?.result && "live_mapping" in source.result && !source.result.live_mapping.supported ?
+        <p role="note">LIVE handoff unavailable: {source.result.live_mapping.reasons.join("; ")}</p> : null}
     </section>
   );
 }
@@ -499,6 +516,11 @@ function LiveContext({
   api: ScenarioClient;
   actor: TokenUser;
 }) {
+  const [confirmed, setConfirmed] = useState(false);
+  const [created, setCreated] = useState<string>();
+  const intent = useScenarioIntent<import("@/types/generated/scenario-planning").LiveEvaluation, import("@/types/generated/scenario-planning").LiveCreated>({api, actor,
+    scope: `live:${workspace.workspace_id}:${source.job_id}`, send: (body, options) => api.evaluateLive(workspace.workspace_id, body, options),
+    onAccepted: result => setCreated(result.decision_case_id)});
   const current = useScenarioRead({
     api,
     actor,
@@ -542,15 +564,19 @@ function LiveContext({
             </p>
           ) : null}
           <label className="block text-sm">
-            <input type="checkbox" disabled className="mr-2" />
-            Confirmation is unavailable until frozen input and mapping
-            eligibility can be verified.
+            <input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={intent.unresolved} className="mr-2" />
+            Create a new LIVE case with the reviewed weights and supported maintenance bounds. Human approval is still required.
           </label>
         </>
       ) : null}
-      <button className="dss-primary" disabled>
+      <button className="dss-primary" disabled={!confirmed || intent.unresolved || !current.data || workspace.stale || current.data.head.snapshot_id !== workspace.baseline.snapshot_id || current.data.head.plan_version !== workspace.baseline.plan_version || !source.result || !("live_mapping" in source.result) || !source.result.live_mapping.supported}
+        onClick={() => current.data && intent.start({source_run_id: source.job_id, confirmation: true, expected_head: current.data.head})}>
         Evaluate LIVE
       </button>
+      {intent.state.error ? <ScenarioFailure error={intent.state.error} /> : null}
+      {intent.state.kind === "uncertain" ? <button onClick={intent.retry}>Retry same LIVE request</button> : null}
+      {intent.state.kind === "rejected" ? <button onClick={() => {intent.reviewed(); setConfirmed(false); current.refresh();}}>Review current LIVE context</button> : null}
+      {created ? <p>New LIVE case: <a className="underline" href={`/operations/recommendations?factory_id=${encodeURIComponent(workspace.baseline.factory_id)}&caseId=${encodeURIComponent(created)}`}>{created}</a></p> : null}
     </div>
   );
 }

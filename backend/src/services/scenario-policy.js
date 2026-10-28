@@ -11,7 +11,7 @@ const strategies = ['PRODUCTION_PRIORITY', 'BALANCED', 'RELIABILITY_PRIORITY'];
 const weights = z.object(Object.fromEntries(weightNames.map(key => [key, z.number().min(0).max(1e6)])))
   .strict().refine(value => Object.values(value).reduce((a, b) => a + b, 0) > 1e-12,
     'At least one weight must be positive (sum > 1e-12, canonical tolerance)');
-const duration = z.number().min(1).max(43200);
+const duration = z.number().int().min(1).max(43200);
 const override = z.discriminatedUnion('type', [
   z.object({ type: z.literal('TECHNICIAN_UNAVAILABLE'), technician_id: identifier,
     start_at: timestamp, end_at: timestamp }).strict(),
@@ -90,9 +90,11 @@ function validateTargets(snapshot, raw) {
     const target = technician ? snapshot.technicians?.find(t => t.technician_id === item.technician_id)
       : snapshot.maintenance_requests?.find(r => r.maintenance_request_id === item.maintenance_request_id);
     if (!target) throw new ApiError(400, 'SCENARIO_INVALID_TARGET', 'Override target is absent from the pinned snapshot');
+    if (!technician && ['COMPLETED', 'CANCELLED'].includes(target.status))
+      throw new ApiError(400, 'SCENARIO_INVALID_TARGET', 'Terminal maintenance cannot be overridden');
     if (technician && (Date.parse(item.start_at) < start || Date.parse(item.end_at) > end))
       throw new ApiError(400, 'SCENARIO_INVALID_WINDOW', 'Unavailable interval must be inside the planning window');
-    if (item.type === 'DEFER_MAINTENANCE' && (Date.parse(item.earliest_start_at) < start || Date.parse(item.earliest_start_at) >= end))
+    if (item.type === 'DEFER_MAINTENANCE' && (Date.parse(item.earliest_start_at) < Math.max(start, Date.parse(target.earliest_start_at)) || Date.parse(item.earliest_start_at) >= end))
       throw new ApiError(400, 'SCENARIO_INVALID_WINDOW', 'Deferred start must be inside the planning window');
   }
   // Feasibility/contradictions against mandatory/locked constraints belong to the engine validator.

@@ -8736,6 +8736,21 @@ components:
                   type: object
                 - additionalProperties: false
                   properties:
+                    maintenance_start_constraints:
+                      type: array
+                      maxItems: 5
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: [maintenance_request_id, earliest_start_at]
+                        properties:
+                          maintenance_request_id:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                          earliest_start_at:
+                            type: string
+                            format: date-time
                     reason:
                       maxLength: 4000
                       minLength: 1

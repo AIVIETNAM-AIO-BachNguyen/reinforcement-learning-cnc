@@ -98,6 +98,18 @@ class DecisionPlanningService:
         return self.plan_with_diagnostics(request).recommendation
 
     def plan_with_diagnostics(self, request: RunDecisionCaseRequest, *, deadline: float | None = None) -> PlanningResult:
+        bounds = getattr(request.trigger, 'maintenance_start_constraints', [])
+        if bounds:
+            from domain.operations.maintenance_constraints import with_start_constraints
+            try:
+                snapshot = with_start_constraints(request.factory_snapshot, bounds)
+            except ValueError as error:
+                raise NoFeasiblePlan('Maintenance start constraints conflict with pinned hard bounds') from error
+            effective = request.model_copy(update={"factory_snapshot": snapshot,
+                "trigger": request.trigger.model_copy(update={"maintenance_start_constraints": []})})
+            return DecisionPlanningService(constraint_profile="scenario-strict:1", simulator=self.simulator,
+                scorer=self.scorer, recommendation_builder=self.recommendation_builder,
+                check_cancelled=self.check_cancelled).plan_with_diagnostics(effective, deadline=deadline)
         strategies = self._strategies(request)
         point_deadline = time.monotonic() + request.planning_config.solver_timeout_seconds
         deadline = min(deadline, point_deadline) if deadline is not None else point_deadline

@@ -1,6 +1,7 @@
 """Internal Scenario transport: bounded isolated processes, no application jobs."""
 import asyncio
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -37,7 +38,7 @@ async def capabilities():
             "sampling_version": SAMPLING_VERSION, "constraint_profile": STRICT_PROFILE,
             "operations": ["EVALUATE", "SENSITIVITY", "COMPARE"], "max_points": 7, "max_candidates": 3,
             "max_draws": 1000, "max_solver_seconds": 30, "max_job_seconds": 300,
-            "live_defer_supported": False}
+            "live_defer_supported": True}
 
 
 async def bounded_read(stream, maximum):
@@ -101,7 +102,7 @@ async def execute(payload, request, response_type):
         if remaining_ms < 1:
             raise TimeoutError()
         budget["remaining_ms"] = remaining_ms
-        process = await asyncio.create_subprocess_exec(sys.executable, "-m", "domain.scenarios.worker",
+        process = await asyncio.create_subprocess_exec(sys.executable, "-m", "domain.scenarios.worker", "--parent-pid", str(os.getpid()),
             cwd=Path(__file__).parent, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
         active_processes.add(process)

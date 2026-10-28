@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import producer from "@/contracts/scenario-planning.proposal.openapi.json";
+import producer from "../../backend/docs/scenario-planning.openapi.json";
 import manifest from "@/types/generated/scenario-planning.manifest.json";
 import {
   createScenarioClient,
@@ -32,21 +32,19 @@ import { createMockOperationsApiClient } from "@/lib/operations-api/mock";
 import { readFileSync } from "node:fs";
 
 describe("pinned Scenario producer proposal", () => {
-  it("keeps unreviewed schemas/capabilities explicit and does not generate a parallel KPI model", () => {
+  it("pins generated producer schemas and reviewed engine capabilities without a parallel KPI model", () => {
     const raw = readFileSync(
-      "contracts/scenario-planning.proposal.openapi.json",
+      "../backend/docs/scenario-planning.openapi.json",
       "utf8",
     ).replace(/\r\n/g, "\n");
     expect(createHash("sha256").update(raw).digest("hex")).toBe(
       manifest.source_sha256,
     );
-    expect(producer.components.schemas.EngineResult["x-contract-status"]).toBe(
-      "PENDING_FLEX",
-    );
+    expect(producer.components.schemas.EngineResult.anyOf).toHaveLength(2);
     expect(manifest).toMatchObject({
-      runnable: false,
-      sensitivity: false,
-      live_handoff: false,
+      runnable: true,
+      sensitivity: true,
+      live_handoff: true,
     });
     expect(
       matchesScenarioSchema(
@@ -172,14 +170,14 @@ describe("pinned Scenario producer proposal", () => {
       ),
     ).rejects.toMatchObject({ code: "BASELINE_ENTITIES_UNAVAILABLE" });
   });
-  it("fail-closes all unreviewed engine operations before HTTP", async () => {
-    const fetcher = vi.fn<typeof fetch>();
+  it("rejects malformed responses on every integrated engine operation", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => Response.json({success: true, data: {invented: true}}));
     const api = createScenarioClient({ fetcher });
     await expect(
       api.enqueueRun(workspaceId, { kind: "BASELINE" }, { key: "run" }),
-    ).rejects.toMatchObject({ code: "DEPENDENCY_PENDING" });
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     await expect(api.compare(workspaceId, [runId])).rejects.toMatchObject({
-      code: "DEPENDENCY_PENDING",
+      code: "INVALID_RESPONSE",
     });
     await expect(
       api.enqueueSensitivity(
@@ -194,7 +192,7 @@ describe("pinned Scenario producer proposal", () => {
         },
         { key: "sweep" },
       ),
-    ).rejects.toMatchObject({ code: "DEPENDENCY_PENDING" });
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     await expect(
       api.evaluateLive(
         workspaceId,
@@ -205,8 +203,8 @@ describe("pinned Scenario producer proposal", () => {
         },
         { key: "live" },
       ),
-    ).rejects.toMatchObject({ code: "DEPENDENCY_PENDING" });
-    expect(fetcher).not.toHaveBeenCalled();
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    expect(fetcher).toHaveBeenCalledTimes(4);
   });
 });
 

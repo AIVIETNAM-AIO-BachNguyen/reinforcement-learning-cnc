@@ -73,7 +73,7 @@ async function claimNext(db, { workerId, engineVersion, contractVersion, leaseMs
       const token = randomUUID();
       const [result] = await tx.$queryRaw`UPDATE scenario_jobs SET status='RUNNING',attempt=attempt+1,lease_token=${token}::uuid,
         worker_id=${workerId},lease_expires_at=LEAST(deadline_at,clock_timestamp()+${leaseMs}*interval '1 millisecond'),
-        started_at=COALESCE(started_at,clock_timestamp()),updated_at=clock_timestamp() WHERE id=${row.id}::uuid RETURNING *`;
+        started_at=COALESCE(started_at,GREATEST(created_at,clock_timestamp())),updated_at=GREATEST(updated_at,clock_timestamp()) WHERE id=${row.id}::uuid RETURNING *`;
       await tx.$executeRaw`INSERT INTO scenario_attempts(factory_id,workspace_id,job_id,attempt,lease_token,worker_id,status)
         VALUES(${row.factory_id},${row.workspace_id}::uuid,${row.id}::uuid,${result.attempt},${token}::uuid,${workerId},'RUNNING')`;
       await event(tx, workspaceOf(row), null, 'JOB_CLAIMED', { attempt: result.attempt, worker_id: workerId }, row.id);
@@ -115,4 +115,43 @@ async function release(db, claim) {
     }
   });
 }
-module.exports = { claimNext, heartbeat, release, fenced, owns, leaseDuration };
+async function persist(db, claim, result, { signal } = {}) {
+  const { requestForJob } = require('./scenario-engine.adapter');
+  const { validateScenarioResult } = require('./scenario-engine.client');
+  const { contentHash } = require('./operations-contract.service');
+  // Canonical validation and CPU work are outside the fenced transaction.
+  await validateScenarioResult(requestForJob(claim, Math.max(1, claim.deadline_at - Date.now())), result, { signal });
+  return fenced(db, claim, async (tx, row) => {
+    const points = await tx.$queryRaw`SELECT * FROM scenario_points WHERE job_id=${row.id}::uuid ORDER BY point_index`;
+    for (const point of points) {
+      const evaluated = row.kind === 'RUN' ? result[point.role.toLowerCase()]
+        : result.points.find(item => item.value === point.value)?.evaluation;
+      if (!evaluated) throw new ApiError(502, 'INVALID_SCENARIO_RESPONSE', 'Engine point mapping is incomplete');
+      const successful = ['FEASIBLE', 'NO_FEASIBLE_PLAN'].includes(evaluated.outcome);
+      const errorCode = successful ? null : evaluated.outcome === 'TIMEOUT' ? 'SCENARIO_DEADLINE_EXCEEDED' : 'SCENARIO_ENGINE_FAILURE';
+      await tx.$executeRaw`UPDATE scenario_points SET status=${evaluated.outcome},
+        result_json=${successful ? JSON.stringify(evaluated) : null}::jsonb,result_hash=${successful ? contentHash(evaluated) : null},
+        error_code=${errorCode},completed_at=clock_timestamp() WHERE job_id=${row.id}::uuid AND point_index=${point.point_index}`;
+    }
+    await endAttempt(tx, row, 'SUCCEEDED', null);
+    await tx.$executeRaw`UPDATE scenario_jobs SET status='SUCCEEDED',result_json=${JSON.stringify(result)}::jsonb,
+      result_hash=${contentHash(result)},completed_at=clock_timestamp(),updated_at=clock_timestamp(),
+      lease_token=NULL,lease_expires_at=NULL,worker_id=NULL WHERE id=${row.id}::uuid`;
+    await event(tx, workspaceOf(row), null, 'JOB_SUCCEEDED', { attempt: row.attempt, result_hash: contentHash(result) }, row.id);
+    return result;
+  });
+}
+async function reject(db, claim, error) {
+  const safe = new Set(['INVALID_SCENARIO_REQUEST', 'INVALID_SCENARIO_RESPONSE', 'SCENARIO_TIMEOUT',
+    'SCENARIO_UNAVAILABLE', 'SCENARIO_SOURCE_INTEGRITY_ERROR', 'SCENARIO_VALIDATOR_UNAVAILABLE']);
+  const code = safe.has(error.code) ? error.code : 'SCENARIO_ENGINE_FAILURE';
+  return fenced(db, claim, async (tx, row) => {
+    if (error.retryable && row.attempt < 3 && row.deadline_at > await now(tx)) {
+      await endAttempt(tx, row, 'FAILED', code);
+      await tx.$executeRaw`UPDATE scenario_jobs SET status='QUEUED',lease_token=NULL,lease_expires_at=NULL,
+        worker_id=NULL,updated_at=clock_timestamp() WHERE id=${row.id}::uuid`;
+      await event(tx, workspaceOf(row), null, 'JOB_RETRY_QUEUED', { attempt: row.attempt, error_code: code }, row.id);
+    } else await fail(tx, row, code);
+  });
+}
+module.exports = { claimNext, heartbeat, release, fenced, owns, leaseDuration, persist, reject };

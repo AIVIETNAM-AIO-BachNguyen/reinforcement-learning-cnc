@@ -81,5 +81,6 @@ stage 'Full snapshot flow' npm --prefix backend run test:operations-flow
 # ports and browser state never overlap.
 stage 'Frontend browser decision workflow' npm --prefix frontend run test:browser
 stage 'Browser E2E through PostgreSQL, backend, worker and FastAPI (three clean schemas)' node scripts/run-operations-browser-e2e.js --repeat=3
+stage 'Scenario browser flow (three fresh schemas, real engine)' env OPERATIONS_E2E_ARTIFACT_DIR="artifacts/scenario-e2e/$(git rev-parse HEAD)" node scripts/run-operations-browser-e2e.js --scenarios --repeat=3
 stage 'Frontend production build' env NODE_ENV=production npm --prefix frontend run build
 stage 'Backend production image and validator smoke check' docker build -f backend/Dockerfile -t cnc-backend:test .

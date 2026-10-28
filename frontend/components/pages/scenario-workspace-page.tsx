@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { MetricTable } from "@/components/scenario-planning/engine-result";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { TokenUser } from "@/lib/auth";
@@ -100,18 +101,20 @@ function SelectedRun({
   actor,
   workspace,
   runId,
+  sensitivity = false,
 }: {
   api: ScenarioClient;
   actor: TokenUser;
   workspace: Workspace;
   runId: string;
+  sensitivity?: boolean;
 }) {
   const run = useScenarioRead({
     api,
     actor,
     scope: `run:${workspace.baseline.factory_id}:${workspace.workspace_id}:${runId}`,
     read: async (options) => {
-      const result = await api.run(workspace.workspace_id, runId, options);
+      const result = await (sensitivity ? api.sensitivity(workspace.workspace_id, runId, options) : api.run(workspace.workspace_id, runId, options));
       if (
         result.engine_version !== workspace.engine_version ||
         result.contract_version !== workspace.contract_version
@@ -136,12 +139,12 @@ function SelectedRun({
       {run.data ? (
         <>
           <RunInspector job={run.data} />
-          <LiveHandoffReview
+          {!sensitivity && <LiveHandoffReview
             source={run.data}
             workspace={workspace}
             api={api}
             actor={actor}
-          />
+          />}
         </>
       ) : null}
     </div>
@@ -423,12 +426,14 @@ function WorkspaceContent({
                       }}
                     />
                     <RunReview
+                      api={api} actor={actor} onAccepted={(job) => { navigate({run_id: job.job_id}); read.refresh(); }}
                       draft={data.draft}
                       snapshot={snapshot}
                       workspace={data.workspace}
                       management={["ADMIN", "ENGINEER"].includes(actor.role)}
                     />
                     <SensitivityInputs
+                      api={api} actor={actor} onAccepted={(job) => navigate({sensitivity_id: job.job_id})}
                       key={`${workspaceId}:${selection.run_id ?? ""}:basis`}
                       workspace={data.workspace}
                       source={selectedSummary}
@@ -629,13 +634,13 @@ function WorkspaceContent({
                 {selectionError || compareError}
               </p>
             ) : null}
-            <Dependency title="Comparison metrics unavailable">
+            {selectedIds.length >= 2 && !compareError ? <ComputedComparison api={api} actor={actor} workspaceId={workspaceId} ids={selectedIds} /> : <Dependency title="Comparison metrics unavailable">
               {selectedIds.length < 2
                 ? "Select a baseline and a scenario to prepare comparison. "
                 : "The selected runs stay in the URL across pages. "}
               The planning service has not provided supported comparison metrics
               or a tradeoff explanation.
-            </Dependency>
+            </Dependency>}
           </section>
           {selection.run_id ? (
             <SelectedRun
@@ -653,12 +658,7 @@ function WorkspaceContent({
             </Dependency>
           )}
           {selection.sensitivity_id ? (
-            <Dependency title="Sensitivity job read unavailable">
-              The URL retains sensitivity job{" "}
-              <code className="break-all">{selection.sensitivity_id}</code>. The
-              producer has not implemented the sensitivity read/result boundary.
-              No different job or fixture is substituted.
-            </Dependency>
+            <SelectedRun api={api} actor={actor} workspace={data.workspace} runId={selection.sensitivity_id} sensitivity />
           ) : null}
           <IdentityDetails
             values={{
@@ -683,4 +683,14 @@ function WorkspaceContent({
       ) : null}
     </div>
   );
+}
+
+function ComputedComparison({api, actor, workspaceId, ids}: {api: ScenarioClient; actor: TokenUser; workspaceId: string; ids: string[]}) {
+  const read = useScenarioRead({api, actor, scope: `computed-comparison:${workspaceId}:${ids.join(",")}`,
+    read: options => api.compare(workspaceId, ids, options)});
+  return <section aria-label="Saved run comparison">
+    {read.error ? <ScenarioFailure error={read.error} retry={read.refresh} /> : null}
+    {read.kind === "loading" ? <p role="status">Reading computed comparison…</p> : null}
+    {read.data?.runs.map(run => <div key={run.identity.run_id}><p>Run {run.identity.run_id} compared with {read.data!.reference_identity.run_id}</p><MetricTable comparison={run.comparison}/></div>)}
+  </section>;
 }

@@ -1282,6 +1282,29 @@
                   {
                     "additionalProperties": false,
                     "properties": {
+                      "maintenance_start_constraints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "earliest_start_at": {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            "maintenance_request_id": {
+                              "maxLength": 128,
+                              "minLength": 1,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "maintenance_request_id",
+                            "earliest_start_at"
+                          ],
+                          "type": "object"
+                        },
+                        "maxItems": 5,
+                        "type": "array"
+                      },
                       "reason": {
                         "maxLength": 4000,
                         "minLength": 1,
