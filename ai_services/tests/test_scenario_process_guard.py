@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 
 def test_worker_guard_exits_after_forced_owner_death(tmp_path):
@@ -15,7 +16,8 @@ def test_worker_guard_exits_after_forced_owner_death(tmp_path):
         worker = subprocess.Popen([python, '-c',
             'import sys,time; from domain.scenarios.process_guard import watch_parent; '
             'watch_parent(int(sys.argv[1])); '
-            'from pathlib import Path; Path(sys.argv[2]).write_text("ready"); time.sleep(60)', str(owner.pid), str(ready)])
+            'from pathlib import Path; Path(sys.argv[2]).write_text("ready"); time.sleep(60)', str(owner.pid), str(ready)],
+            cwd=Path(__file__).resolve().parents[1])
         deadline = time.monotonic() + 5
         while not ready.exists() and time.monotonic() < deadline:
             time.sleep(.02)
