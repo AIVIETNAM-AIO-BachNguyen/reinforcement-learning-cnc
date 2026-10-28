@@ -96,9 +96,15 @@ test('real saved scenario, physical and weight sweeps, replay, reload and immuta
     const baselineId = new URL(page.url()).searchParams.get('run_id')!;
     await expect.poll(async () => (await read(`/runs/${baselineId}`)).status).toBe('SUCCEEDED');
     await page.reload();
-    await page.getByRole('checkbox', {name: `Compare run ${baselineId}`, exact: true}).check();
+    // Selection is URL-owned: wait for the Next route commit before selecting
+    // another run, rather than asserting the transient pre-navigation element.
+    const baselineSelection = page.getByRole('checkbox', {name: `Compare run ${baselineId}`, exact: true});
+    await baselineSelection.click();
+    await expect(baselineSelection).toBeChecked();
     const comparisonResponse = page.waitForResponse(response => response.url().includes(`/scenario-workspaces/${workspace}/compare`));
-    await page.getByRole('checkbox', {name: `Compare run ${runId}`, exact: true}).check();
+    const scenarioSelection = page.getByRole('checkbox', {name: `Compare run ${runId}`, exact: true});
+    await scenarioSelection.click();
+    await expect(scenarioSelection).toBeChecked();
     const comparison = await comparisonResponse;
     expect(comparison.status()).toBe(200);
     await expect(page.getByRole('region', {name: 'Saved run comparison'}).getByRole('table', {name: 'Computed KPI comparison'}).first()).toBeVisible();
