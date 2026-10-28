@@ -67,6 +67,7 @@ OPERATIONS_PYTHON="$(uv run --no-sync --project ai_services python -c 'import sy
 
 stage 'Generate Prisma client' npm --prefix backend run prisma:generate
 stage 'Canonical contracts and generated client types' uv run --frozen --project ai_services python scripts/check-contracts.py
+stage 'Scenario engine and real Node/FastAPI transport' uv run --frozen --project ai_services python -m pytest ai_services/tests -q
 stage 'Backend unit tests' env NODE_ENV=test npm --prefix backend test -- --runInBand
 # Each runner migrates its own fresh schema, and cleans it in finally even on failure.
 stage 'PostgreSQL integration' npm --prefix backend run test:integration

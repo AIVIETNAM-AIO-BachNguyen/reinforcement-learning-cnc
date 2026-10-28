@@ -14,6 +14,7 @@ def run(*args: str, cwd: Path = ROOT) -> None:
 
 
 def main() -> None:
+    run(sys.executable, str(ROOT / "ai_services/scripts/export_scenario_contracts.py"), "--check")
     with tempfile.TemporaryDirectory(prefix="operations-contract-") as temp:
         generated = Path(temp) / "operations-domain.schema.json"
         run(sys.executable, str(ROOT / "ai_services/scripts/export_operations_contracts.py"),
