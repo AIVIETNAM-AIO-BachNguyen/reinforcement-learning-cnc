@@ -15,3 +15,7 @@ artifacts/
 
 # Local design direction and browser inspection artifacts
 .taste-skill/
+
+# Local SSH credentials
+/bachng
+/bachng.pub

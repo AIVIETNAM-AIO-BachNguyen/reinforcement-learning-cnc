@@ -30,7 +30,7 @@ export default function Page() {
         <div className="login-brand">
           <span className="brand-symbol">M</span>
           <span>
-            Maintenance AI<span>Industrial decision support</span>
+            MCC Workspace<span>Demand & capacity coordination</span>
           </span>
         </div>
         <div className="login-argument">
@@ -40,8 +40,8 @@ export default function Page() {
             maintenance decision.
           </h1>
           <p>
-            Understand machine condition, review the evidence and evaluate the
-            next action in one focused workspace.
+            Compare research evidence, replay component states and examine
+            maintenance decisions in one focused workspace.
           </p>
           <div className="login-process">
             <div>
@@ -58,7 +58,7 @@ export default function Page() {
             </div>
           </div>
         </div>
-        <p className="login-footer">CNC maintenance · Evidence-led planning</p>
+        <p className="login-footer">JCST research · Maintenance demand and technician capacity</p>
       </section>
       <section className="login-entry">
         <LoginPage onSubmit={handleSubmit} />

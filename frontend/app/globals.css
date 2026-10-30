@@ -4,30 +4,30 @@
 
 :root {
   --color-cloud-white: #ffffff;
-  --color-canvas-fog: #f3f6fa;
-  --color-slate-text: #1b2b43;
-  --color-ash-gray: #526279;
-  --color-stone-border: #dfe6ee;
-  --color-platinum-outline: #c8d3e1;
-  --color-steel-gray: #63738a;
-  --color-hover-stone: #edf2f8;
-  --color-ghost-ink: #253b57;
-  --color-chartwell-blue: #3159c9;
-  --color-sky-tint: #edf3ff;
+  --color-canvas-fog: #fafafb;
+  --color-slate-text: #1c1d1f;
+  --color-ash-gray: #626873;
+  --color-stone-border: #e4e7ec;
+  --color-platinum-outline: #cad0d9;
+  --color-steel-gray: #6f7988;
+  --color-hover-stone: #f0f1f3;
+  --color-ghost-ink: #2e3238;
+  --color-chartwell-blue: #266df0;
+  --color-sky-tint: #eaf0ff;
   --color-emerald: #087b58;
   --color-emerald-tint: #e6f4ed;
   --color-amber: #986211;
   --color-amber-tint: #fff3db;
   --color-rose: #be3048;
   --color-rose-tint: #fff0f1;
-  --color-blue-tint: #edf3ff;
-  --sidebar-ground: #172940;
-  --sidebar-ink: #e1e9f4;
-  --sidebar-muted: #a5b5cb;
-  --sidebar-active: #29456c;
-  --map-ground: #f3f6fa;
+  --color-blue-tint: #eaf0ff;
+  --sidebar-ground: #f7f8fa;
+  --sidebar-ink: #444a53;
+  --sidebar-muted: #737b88;
+  --sidebar-active: #e9eefb;
+  --map-ground: #fafafb;
   --trend-health: #087b58;
-  --trend-load: #3159c9;
+  --trend-load: #266df0;
   --shadow-md: none;
   --shadow-sm: 0 1px 3px rgb(27 43 67 / 5%);
   --shadow-subtle: 0 1px 2px rgb(27 43 67 / 4%);
@@ -35,7 +35,7 @@
   --input: 214 29% 83%;
   --ring: 219 81% 48%;
   --radius-panel: 12px;
-  --radius-control: 8px;
+  --radius-control: 10px;
   --sidebar-width: 240px;
   --font-numeric:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; /* taste-skill-ignore: numeric comparison required by the DSS brief and Dub reference. */
@@ -54,6 +54,7 @@ body {
   color: var(--color-slate-text);
   background: var(--color-canvas-fog);
   font-family:
+    Inter,
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -134,7 +135,7 @@ summary:focus-visible {
   color: var(--sidebar-ink);
 
   padding: 24px 16px 18px;
-  border-right: 1px solid #172940; /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
+  border-right: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
 }
 .workspace-brand {
   display: flex;
@@ -149,7 +150,7 @@ summary:focus-visible {
   height: 36px;
   flex-shrink: 0;
 
-  background: #4269d5;
+  background: #232529;
   color: white;
   border-radius: 8px;
 }
@@ -159,7 +160,7 @@ summary:focus-visible {
   font-weight: 600;
   letter-spacing: -0.025em;
 
-  color: #f4f7fc;
+  color: var(--color-slate-text);
   white-space: nowrap;
 }
 .brand-name > span {
@@ -203,25 +204,25 @@ summary:focus-visible {
   color: var(--sidebar-muted);
 }
 .workspace-nav-link:hover {
-  background: #223952;
+  background: #edeff3;
 
-  color: #ffffff;
+  color: var(--color-slate-text);
 }
 .workspace-nav-link.is-active {
   background: var(--sidebar-active);
 
-  color: #ffffff;
-  box-shadow: inset 3px 0 #83a7ff;
+  color: #2058c2;
+  box-shadow: none;
 }
 .workspace-nav-link.is-active svg {
-  color: #aac4ff;
+  color: #266df0;
 }
 .workspace-sidebar :is(a, button):focus-visible {
-  outline-color: #a9c5ff;
+  outline-color: var(--color-chartwell-blue);
 }
 .sidebar-footer {
   margin-top: 36px;
-  border-top: 1px solid #30445e;
+  border-top: 1px solid var(--color-stone-border);
   padding-top: 16px;
 }
 .sidebar-toggle {
@@ -242,9 +243,9 @@ summary:focus-visible {
   flex-shrink: 0;
   border-radius: 50%;
 
-  background: #30496a;
+  background: #e4e7ec;
 
-  color: #d9e6ff;
+  color: #444a53;
   font-weight: 600;
 }
 .account-name {
@@ -255,7 +256,7 @@ summary:focus-visible {
   white-space: nowrap;
   text-overflow: ellipsis;
 
-  color: #f4f7fc;
+  color: var(--color-slate-text);
   font-size: 14px;
 }
 .account-name span {
@@ -264,7 +265,7 @@ summary:focus-visible {
 }
 .sidebar-collapsed .workspace-sidebar {
   padding-inline: 12px;
-  border-right: 1px solid #172940; /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
+  border-right: 1px solid var(--color-stone-border); /* taste-skill-ignore: Dub structural border for application panels and data boundaries. */
   padding: 24px 16px 18px;
 }
 .sidebar-collapsed .workspace-brand {
@@ -370,7 +371,7 @@ summary:focus-visible {
   border-radius: var(--radius-control);
   color: white;
 
-  background: var(--color-chartwell-blue);
+  background: #232529;
   box-shadow: 0 1px 2px rgb(22 47 111 / 12%);
 
   font-weight: 500;
@@ -378,7 +379,7 @@ summary:focus-visible {
   transition: background-color 150ms;
 }
 .primary-action:hover {
-  background: #2447ae;
+  background: #383c43;
 }
 .snapshot-notice {
   display: flex;

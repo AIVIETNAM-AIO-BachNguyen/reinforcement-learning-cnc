@@ -28,7 +28,7 @@ const navigation = [
   },
   { href: "/decisions", label: "Decision Center", icon: ClipboardCheck },
   { href: "/agents", label: "Agent Control Room", icon: Bot },
-  { href: "/what-if", label: "What-if Workspace", icon: SlidersHorizontal },
+  { href: "/what-if", label: "Compare controllers", icon: SlidersHorizontal },
 ];
 
 function NavItem({
@@ -45,9 +45,10 @@ function NavItem({
   activePaths?: string[];
 }) {
   const pathname = usePathname();
+  const baseHref = href.split("?")[0];
   const active =
-    pathname === href ||
-    pathname.startsWith(`${href}/`) ||
+    pathname === baseHref ||
+    pathname.startsWith(`${baseHref}/`) ||
     activePaths.includes(pathname);
   return (
     <Link
@@ -65,9 +66,11 @@ function NavItem({
 export function AppShell({
   children,
   title = "Operations overview",
+  simulationId,
 }: {
   children: ReactNode;
   title?: string;
+  simulationId?: string;
 }) {
   const router = useRouter();
   const [user, setUser] = useState<TokenUser | null>(null);
@@ -125,34 +128,38 @@ export function AppShell({
       </a>
       <aside className="workspace-sidebar" aria-label="Workspace sidebar">
         <Link
-          href="/overview"
+          href={simulationId ? `/overview?session=${simulationId}` : "/overview"}
           className="workspace-brand"
-          title="Maintenance AI"
+          title="Maintenance Coordination Workspace"
         >
           <span className="brand-symbol">
             <Activity size={23} aria-hidden="true" />
           </span>
           <span className={collapsed ? "sr-only" : "brand-name"}>
-            Maintenance AI<span>Decision support</span>
+            MCC Workspace<span>Demand & capacity</span>
           </span>
         </Link>
         <nav aria-label="Primary navigation" className="workspace-navigation">
           <p className={collapsed ? "sr-only" : "nav-group-label"}>
-            Operations
+            Application
           </p>
           {navigation.map((item) => (
-            <NavItem key={item.href} {...item} collapsed={collapsed} />
+            <NavItem key={item.href} {...item} href={simulationId ? `${item.href}?session=${simulationId}` : item.href} collapsed={collapsed} />
           ))}
+          {process.env.NEXT_PUBLIC_RESEARCH_ENABLED !== "false" && <>
+            <p className={collapsed ? "sr-only" : "nav-group-label nav-group-secondary"}>Research</p>
+            <NavItem href="/research" label="Research workspace" icon={FlaskConical} collapsed={collapsed} />
+          </>}
           <p
             className={
               collapsed ? "sr-only" : "nav-group-label nav-group-secondary"
             }
           >
-            Research & administration
+            Legacy & administration
           </p>
           <NavItem
             href="/experiments"
-            label="Experiments"
+            label="Legacy CNC experiments"
             icon={FlaskConical}
             collapsed={collapsed}
           />

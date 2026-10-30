@@ -17,7 +17,7 @@ from domain.operations.service import (
 
 
 app = FastAPI(
-    title="CNC Research AI Service",
+    title="Maintenance Coordination Research AI Service",
     version="0.1.0",
 )
 
@@ -68,7 +68,7 @@ async def health() -> dict[str, str | list[str]]:
     return {
         "status": "ok",
         "service": "cnc-research-ai",
-        "contract_versions": ["2.0", "3.0"],
+        "contract_versions": ["2.0", "3.0", "jcst-research/1.0"],
     }
 
 

@@ -1,4 +1,27 @@
-# CNC Research Console
+# Maintenance Coordination Research Console
+
+The default route is `/overview`; Application appears first in the sidebar.
+Application now uses a persisted JCST simulation session: `/overview` shows the
+live factory; `/decisions` reviews and dispatches matching actions; `/agents`
+shows actual orchestration events; `/what-if` compares S and F. A `session` URL
+parameter keeps all four views on the same backend state. **Auto demo** creates
+a new incident session and presents the whole flow automatically, with short
+reading pauses and automatic scrolling. Pause/Resume or take Manual control
+at any point. For the manual walkthrough, start a new session
+with engineering seed `990000001` and incident mode for the failure-to-repair demo.
+The isolated learned runtime and registered checkpoints are required; there is
+no fixture-policy fallback. Legacy sample pages remain at `/legacy/overview`,
+`/legacy/decisions`, `/legacy/agents` and `/legacy/what-if`.
+
+The Research workspace at `/research` provides campaign evidence, source/audit scope,
+per-root S/A/F learning curves, component-level replay, registered checkpoint
+inference, matched what-if branches and immutable simulation reviews. Research
+data is read from `/api/v1/research`; the UI never substitutes demo data on errors.
+Case/arm/root/budget selection is reflected in the URL. Curve inspection does
+not change the source study's primary estimand or research gate.
+
+See [the research runbook](../docs/research/runbook.md). The CNC v2/Operations v3
+surfaces below are compatibility modules and retain their original semantics.
 
 Next.js frontend for the authenticated AI-assisted maintenance workflow. The UI includes:
 
@@ -11,7 +34,9 @@ Next.js frontend for the authenticated AI-assisted maintenance workflow. The UI 
 - an Operations contract v3 fixture preview spanning overview, integrated scheduling, recommendation comparison, agent trace inspection, and isolated what-if scenarios;
 - a typed real Product API adapter and an in-memory mock adapter using the same TypeScript models.
 
-The default route is `/overview`. Research experiments remain available under `/experiments`; operational review is organized around `/decisions`, `/agents`, and `/what-if`. The current `/overview` dashboard uses the typed fixture in `lib/operations-ui/fixtures.ts` until the Operations API exposes live case, machine, and agent-run resources.
+The legacy application overview remains `/overview`. CNC v2 experiments remain
+under `/experiments`; operational review uses `/decisions`, `/agents`, and
+`/what-if`. These older surfaces are separate from the JCST research workspace.
 
 The frontend only presents returned research data. It does not predict RUL, derive a point estimate, calculate cost/risk/CVaR/failure probability, choose replacement actions, or reconstruct missing engine output.
 

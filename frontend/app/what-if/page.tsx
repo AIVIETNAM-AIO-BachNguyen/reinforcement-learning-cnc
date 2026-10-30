@@ -1,5 +1,5 @@
-import { WhatIfWorkspacePage } from "@/components/pages/what-if-workspace-page";
-
-export default function WhatIfPage() {
-  return <WhatIfWorkspacePage />;
+import { DemoWorkspace } from '@/components/simulation/demo-workspace';
+export default async function Page({searchParams}:{searchParams:Promise<{session?:string}>}) {
+  const {session}=await searchParams;
+  return <DemoWorkspace view="compare" initialId={session} />;
 }
