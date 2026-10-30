@@ -22,7 +22,11 @@ import {
   scenarioActor,
   scenarioDraft,
   scenarioJob,
-  scenarioSnapshot,
+  scenarioEntities,
+  engineSnapshot,
+  engineWorkspace,
+  engineEntities,
+  engineJob,
   scenarioWorkspace,
   draftId,
   runId,
@@ -41,7 +45,7 @@ function stub() {
   const api = createScenarioClient();
   vi.spyOn(api, "identity").mockResolvedValue(scenarioActor);
   vi.spyOn(api, "workspace").mockResolvedValue(scenarioWorkspace());
-  vi.spyOn(api, "baselineEntities").mockResolvedValue(scenarioSnapshot());
+  vi.spyOn(api, "baselineEntities").mockResolvedValue(scenarioEntities());
   vi.spyOn(api, "draft").mockResolvedValue(scenarioDraft());
   vi.spyOn(api, "listDrafts").mockResolvedValue({
     items: [scenarioDraft()],
@@ -67,7 +71,7 @@ describe("Scenario editor independent contract UI", () => {
         fresh
         workspace={scenarioWorkspace()}
         draft={scenarioDraft()}
-        snapshot={scenarioSnapshot()}
+        snapshot={scenarioEntities()}
         onSaved={accepted}
         refresh={vi.fn()}
       />,
@@ -81,7 +85,7 @@ describe("Scenario editor independent contract UI", () => {
       within(
         screen.getByRole("combobox", { name: "Assumption 2 target" }),
       ).getAllByRole("option"),
-    ).toHaveLength(scenarioSnapshot().technicians!.length + 1);
+    ).toHaveLength(scenarioEntities().technicians!.length + 1);
     expect(
       screen.queryByRole("textbox", { name: /uuid/i }),
     ).not.toBeInTheDocument();
@@ -121,7 +125,7 @@ describe("Scenario editor independent contract UI", () => {
         fresh
         workspace={scenarioWorkspace()}
         draft={scenarioDraft()}
-        snapshot={scenarioSnapshot()}
+        snapshot={scenarioEntities()}
         onSaved={vi.fn()}
         refresh={vi.fn()}
       />,
@@ -157,7 +161,7 @@ describe("Scenario editor independent contract UI", () => {
       fresh: true,
       workspace: scenarioWorkspace(),
       draft: scenarioDraft(),
-      snapshot: scenarioSnapshot(),
+      snapshot: scenarioEntities(),
       onSaved: vi.fn(),
       refresh,
     };
@@ -215,7 +219,7 @@ describe("Scenario editor independent contract UI", () => {
         fresh
         workspace={scenarioWorkspace()}
         draft={scenarioDraft()}
-        snapshot={scenarioSnapshot()}
+        snapshot={scenarioEntities()}
         onSaved={vi.fn()}
         refresh={vi.fn()}
       />,
@@ -237,6 +241,43 @@ describe("Scenario editor independent contract UI", () => {
 });
 
 describe("workspace/read/result boundaries", () => {
+  it("keeps immutable run selection usable during a background refresh while commands stay disabled", async () => {
+    const user = userEvent.setup();
+    const api = stub();
+    push.mockClear();
+    const enqueue = vi.spyOn(api, "enqueueRun");
+    vi.mocked(api.listRuns).mockResolvedValue({
+      items: [
+        {
+          ...scenarioJob("SUCCEEDED"),
+          source_scenario_id: null,
+          source_revision: null,
+        },
+      ],
+      next_cursor: null,
+    });
+    render(
+      <ScenarioWorkspacePage
+        api={api}
+        workspaceId={workspaceId}
+        selection={{ factory_id: "factory-demo-01" }}
+      />,
+    );
+    const choice = await screen.findByRole("checkbox", {
+      name: `Compare run ${runId}`,
+    });
+    vi.mocked(api.workspace).mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+    await user.click(screen.getByRole("button", { name: "Refresh workspace" }));
+    expect(
+      screen.getByRole("button", { name: "Run baseline" }),
+    ).toBeDisabled();
+    expect(choice).toBeEnabled();
+    await user.click(choice);
+    expect(push.mock.calls.at(-1)?.[0]).toContain(`compare=${runId}`);
+    expect(enqueue).not.toHaveBeenCalled();
+  });
   it("write authorization loss revalidates actor and removes the old private form", async () => {
     const user = userEvent.setup();
     const api = stub();
@@ -291,7 +332,7 @@ describe("workspace/read/result boundaries", () => {
         fresh
         workspace={scenarioWorkspace()}
         draft={scenarioDraft()}
-        snapshot={scenarioSnapshot()}
+        snapshot={scenarioEntities()}
         onSaved={vi.fn()}
         refresh={vi.fn()}
       />,
@@ -336,7 +377,7 @@ describe("workspace/read/result boundaries", () => {
       await screen.findByRole("heading", { name: "Pinned baseline" }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "Scenario run" }),
+      await screen.findByRole("heading", { name: "Scenario data unavailable" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("987654")).not.toBeInTheDocument();
     expect(screen.queryByText("0.95")).not.toBeInTheDocument();
@@ -431,7 +472,12 @@ describe("workspace/read/result boundaries", () => {
         status: status as (typeof job.points)[number]["status"],
         value: point_index * 30,
         error_code: null,
-        result: status === "FEASIBLE" ? { kpis: { invented: 987654 } } as unknown as NonNullable<(typeof job.points)[number]["result"]> : null,
+        result:
+          status === "FEASIBLE"
+            ? ({ kpis: { invented: 987654 } } as unknown as NonNullable<
+                (typeof job.points)[number]["result"]
+              >)
+            : null,
       }),
     );
     render(<RunInspector job={job} />);
@@ -461,11 +507,17 @@ describe("workspace/read/result boundaries", () => {
   });
   it("reviews five explicit weight samples without normalization or sending sensitivity", async () => {
     const user = userEvent.setup();
+    const api = stub();
+    const enqueue = vi.spyOn(api, "enqueueSensitivity");
     render(
       <SensitivityInputs
-        workspace={scenarioWorkspace()}
-        snapshot={scenarioSnapshot()}
-        source={scenarioJob("SUCCEEDED")}
+        workspace={engineWorkspace()}
+        snapshot={engineEntities()}
+        source={engineJob()}
+        api={api}
+        actor={scenarioActor}
+        fresh
+        onAccepted={vi.fn()}
       />,
     );
     await user.selectOptions(
@@ -475,25 +527,25 @@ describe("workspace/read/result boundaries", () => {
     await user.click(
       screen.getByRole("button", { name: "Review sweep inputs" }),
     );
+    expect(screen.getByText(/values 0, 0.5, 1, 2, 4/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Requested values: 0, 0.5, 1, 2, 4/),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Start sensitivity job" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Start sensitivity job" }),
+    ).toBeEnabled();
+    expect(enqueue).not.toHaveBeenCalled();
   });
   it("LIVE review shows S1/P1 vs S2/P2, requires supported frozen mapping and never commits simulation", async () => {
     const user = userEvent.setup();
     const api = stub();
     vi.spyOn(api, "currentContext").mockResolvedValue({
-      snapshot: scenarioSnapshot(),
+      snapshot: { ...engineSnapshot(), snapshot_id: "S2" },
       head: { snapshot_id: "S2", plan_version: 2, revision: 8 },
       publication: null,
     });
     render(
       <LiveHandoffReview
-        workspace={scenarioWorkspace()}
-        source={scenarioJob("SUCCEEDED")}
+        workspace={engineWorkspace()}
+        source={engineJob(true)}
+        fresh
         api={api}
         actor={scenarioActor}
       />,
@@ -502,7 +554,7 @@ describe("workspace/read/result boundaries", () => {
       screen.getByRole("button", { name: "Review LIVE handoff" }),
     );
     expect(
-      await screen.findByText(/Analysis basis is stale/),
+      await screen.findByText(/The baseline is stale/),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Evaluate LIVE" }),
