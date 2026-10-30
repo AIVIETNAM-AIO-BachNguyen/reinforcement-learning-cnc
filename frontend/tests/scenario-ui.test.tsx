@@ -241,6 +241,43 @@ describe("Scenario editor independent contract UI", () => {
 });
 
 describe("workspace/read/result boundaries", () => {
+  it("keeps immutable run selection usable during a background refresh while commands stay disabled", async () => {
+    const user = userEvent.setup();
+    const api = stub();
+    push.mockClear();
+    const enqueue = vi.spyOn(api, "enqueueRun");
+    vi.mocked(api.listRuns).mockResolvedValue({
+      items: [
+        {
+          ...scenarioJob("SUCCEEDED"),
+          source_scenario_id: null,
+          source_revision: null,
+        },
+      ],
+      next_cursor: null,
+    });
+    render(
+      <ScenarioWorkspacePage
+        api={api}
+        workspaceId={workspaceId}
+        selection={{ factory_id: "factory-demo-01" }}
+      />,
+    );
+    const choice = await screen.findByRole("checkbox", {
+      name: `Compare run ${runId}`,
+    });
+    vi.mocked(api.workspace).mockImplementationOnce(
+      () => new Promise(() => {}),
+    );
+    await user.click(screen.getByRole("button", { name: "Refresh workspace" }));
+    expect(
+      screen.getByRole("button", { name: "Run baseline" }),
+    ).toBeDisabled();
+    expect(choice).toBeEnabled();
+    await user.click(choice);
+    expect(push.mock.calls.at(-1)?.[0]).toContain(`compare=${runId}`);
+    expect(enqueue).not.toHaveBeenCalled();
+  });
   it("write authorization loss revalidates actor and removes the old private form", async () => {
     const user = userEvent.setup();
     const api = stub();

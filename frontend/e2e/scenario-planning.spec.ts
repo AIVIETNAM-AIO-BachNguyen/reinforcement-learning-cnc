@@ -388,6 +388,9 @@ test("real baseline → overrides → run → compare → sensitivity → reload
       exact: true,
     });
     await baselineSelect.click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("compare"))
+      .toBe(baselineId);
     await expect(baselineSelect).toBeChecked();
     const compareResponse = page.waitForResponse((response) =>
       response.url().includes(`/scenario-workspaces/${workspace}/compare`),
@@ -397,6 +400,9 @@ test("real baseline → overrides → run → compare → sensitivity → reload
       exact: true,
     });
     await scenarioSelect.click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("compare")?.split(","))
+      .toEqual([baselineId, runId]);
     await expect(scenarioSelect).toBeChecked();
     expect((await compareResponse).status()).toBe(200);
     await expect(

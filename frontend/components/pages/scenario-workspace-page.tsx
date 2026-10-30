@@ -647,8 +647,9 @@ function WorkspaceContent({
                           <input
                             type="checkbox"
                             aria-label={`Compare run ${run.job_id}`}
+                            // Selecting an immutable completed record is read-only.
+                            // Background refresh must not interrupt a pointer click.
                             disabled={
-                              !fresh ||
                               run.status !== "SUCCEEDED" ||
                               run.kind !== "RUN"
                             }
