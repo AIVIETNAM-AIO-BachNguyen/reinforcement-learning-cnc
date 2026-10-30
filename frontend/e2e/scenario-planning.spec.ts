@@ -34,7 +34,15 @@ async function desktopEvidence(page: Page, name: string, target?: Locator) {
   await mkdir(directory, { recursive: true });
   for (const size of desktops) {
     await page.setViewportSize(size);
-    if (target) await target.scrollIntoViewIfNeeded();
+    if (target) {
+      await target.scrollIntoViewIfNeeded();
+      const bounds = await target.boundingBox();
+      if (bounds)
+        await page.evaluate(
+          (offset) => window.scrollBy(0, offset),
+          bounds.y - 128,
+        );
+    }
     await expect
       .poll(() =>
         page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -413,6 +421,12 @@ test("real baseline → overrides → run → compare → sensitivity → reload
     );
 
     await page.getByRole("link", { name: "New draft", exact: true }).click();
+    // The old saved editor is still mounted until the App Router transition resolves.
+    // Wait for the destination before filling its inputs.
+    await expect(page).not.toHaveURL(/scenario_id=/);
+    await expect(
+      page.getByRole("heading", { name: "New scenario draft", exact: true }),
+    ).toBeVisible();
     await page
       .getByLabel("Scenario name", { exact: true })
       .fill("Supported LIVE defer");

@@ -422,7 +422,7 @@ function WorkspaceContent({
         <>
           <nav
             aria-label="Scenario workspace sections"
-            className="sticky top-16 z-10 flex flex-wrap gap-4 rounded-lg border bg-white/95 p-3 text-sm text-blue-800 shadow-sm"
+            className="sticky top-16 z-10 flex flex-wrap gap-4 rounded-lg border bg-white p-3 text-sm text-blue-800 shadow-sm"
           >
             <a className="underline underline-offset-4" href="#scenario-editor">
               Draft editor
@@ -775,8 +775,8 @@ function WorkspaceContent({
                 {selectedIds.length < 2
                   ? "Select a baseline and a scenario to prepare comparison. "
                   : "The selected runs stay in the URL across pages. "}
-                The planning service has not provided supported comparison
-                metrics or a tradeoff explanation.
+                Comparison is read only after a completed baseline and scenario
+                are selected and their saved metadata is verified.
               </Dependency>
             )}
           </section>
